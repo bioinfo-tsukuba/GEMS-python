@@ -1,7 +1,8 @@
-use std::{collections::HashMap, error::Error, os::unix::process};
+use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, os::unix::process, path::Path};
 
-use polars::{datatypes::DataType, frame::DataFrame};
+use polars::{datatypes::DataType, df, frame::DataFrame, series::Series};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 // 共通のパラメータ型を定義
 pub type StateIndex = usize;
@@ -40,6 +41,60 @@ pub struct  ScheduledTask {
     pub experiment_name: ExperimentName,
     pub schedule_timing: ScheduleTiming,
     pub task_id: usize,
+}
+
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct  ScheduledTaskSerde {
+    pub optimal_timing: OptimalTiming,
+    pub processing_time: ProcessingTime,
+    pub penalty_type: String,
+    pub experiment_operation: ExperimentOperation,
+    pub experiment_name: ExperimentName,
+    pub schedule_timing: ScheduleTiming,
+    pub task_id: usize,
+}
+
+pub(crate) fn scheduled_task_convert_to_csv(output_path: &String, tasks: &Vec<ScheduledTask>)-> Result<String, Box<dyn Error>> {
+    // Convert ScheduledTask to ScheduledTaskSerde
+    let mut items = Vec::new();
+    for i in 0..tasks.len(){
+        items.push(
+            ScheduledTaskSerde{
+                optimal_timing: tasks[i].optimal_timing,
+                processing_time: tasks[i].processing_time,
+                penalty_type: tasks[i].penalty_type.to_string_format(),
+                experiment_operation: tasks[i].experiment_operation.clone(),
+                experiment_name: tasks[i].experiment_name.clone(),
+                schedule_timing: tasks[i].schedule_timing,
+                task_id: tasks[i].task_id,
+            }
+        )
+    }
+
+    write_struct(&output_path, &items)
+
+}
+
+pub(crate) fn read_scheduled_task(path: &String) -> Result<Vec<ScheduledTask>, Box<dyn Error>> {
+    let scheduled_task_serde: Vec<ScheduledTaskSerde> = try_read_tsv_struct(path)?;
+    let mut scheduled_tasks = Vec::new();
+    for i in 0..scheduled_task_serde.len(){
+        scheduled_tasks.push(
+            ScheduledTask{
+                optimal_timing: scheduled_task_serde[i].optimal_timing,
+                processing_time: scheduled_task_serde[i].processing_time,
+                penalty_type: PenaltyType::from_string_format(&scheduled_task_serde[i].penalty_type),
+                experiment_operation: scheduled_task_serde[i].experiment_operation.clone(),
+                experiment_name: scheduled_task_serde[i].experiment_name.clone(),
+                schedule_timing: scheduled_task_serde[i].schedule_timing,
+                task_id: scheduled_task_serde[i].task_id,
+            }
+        )
+    }
+    println!("Read the schedule: {}", path);
+    Ok(scheduled_tasks)
+
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -123,6 +178,42 @@ impl PenaltyType {
 pub struct Protocol {
     pub protocol_name: String,
     pub protocol_penalties: Vec<f64>,
+}
+
+
+pub(crate) fn try_read_tsv_struct<T: for<'de> Deserialize<'de>>(file_path: &String) -> Result<Vec<T>, Box<dyn Error>> {
+    let tsv_text = fs::read_to_string(&file_path)?;
+    let mut rdr = csv::ReaderBuilder::new().delimiter(b'\t').from_reader(tsv_text.as_bytes());
+    let mut data_list = Vec::new();
+    
+    for result in rdr.deserialize() {
+        let record: T = result?;
+        data_list.push(record);
+    }
+
+    Ok(data_list)
+}
+
+pub(crate) fn write_struct<T: Serialize>(output_path: &String, items: &Vec<T>) -> Result<String, Box<dyn Error>> {
+    let path = Path::new(output_path);
+    let mut wtr = csv::WriterBuilder::new().delimiter(b'\t').from_path(&path)?;
+
+    for item in items {
+        wtr.serialize(item)?;
+    }
+    wtr.flush()?;
+    Ok(path.to_str().unwrap().to_string())
+}
+
+// jsonファイル書き出し
+pub(crate) fn output_json<T: Serialize>(output_fn: &str, written_struct: Vec<T>) -> std::io::Result<()> {
+    // シリアライズ
+    let serialized: String = serde_json::to_string(&written_struct).unwrap();
+
+    // ファイル出力
+    let mut file = File::create(output_fn)?;
+    file.write_all(serialized.as_bytes())?;
+    Ok(())
 }
 
 

@@ -20,6 +20,8 @@ pub(crate) mod simulator;
 
 #[cfg(test)]
 mod tests{
+    use std::fs::create_dir;
+
     use polars::lazy::dsl::col;
 
     use super::*;
@@ -189,6 +191,12 @@ mod tests{
 
     #[test]
     fn test_cell_culture() {
+        let dir = "testcase/volatile";
+
+        match create_dir(dir){
+            Ok(_) => (),
+            Err(err) => println!("{}", err),
+        }
         // Define the transition functions
         let experiment_operation_state_0 = "Expire".to_string();
         let processing_time_function_state_0 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
@@ -339,6 +347,20 @@ mod tests{
             
             println!("schedule.tasks: {:?}", schedule.tasks);
             schedule.experiments[0].show_current_state_name();
+
+            // create csv of the shared_variable_history as dir/step_{}.csv
+            let path = format!("{}/step_{}.csv", dir, step);
+            let mut file = std::fs::File::create(path).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut schedule.experiments[0].shared_variable_history)
+                .unwrap();
+
+            let schedule_path = format!("{}/schedule_step_{}.csv", dir, step);
+            match scheduled_task_convert_to_csv(&schedule_path, &schedule_task) {
+                Ok(_) => (),
+                Err(err) => panic!("{}", err),
+            }
+            schedule_task = read_scheduled_task(&schedule_path).unwrap();
 
         }
     
