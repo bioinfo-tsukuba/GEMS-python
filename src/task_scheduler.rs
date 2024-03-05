@@ -55,8 +55,13 @@ pub(crate) mod one_machine_schedule_solver{
         let mut previous_task_completion_time = 0;
         for index in 0..scheduled_tasks.len() {
             let task = &mut scheduled_tasks[index].1;
-            task.schedule_timing = previous_task_completion_time;
-            previous_task_completion_time += task.processing_time;
+            let schedule_timing = previous_task_completion_time.max(task.optimal_timing);
+            println!("previous_task_completion_time: {}, 
+            task.optimal_timing: {}, 
+            schedule_timing: {}", 
+            previous_task_completion_time, task.optimal_timing, schedule_timing);
+            task.schedule_timing = schedule_timing;
+            previous_task_completion_time = task.schedule_timing+task.processing_time;
         }
 
         // Sort the scheduled_tasks by index
@@ -66,4 +71,50 @@ pub(crate) mod one_machine_schedule_solver{
 
         scheduled_tasks
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_FIFO_scheduler() {
+            // Define the tasks
+            let tasks = vec![
+                Task {
+                    optimal_timing: 0,
+                    processing_time: 100,
+                    penalty_type: PenaltyType::Linear(100),
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    task_id: 0,
+                },
+                Task {
+                    optimal_timing: 1,
+                    processing_time: 100,
+                    penalty_type: PenaltyType::Linear(100),
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    task_id: 1,
+                },
+                Task {
+                    optimal_timing: 500,
+                    processing_time: 1,
+                    penalty_type: PenaltyType::Linear(100),
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    task_id: 2,
+                },
+            ];
+
+            // Schedule the tasks
+            let scheduled_tasks = FIFO_scheduler(tasks);
+
+            // Check the scheduled_tasks
+            for scheduled_task in scheduled_tasks {
+                println!("{:?}", scheduled_task);
+            }
+        }
+    }
+
+
 }
