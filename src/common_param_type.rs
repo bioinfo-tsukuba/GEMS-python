@@ -4,13 +4,15 @@ use polars::{datatypes::DataType, df, frame::DataFrame, series::Series};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+pub static GLOBAL_TIME_PATH: &str = "/Users/yuyaarai/Downloads/ExperimentManagementSystem/testcase/global_time";
+
 // 共通のパラメータ型を定義
 pub type StateIndex = usize;
 pub type StateName = String;
 pub type ExperimentIndex = usize;
 pub type ExperimentName = String;
 
-pub type OptimalTiming = i32;
+pub type OptimalTiming = i64;
 pub type ScheduleTiming = OptimalTiming;
 pub type PenaltyParameter = OptimalTiming;
 pub type ProcessingTime = OptimalTiming;
@@ -55,7 +57,7 @@ pub struct  ScheduledTaskSerde {
     pub task_id: usize,
 }
 
-pub(crate) fn scheduled_task_convert_to_csv(output_path: &String, tasks: &Vec<ScheduledTask>)-> Result<String, Box<dyn Error>> {
+pub(crate) fn scheduled_task_convert_to_csv(output_path: &Path, tasks: &Vec<ScheduledTask>)-> Result<String, Box<dyn Error>> {
     // Convert ScheduledTask to ScheduledTaskSerde
     let mut items = Vec::new();
     for i in 0..tasks.len(){
@@ -76,7 +78,7 @@ pub(crate) fn scheduled_task_convert_to_csv(output_path: &String, tasks: &Vec<Sc
 
 }
 
-pub(crate) fn read_scheduled_task(path: &String) -> Result<Vec<ScheduledTask>, Box<dyn Error>> {
+pub(crate) fn read_scheduled_task(path: &Path) -> Result<Vec<ScheduledTask>, Box<dyn Error>> {
     let scheduled_task_serde: Vec<ScheduledTaskSerde> = try_read_tsv_struct(path)?;
     let mut scheduled_tasks = Vec::new();
     for i in 0..scheduled_task_serde.len(){
@@ -92,7 +94,7 @@ pub(crate) fn read_scheduled_task(path: &String) -> Result<Vec<ScheduledTask>, B
             }
         )
     }
-    println!("Read the schedule: {}", path);
+    println!("Read the schedule: {:?}", path);
     Ok(scheduled_tasks)
 
 }
@@ -181,7 +183,7 @@ pub struct Protocol {
 }
 
 
-pub(crate) fn try_read_tsv_struct<T: for<'de> Deserialize<'de>>(file_path: &String) -> Result<Vec<T>, Box<dyn Error>> {
+pub(crate) fn try_read_tsv_struct<T: for<'de> Deserialize<'de>>(file_path: &Path) -> Result<Vec<T>, Box<dyn Error>> {
     let tsv_text = fs::read_to_string(&file_path)?;
     let mut rdr = csv::ReaderBuilder::new().delimiter(b'\t').from_reader(tsv_text.as_bytes());
     let mut data_list = Vec::new();
@@ -194,7 +196,7 @@ pub(crate) fn try_read_tsv_struct<T: for<'de> Deserialize<'de>>(file_path: &Stri
     Ok(data_list)
 }
 
-pub(crate) fn write_struct<T: Serialize>(output_path: &String, items: &Vec<T>) -> Result<String, Box<dyn Error>> {
+pub(crate) fn write_struct<T: Serialize>(output_path: &Path, items: &Vec<T>) -> Result<String, Box<dyn Error>> {
     let path = Path::new(output_path);
     let mut wtr = csv::WriterBuilder::new().delimiter(b'\t').from_path(&path)?;
 
@@ -216,6 +218,36 @@ pub(crate) fn output_json<T: Serialize>(output_fn: &str, written_struct: Vec<T>)
     Ok(())
 }
 
+pub(crate) fn overwrtite_global_time_manualy(current_time: i64){
+    // Global time in the file, GLOBAL_TIME_PATH, is rewritten manually.
+
+    // Get the global time as i64
+    let global_time = fs::read_to_string(GLOBAL_TIME_PATH).unwrap();
+    println!("global time: {:?}", global_time);
+    let global_time: i64 = chrono::DateTime::parse_from_rfc3339(&global_time).unwrap().timestamp();
+    println!("global time: {:?}", global_time);
+    let elapsed_time = current_time - global_time;
+
+    // current_time(i64, timestamp) -> chrono::DateTime
+    let current_time = chrono::TimeZone::timestamp_opt(&chrono::Utc, current_time, 0);
+    println!("overwrite time: {:?}", current_time);
+
+    let current_time = current_time.unwrap().to_rfc3339();
+
+    // Elapsed time
+    
+    println!("Elapsed time: {}", elapsed_time);
+
+    // Rewrite the global time
+    let mut file = File::create(GLOBAL_TIME_PATH).unwrap();
+    file.write_all(format!("{}", current_time).as_bytes()).unwrap();
+}
+
+
+pub(crate) fn get_current_absolute_time() -> i64 {
+    let global_time = std::fs::read_to_string(GLOBAL_TIME_PATH).unwrap();
+    chrono::DateTime::parse_from_rfc3339(&global_time).unwrap().timestamp()
+}
 
 // Test
 #[cfg(test)]
@@ -246,5 +278,10 @@ mod tests {
 
         let penalty_type = PenaltyType::None;
         assert_eq!(penalty_type.to_string_format(), "None()");
+    }
+
+    #[test]
+    fn overwrtite_global_time_manualy_test(){
+        overwrtite_global_time_manualy(0);
     }
 }

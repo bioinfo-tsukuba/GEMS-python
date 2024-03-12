@@ -25,7 +25,7 @@ pub(crate) mod one_machine_schedule_solver{
 
     // Define the the simple task scheduler, FIFO
     
-    pub(crate) fn FIFO_scheduler(tasks: Vec<Task>) -> Vec<ScheduledTask> {
+    pub(crate) fn FIFO_scheduler_relative(tasks: Vec<Task>) -> Vec<ScheduledTask> {
         let mut scheduled_tasks: Vec<(usize, ScheduledTask)> = Vec::with_capacity(tasks.len());
 
         // Move the tasks to scheduled_tasks
@@ -71,6 +71,47 @@ pub(crate) mod one_machine_schedule_solver{
 
         scheduled_tasks
     }
+
+
+    /// The scheduler manage 
+    pub(crate) fn FIFO_scheduler_absolute(tasks: Vec<Task>) -> Vec<ScheduledTask> {
+
+        let current_absolute_time = get_current_absolute_time();
+        let tasks: Vec<Task> = tasks.into_iter().map(|mut task| {
+            task.optimal_timing = task.optimal_timing - current_absolute_time;
+            task
+        }).collect();
+
+        let scheduled_tasks = FIFO_scheduler_relative(tasks);
+
+        let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
+            task.optimal_timing = task.optimal_timing + current_absolute_time;
+            task
+        }).collect();
+
+        scheduled_tasks
+    }
+
+
+    /// The scheduler manage the schedule task
+    /// Input: Task with "RELATIVE" optimal time
+    /// Output: Scheduled task with "ABSOLUTE" time
+    /// Note: The schedule must finish in Unit time(min)
+    pub(crate) fn FIFO_scheduler(tasks: Vec<Task>) -> Vec<ScheduledTask> {
+        println!("Now fifo scheduling");
+
+        let scheduled_tasks = FIFO_scheduler_relative(tasks);
+
+        let current_absolute_time = get_current_absolute_time();
+
+        let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
+            task.schedule_timing = task.schedule_timing + current_absolute_time;
+            task
+        }).collect();
+
+        scheduled_tasks
+    }
+    
 
     #[cfg(test)]
     mod tests {

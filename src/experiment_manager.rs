@@ -1,4 +1,4 @@
-use std::{error::Error, result};
+use std::{error::Error, os::macos::raw::stat, path::{Path, PathBuf}, result};
 use crate::{common_param_type::{self, TaskId, TaskResult}, transition_manager, task_generator, task_scheduler::{self, one_machine_schedule_solver}};
 use polars::{functions::concat_df_diagonal, prelude::*};
 
@@ -31,7 +31,9 @@ impl State {
 }
 
 pub(crate) enum SharedVariableHistoryInput{
-    Path(String),
+    /// Path input of shared variable history
+    PathInput(PathBuf),
+    /// DataFrame input directly
     DataFrame(polars::frame::DataFrame),
 }
 
@@ -53,7 +55,7 @@ impl Experiment {
     ) -> Self {
 
         let shared_variable_history = match shared_variable_history{
-            SharedVariableHistoryInput::Path(path) => {
+            SharedVariableHistoryInput::PathInput(path) => {
                 CsvReader::from_path(path).unwrap()
                 .has_header(true)
                 .finish()
@@ -79,6 +81,7 @@ impl Experiment {
         for state in &self.states[1..] {
             print!(" => {}", state.state_name);
         }
+        println!();
     }
 
     /// Show the current state name
@@ -93,6 +96,7 @@ impl Experiment {
         &mut self,
     ) -> common_param_type::Task {
         // Determine the next state index
+        // todo!("Error state transition");
         let next_state_index = match self.states[self.current_state_index].transition_function.determine_next_state_index(&mut self.shared_variable_history) {
             Ok(it) => it,
             Err(err) => panic!("{}", err),
@@ -112,6 +116,22 @@ impl Experiment {
 
         task
     }
+
+    pub(crate) fn generate_task_of_the_state(
+        &self,
+    ) -> common_param_type::Task {
+        // Generate a task
+        let state_index = self.current_state_index;
+        let task = match self
+        .states[state_index]
+        .task_generator
+        .generate_task(&mut self.shared_variable_history.clone(), self.experiment_name.clone()) {
+            Ok(it) => it,
+            Err(err) => panic!("{}", err),
+        };
+
+        task
+    }
 }
 
 /// ExperimentManager has 
@@ -121,21 +141,47 @@ impl Experiment {
 pub(crate) struct OneMachineExperimentManager {
     pub(crate) experiments: Vec<Experiment>,
     pub(crate) tasks: Vec<common_param_type::Task>,
+    pub(crate) dir: PathBuf,
 }
 
 impl OneMachineExperimentManager {
     pub(crate) fn new(
         experiments: Vec<Experiment>,
         tasks: Vec<common_param_type::Task>,
+        dir: PathBuf,
     ) -> Self {
+        if dir == PathBuf::new() {
+            let dir = std::env::current_dir().unwrap();
+            let uuid = uuid::Uuid::new_v4();
+            let dir = dir.join(uuid.to_string());
+            println!("The directory is not specified. The directory is set to: {:?}", dir);
+        return Self {
+            experiments,
+            tasks,
+            dir
+        };
+        }
         Self {
             experiments,
             tasks,
+            dir
         }
     }
 }
 
 impl OneMachineExperimentManager {
+
+    pub(crate) fn show_experiment_names_and_state_names(&self) {
+        println!("Experiment names and state names:");
+        let mut experiment_index = 0;
+        for experiment in &self.experiments {
+            println!("Experiment index: {}", experiment_index);
+            experiment.show_experiment_name_and_state_names();
+            println!("------------------------");
+            experiment_index += 1;
+        }
+        println!("End of experiment names and state names");
+    }
 
     /// Delete the tasks with task_id
     pub(crate) fn delete_tasks_with_task_id(
@@ -147,6 +193,7 @@ impl OneMachineExperimentManager {
     }
 
     /// Update the state and reschedule
+    /// update_type: 'a' for add, 'w' for replace
     pub(crate) fn update_state_and_reschedule(
         &mut self, 
         task_id: TaskId,
