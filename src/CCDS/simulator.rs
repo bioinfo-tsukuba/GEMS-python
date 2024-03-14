@@ -49,9 +49,9 @@ impl Simulator {
                 ;
         let df = q.collect().unwrap();
 
-        let start_time = df["time"].i64().unwrap().get(0).unwrap();
+        let start_time = df["time"].f64().unwrap().get(0).unwrap();
         let density = df["density"].f64().unwrap().get(0).unwrap();
-        let delta_time = current_time - start_time;
+        let delta_time = current_time as f64 - start_time;
 
         let mut normal_cell_simulator = self.normal_cell_simulator.clone();
         normal_cell_simulator.n0 = density as f32;
@@ -59,7 +59,7 @@ impl Simulator {
 
         // Update the cell_history
         let simulate_log = df!(
-            "time" => [current_time as i64], 
+            "time" => [current_time as f64], 
             "density" => [current_cell_density as f64], 
             "tag" => ["SIMULATE"]
         ).unwrap();
@@ -309,10 +309,11 @@ mod tests {
 
     #[test]
     fn test_simulate(){
+        overwrtite_global_time_manualy(60*24*6);
         let cell_history = df!(
-            "time" => [0.0, 1.0, 2.0, 3.0, 4.0],
-            "density" => [0.05, 0.1, 0.2, 0.3, 0.4],
-            "operation" => ["PASSAGE", "PASSAGE", "PASSAGE", "PASSAGE", "GGGGG"]
+            "time" => [0.0, ],
+            "density" => [0.05, ],
+            "tag" => ["PASSAGE", ]
         ).unwrap();
         let normal_cell_simulator = NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05);
         let mut simulator = Simulator::new(cell_history, normal_cell_simulator);
