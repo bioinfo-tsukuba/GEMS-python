@@ -1,6 +1,7 @@
 use std::{arch::global_asm, fs::File, io::{self, BufReader, Read, Write}, os::unix::{process, raw::uid_t}, path::Path, vec};
 
-use polars::prelude::*;
+use polars::{functions::concat_df_diagonal, lazy::dsl::max, prelude::*};
+use polars::lazy::dsl::col;
 
 use crate::{ccds::IPS_CULTURE_STATE_NAMES, common_param_type};
 
@@ -8,25 +9,72 @@ use super::{overwrtite_global_time_manualy, ScheduledTask, TaskId};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Simulator{
-    cell_history: Vec<CellHistory>,
-    normal_cell_simulators: NormalCellSimulator,
+    cell_history: DataFrame,
+    normal_cell_simulator: NormalCellSimulator,
 }
 
 impl Simulator {
-    pub(crate) fn new(cell_history: Vec<CellHistory>, normal_cell_simulators: NormalCellSimulator) -> Self {
+    pub(crate) fn new(cell_history: DataFrame, normal_cell_simulator: NormalCellSimulator) -> Self {
         Self {
             cell_history,
-            normal_cell_simulators,
+            normal_cell_simulator,
         }
     }
 
-    pub(crate) fn simulate(&mut self, delta_time: f32) {
-        for cell_history in &self.cell_history {
-            let current_cell_density = self.normal_cell_simulators.simulate_cell_growth(delta_time, cell_history.cell_density);
-            self.normal_cell_simulators.current_cell_density = current_cell_density;
-        }
+    /// Simulate cell growth
+    /// 1. Get the current time
+    /// 2. Get the initial time and density, passaged time and density
+    /// 3. Calculate the delta time
+    /// 4. Simulate the cell growth
+    /// 5. Update the cell_history
+    pub(crate) fn simulate(&mut self) {
+        let current_time = super::get_current_absolute_time();
+        let q = self.cell_history
+                .clone()
+                .lazy()
+                .filter(
+                    col("time").is_not_null()
+                    .and(col("density").is_not_null())
+                    .and(col("tag").eq(lit("PASSAGE")))
+                )
+                .select(&[col("time"), col("density")])
+                .sort("time", SortOptions{
+                    descending: true,
+                    nulls_last: false,
+                    multithreaded: true,
+                    maintain_order: false,
+                    }
+                )
+                .limit(1)
+                ;
+        let df = q.collect().unwrap();
+
+        let start_time = df["time"].i64().unwrap().get(0).unwrap();
+        let density = df["density"].f64().unwrap().get(0).unwrap();
+        let delta_time = current_time - start_time;
+
+        let mut normal_cell_simulator = self.normal_cell_simulator.clone();
+        normal_cell_simulator.n0 = density as f32;
+        let current_cell_density = normal_cell_simulator.simulate_cell_growth(delta_time as f32, normal_cell_simulator.current_cell_density);
+
+        // Update the cell_history
+        let simulate_log = df!(
+            "time" => [current_time as i64], 
+            "density" => [current_cell_density as f64], 
+            "tag" => ["SIMULATE"]
+        ).unwrap();
+        self.cell_history = concat_df_diagonal(&[
+            self.cell_history.clone(),
+            simulate_log,
+        ]).unwrap();
+
+        self.normal_cell_simulator.current_cell_density = current_cell_density;
+
     }
 
+    pub(crate) fn process_earliest_task(&mut self, one_machine_experiment: &super::OneMachineExperimentManager) -> (TaskId, DataFrame, char) {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -98,15 +146,17 @@ impl SimpleTaskSimulator {
         overwrtite_global_time_manualy(global_time);
     }
 
-    pub(crate) fn simulate(&self, delta_time: i64, normal_cell_simulators:&mut Vec<NormalCellSimulator>) {
-        todo!("Write down and read the true cell condition history");
-        for normal_cell_simulator in normal_cell_simulators {
-            let current_cell_density = normal_cell_simulator.simulate_cell_growth(delta_time as f32, normal_cell_simulator.current_cell_density);
-            normal_cell_simulator.current_cell_density = current_cell_density;
+    pub(crate) fn simulate(&self, delta_time: i64, simulators:&mut Vec<Simulator>) {
+        for simulator in simulators {
+            simulator.simulate();
         }
     }
 
-    pub(crate) fn process_earliest_task(&mut self, one_machine_experiment: &super::OneMachineExperimentManager, normal_cell_simulators: &mut Vec<NormalCellSimulator>) -> (TaskId, DataFrame, char) {
+    pub(crate) fn process_earliest_task(
+        &mut self, 
+        one_machine_experiment: &super::OneMachineExperimentManager, 
+        simulators: &mut Vec<Simulator>
+    ) -> (TaskId, DataFrame, char) {
         let mut simulation_dir = one_machine_experiment.dir.clone();
         let output_dir = simulation_dir.join("simulation");
         println!("********Processing the earliest task********");
@@ -128,7 +178,7 @@ impl SimpleTaskSimulator {
         self.put_a_clock_forward(delta_time);
 
         // Simulate cell growth
-        self.simulate(delta_time, normal_cell_simulators);
+        self.simulate(delta_time, simulators);
 
 
         let operation_name = earliest_task.experiment_operation.as_str();
@@ -148,7 +198,7 @@ impl SimpleTaskSimulator {
         } else if operation_name == IPS_CULTURE_STATE_NAMES[2] {
             // GET_IMAGE_1
             new_result_of_experiment = match df!(
-                "density" => [normal_cell_simulators[earliest_task_id].current_cell_density as f64], 
+                "density" => [simulators[earliest_task_id].normal_cell_simulator.current_cell_density as f64], 
             ) {
                 Ok(it) => it,
                 Err(err) => panic!("{}", err),
@@ -160,7 +210,7 @@ impl SimpleTaskSimulator {
         } else if operation_name == IPS_CULTURE_STATE_NAMES[4] {
             // GET_IMAGE_2
             new_result_of_experiment = match df!(
-                "density" => [normal_cell_simulators[earliest_task_id].current_cell_density as f64], 
+                "density" => [simulators[earliest_task_id].normal_cell_simulator.current_cell_density as f64], 
                 ) {
                 Ok(it) => it,
                 Err(err) => panic!("{}", err),
@@ -259,20 +309,50 @@ mod tests {
 
     #[test]
     fn test_simulate(){
-        let mut normal_cell_simulators = vec![
-            NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05),
-            NormalCellSimulator::new(1, 0.000252219650877879, 0.05, 1.0, 0.05),
-            NormalCellSimulator::new(2, 0.000252219650877879, 0.05, 1.0, 0.05),
-            NormalCellSimulator::new(3, 0.000253, 0.05, 1.0, 0.05),
-            NormalCellSimulator::new(4, 0.0003, 0.05, 1.0, 0.05),
-            ];
-        let target_density = 0.3;
-        let time  = normal_cell_simulators[0].calculate_logistic_rev(target_density);
-        println!("For density: {}, min: {}, hour: {}, day: {}", target_density, time, time/60.0, time/24.0/60.0);
-        let simple_task_simulator = SimpleTaskSimulator::new(vec![]);
-        simple_task_simulator.simulate(time as i64, &mut normal_cell_simulators);
-        for normal_cell_simulator in normal_cell_simulators {
-            println!("Cell density: {}", normal_cell_simulator.current_cell_density);
-        }
+        let cell_history = df!(
+            "time" => [0.0, 1.0, 2.0, 3.0, 4.0],
+            "density" => [0.05, 0.1, 0.2, 0.3, 0.4],
+            "operation" => ["PASSAGE", "PASSAGE", "PASSAGE", "PASSAGE", "GGGGG"]
+        ).unwrap();
+        let normal_cell_simulator = NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05);
+        let mut simulator = Simulator::new(cell_history, normal_cell_simulator);
+        simulator.simulate();
+        println!("{:?}", simulator.cell_history);
+    }
+
+    #[test]
+    fn test_get_initial_density(){
+        let cell_history = df!(
+            "time" => [0.0, 1.0, 2.0, 3.0, 4.0],
+            "density" => [0.05, 0.1, 0.2, 0.3, 0.4],
+            "operation" => ["PASSAGE", "PASSAGE", "PASSAGE", "PASSAGE", "GGGGG"]
+        ).unwrap();
+
+        println!("{:?}", cell_history);
+        let q = cell_history
+                .clone()
+                .lazy()
+                .filter(
+                    col("time").is_not_null()
+                    .and(col("density").is_not_null())
+                    .and(col("operation").eq(lit("PASSAGE")))
+                )
+                .select(&[col("time"), col("density")])
+                .sort("time", SortOptions{
+                    descending: true,
+                    nulls_last: false,
+                    multithreaded: true,
+                    maintain_order: false,
+                    }
+                )
+                .limit(1)
+                ;
+        let df = q.collect().unwrap();
+
+        let time = df["time"].f64().unwrap().get(0).unwrap();
+        let density = df["density"].f64().unwrap().get(0).unwrap();
+        println!("{:?}", df);
+
+        println!("Time: {}, Density: {}", time, density);
     }
 }

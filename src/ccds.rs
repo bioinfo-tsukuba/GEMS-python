@@ -398,6 +398,10 @@ mod tests{
             NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05),
         ];
 
+        let mut maholo_simulator = vec![
+            Simulator::new(DataFrame::empty(), NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05))
+        ];
+
         
 
         println!("schedule.tasks: {:?}", schedule.tasks);
@@ -425,7 +429,7 @@ mod tests{
 
             // // Get the earliest task
             let (task_id, new_result_of_experiment, update_type) = SimpleTaskSimulator::new(schedule_task.clone())
-            .process_earliest_task(&schedule, &mut normal_cell_simulators);
+            .process_earliest_task(&schedule, &mut maholo_simulator);
 
             println!("task_id: {}, new_result_of_experiment: {:?}, update_type: {}", task_id, new_result_of_experiment, update_type);
             schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type);
