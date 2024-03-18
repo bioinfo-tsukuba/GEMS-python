@@ -54,12 +54,13 @@ pub(crate) mod logistic_estimator;
 
 #[cfg(test)]
 mod tests{
-    use std::{f32::consts::E, fs::create_dir, path::Path};
+    use std::{default, f32::consts::E, fs::create_dir, path::Path};
 
     use argmin::{core::{Executor}, solver::neldermead::NelderMead};
     use polars::lazy::dsl::col;
+    use tests::logistic_estimator::calculate_logistic_inverse_binary_search;
 
-    use self::logistic_estimator::{calculate_logistic_rev, CellGrowthProblem};
+    use self::logistic_estimator::CellGrowthProblem;
 
     use super::*;
 
@@ -121,12 +122,12 @@ mod tests{
                     maintain_order: false,
                     }
                 )
-                .select([col("density").cast(DataType::Float32)])
+                .select([col("density")])
                 ;
             let latest_density = q.collect().unwrap();
             let latest_density = latest_density.column("density").unwrap().get(0).unwrap();
             let latest_density = match latest_density{
-                AnyValue::Float32(it) => it,
+                AnyValue::Float64(it) => it,
                 _ => panic!("unexpected type"),
             };
             
@@ -165,6 +166,7 @@ mod tests{
             // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
 
             // sort the variable_history by "time", then get the latest density named "latest_density"
+            // Convert time (sec) to time (min)
             let q = variable_history
                 .clone()
                 .lazy()
@@ -174,6 +176,49 @@ mod tests{
                 )
                 ;
             let df = q.collect().unwrap();
+            
+
+            // Sort by time with operation == "PASSAGE"
+            let latest_passage_time = df
+                .clone()
+                .lazy()
+                .filter(
+                    col("operation").eq(lit("PASSAGE"))
+                )
+                .sort("time", 
+                SortOptions {
+                    descending: true,
+                    nulls_last: false,
+                    multithreaded: false,
+                    maintain_order: false,
+                    }
+                )
+                .select([col("time")]);
+            let latest_passage_time = latest_passage_time.collect().unwrap();
+            let latest_passage_time = latest_passage_time.column("time")?.iter().nth(0);
+            let latest_passage_time = match latest_passage_time{
+                Some(it) => it.try_extract::<f64>()?,
+                None => panic!("latest_passage_time is None"),
+            };
+
+            // Filter the all time > latest_passage_time and shift - latest_passage_time
+            let df = df
+                .clone()
+                .lazy()
+                .filter(
+                    col("time").gt_eq(latest_passage_time)
+                )
+                .with_columns(
+                    [
+                        (col("time") - lit(latest_passage_time)).alias("time"),
+                    ]
+                )
+                .select([col("time").cast(DataType::Float64), col("density")]);
+
+            let df = df.collect().unwrap();
+            eprintln!("Passage clipped df: {:?}", df);
+
+
             let problem = CellGrowthProblem::new_from_df(df, "time", "density").unwrap();
             let init_param = problem.default_parameter()?;
             // Using Nelder-Mead
@@ -199,21 +244,16 @@ mod tests{
 
             let best = res.state();
             let best = argmin::core::State::get_best_param(best).unwrap();
-            // cast Vec<f64> to Vec<f32>
-            let best = best.iter().map(|&x| x as f32).collect::<Vec<f32>>();
+            eprintln!("best params MEDIUM CHANGE 2: {:?}", best);
             
-            let reach_time = calculate_logistic_rev(0.3, best[0], best[1], best[2]);
+            let reach_time = calculate_logistic_inverse_binary_search(0.3, best[0], best[1], best[2]);
+            let reach_time = reach_time + latest_passage_time;
+            eprintln!("estimated reach_time: {}", reach_time);
 
-            let current_time = variable_history
-            .column("time")
-            .unwrap()
-            .f32()
-            .unwrap()
-            .max()
-            .unwrap();
+            let current_time = get_current_absolute_time() as f64;
 
             // Round the reach_time to the nearest integer
-            let reach_time = (reach_time - current_time).round() as i32;
+            let reach_time = (reach_time - current_time).round() as i64;
             
             if reach_time < 48*60 {
                 Ok(6)
@@ -253,6 +293,48 @@ mod tests{
                 )
                 ;
             let df = q.collect().unwrap();
+
+            // Sort by time with operation == "PASSAGE"
+            let latest_passage_time = df
+                .clone()
+                .lazy()
+                .filter(
+                    col("operation").eq(lit("PASSAGE"))
+                )
+                .sort("time", 
+                SortOptions {
+                    descending: true,
+                    nulls_last: false,
+                    multithreaded: false,
+                    maintain_order: false,
+                    }
+                )
+                .select([col("time")]);
+            let latest_passage_time = latest_passage_time.collect().unwrap();
+            let latest_passage_time = latest_passage_time.column("time")?.iter().nth(0);
+            let latest_passage_time = match latest_passage_time{
+                Some(it) => it.try_extract::<f64>()?,
+                None => panic!("latest_passage_time is None"),
+            };
+
+            // Filter the all time > latest_passage_time and shift - latest_passage_time
+            let df = df
+                .clone()
+                .lazy()
+                .filter(
+                    col("time").gt_eq(latest_passage_time)
+                )
+                .with_columns(
+                    [
+                        (col("time") - lit(latest_passage_time)).alias("time"),
+                    ]
+                )
+                .select([col("time").cast(DataType::Float64), col("density")]);
+
+            let df = df.collect().unwrap();
+            eprintln!("Passage clipped df: {:?}", df);
+
+
             let problem = CellGrowthProblem::new_from_df(df, "time", "density").unwrap();
             let init_param = problem.default_parameter()?;
             // Using Nelder-Mead
@@ -268,18 +350,13 @@ mod tests{
             .run()?;
             let best = res.state();
             let best = argmin::core::State::get_best_param(best).unwrap();
-            // cast Vec<f64> to Vec<f32>
-            let best = best.iter().map(|&x| x as f32).collect::<Vec<f32>>();
+            eprintln!("best params PLATE COATING: {:?}", best);
             
-            let reach_time = calculate_logistic_rev(0.3, best[0], best[1], best[2]);
+            let reach_time = calculate_logistic_inverse_binary_search(0.3, best[0], best[1], best[2]);
+            let reach_time = reach_time + latest_passage_time;
+            eprintln!("estimated reach_time: {}", reach_time);
 
-            let current_time = variable_history
-            .column("time")
-            .unwrap()
-            .f32()
-            .unwrap()
-            .max()
-            .unwrap();
+            let current_time = get_current_absolute_time() as f64;
 
             // Round the reach_time to the nearest integer
             let reach_time = (reach_time - current_time).round() as common_param_type::OptimalTiming;
@@ -386,6 +463,7 @@ mod tests{
         cell_culture_experiment.show_experiment_name_and_state_names();
         let new_task = cell_culture_experiment.generate_task_of_the_state();
         println!("new_task: {:?}", new_task);
+        println!("current time before the simulation: {}", get_current_absolute_time());
 
 
         let mut schedule = OneMachineExperimentManager::new(
@@ -394,12 +472,16 @@ mod tests{
             std::path::PathBuf::new(),
         );
 
-        let mut normal_cell_simulators = vec![
-            NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05),
-        ];
-
+        let initial_df = match df!(
+            "density" => [0.05], 
+            "time" => [0.0],
+            "tag" => ["PASSAGE"]
+        ) {
+            Ok(it) => it,
+            Err(err) => panic!("{}", err),
+        };
         let mut maholo_simulator = vec![
-            Simulator::new(DataFrame::empty(), NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05))
+            Simulator::new(initial_df, NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)),
         ];
 
         
@@ -412,10 +494,11 @@ mod tests{
         println!("schedule_task: {:?}", schedule_task);
 
         println!("Test the simulator --------------------------\n\n");
-        for step in 0..10 {
+        for step in 0..1000 {
             println!("step: {}=================", step);
             println!("Current state name: {}", schedule.experiments[0].states[schedule.experiments[0].current_state_index].state_name);
             println!("Current history: {}", schedule.experiments[0].shared_variable_history);
+            println!("Current time: {}", get_current_absolute_time());
 
             let step_dir = dir.join(format!("step_{}", step));
 
@@ -460,10 +543,28 @@ mod tests{
             }
             schedule_task = read_scheduled_task(&schedule_path).unwrap();
             schedule.show_experiment_names_and_state_names();
-            for normal_cell_simulator in &mut normal_cell_simulators{
-                println!("normal_cell_simulator: {:?}", normal_cell_simulator);
-            }
         }
+
+        // Save the simulation result df
+        for experiment_index in 0..schedule.experiments.len(){
+            let mut experiment = &mut schedule.experiments[experiment_index];
+            let name = experiment.experiment_name.clone();
+            // Make the directory
+            let dir = dir.join(name);
+            match create_dir(&dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+            let mut file = std::fs::File::create(dir.join("simulation_result.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut experiment.shared_variable_history)
+                .unwrap();
+            let mut file = std::fs::File::create(dir.join("simulator_result.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut maholo_simulator[experiment_index].cell_history().clone())
+                .unwrap();    
+        }
+        
         
     }
 
@@ -522,12 +623,12 @@ mod tests{
                     maintain_order: false,
                     }
                 )
-                .select([col("density").cast(DataType::Float32)])
+                .select([col("density").cast(DataType::Float64)])
                 ;
             let latest_density = q.collect().unwrap();
             let latest_density = latest_density.column("density").unwrap().get(0).unwrap();
             let latest_density = match latest_density{
-                AnyValue::Float32(it) => it,
+                AnyValue::Float64(it) => it,
                 _ => panic!("unexpected type"),
             };
             

@@ -18,7 +18,7 @@ pub(crate) struct MyProblem {
     history: Vec<CellGrowthHistory>,
 }
 
-// Make alias of MyProblem, cell_growth_problem
+/// Make alias of MyProblem, cell_growth_problem
 pub(crate) type CellGrowthProblem = MyProblem;
 
 pub(crate) fn logistic_growth(t: f64, n0: f64, r: f64, k: f64) -> f64 {
@@ -26,8 +26,44 @@ pub(crate) fn logistic_growth(t: f64, n0: f64, r: f64, k: f64) -> f64 {
 }
 
 /// Calculate value of t(passed time) from cell number
-pub(crate) fn calculate_logistic_rev(cell_number: f32, n0: f32, k: f32, r: f32) -> f32{
+pub(crate) fn calculate_logistic_inverse_function(cell_number: f64, n0: f64, r: f64, k: f64) -> f64{
     ((k-n0).ln() - n0.ln() + cell_number.ln() - (k - cell_number).ln())/r
+}
+
+/// Calculate value of t(passed time) from cell number
+pub(crate) fn calculate_logistic_inverse_binary_search(cell_number: f64, n0: f64, r: f64, k: f64) -> f64{
+    let mut small_bound = 0.0;
+    let mut large_bound = 100.0;
+
+    let mut large_value ;
+    let mut small_value ;
+
+    // eprintln!("cell_number: {}", cell_number);
+    // eprintln!("n0: {}, r: {}, k: {}", n0, r, k);
+// 
+    while large_bound - small_bound > 0.0001 {
+        // std::thread::sleep(std::time::Duration::from_millis(100));
+        large_value = logistic_growth(large_bound, n0, r, k);
+        small_value = logistic_growth(small_bound, n0, r, k);
+        // eprintln!("small_bound: {}, large_bound: {}", small_bound, large_bound);
+        // eprintln!("small_value: {}, large_value: {}", small_value, large_value);
+        if large_value < cell_number {
+            large_bound = large_bound + (large_bound - small_bound);
+        } else if  cell_number < small_value {
+            small_bound = small_bound - (large_bound - small_bound);
+        } else {
+            let mid = (large_bound + small_bound) / 2.0;
+            let mid_value = logistic_growth(mid, n0, r, k);
+            if mid_value > cell_number {
+                large_bound = mid;
+            } else if mid_value < cell_number {
+                small_bound = mid;
+            } else {
+                return mid;
+            }
+        }
+    }
+    (large_bound + small_bound) / 2.0
 }
 
 fn clamp_param(p: &[f64], min: f64, max: f64) -> Vec<f64> {
@@ -66,9 +102,9 @@ impl MyProblem {
         // 0 < r <= 1
         // n0 < k <= 1
         Ok(vec![
-            vec![0.01, 0.01, 1.0],
+            vec![0.0001, 0.0001, 1.0],
             vec![0.1, 0.1, 1.0],
-            vec![0.1, 0.1, 1.0],
+            vec![0.1, 0.00001, 1.0],
             vec![0.05, 0.5, 1.0],
         ])
     }
@@ -85,14 +121,12 @@ impl CostFunction for MyProblem {
     /// Apply the cost function to a parameter `p`
     fn cost(&self, p: &Self::Param) -> Result<Self::Output, Error> {
         assert_eq!(p.len(), 3);
-        let clamped_p = clamp_param(p, 0.0, 10.0);        
         let mut cost = 0.0;
         for history in &self.history {
-            let n = logistic_growth(history.time, clamped_p[0], clamped_p[1], clamped_p[2]);
+            let n = logistic_growth(history.time, p[0], p[1], p[2]);
             cost += (n - history.cell_count).powi(2);
         }
         Ok(cost)
-        // Ok(rosenbrock_2d(p, 1.0, 100.0))
     }
 }
 

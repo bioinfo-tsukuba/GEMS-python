@@ -3,7 +3,7 @@ use std::{arch::global_asm, fs::File, io::{self, BufReader, Read, Write}, os::un
 use polars::{functions::concat_df_diagonal, lazy::dsl::max, prelude::*};
 use polars::lazy::dsl::col;
 
-use crate::{ccds::IPS_CULTURE_STATE_NAMES, common_param_type};
+use crate::{ccds::IPS_CULTURE_STATE_NAMES, common_param_type::{self, get_current_absolute_time}};
 
 use super::{overwrtite_global_time_manualy, ScheduledTask, TaskId};
 
@@ -48,14 +48,15 @@ impl Simulator {
                 .limit(1)
                 ;
         let df = q.collect().unwrap();
-
+        println!("criteria :{:?}", df);
         let start_time = df["time"].f64().unwrap().get(0).unwrap();
         let density = df["density"].f64().unwrap().get(0).unwrap();
         let delta_time = current_time as f64 - start_time;
+        println!("delta_time: {}", delta_time);
 
         let mut normal_cell_simulator = self.normal_cell_simulator.clone();
         normal_cell_simulator.n0 = density as f32;
-        let current_cell_density = normal_cell_simulator.simulate_cell_growth(delta_time as f32, normal_cell_simulator.current_cell_density);
+        let current_cell_density = normal_cell_simulator.logistic_function(delta_time as f32);
 
         // Update the cell_history
         let simulate_log = df!(
@@ -74,6 +75,10 @@ impl Simulator {
 
     pub(crate) fn process_earliest_task(&mut self, one_machine_experiment: &super::OneMachineExperimentManager) -> (TaskId, DataFrame, char) {
         todo!()
+    }
+    
+    pub(crate) fn cell_history(&self) -> &DataFrame {
+        &self.cell_history
     }
 }
 
@@ -139,16 +144,18 @@ impl SimpleTaskSimulator {
         }
     }
 
+    /// The time unit is minute
     pub(crate) fn put_a_clock_forward(&self, time: i64) {
-        let global_time = std::fs::read_to_string(super::GLOBAL_TIME_PATH).unwrap();
-        let mut global_time = chrono::DateTime::parse_from_rfc3339(&global_time).unwrap().timestamp();
+        let mut global_time = get_current_absolute_time();
         global_time += time;
         overwrtite_global_time_manualy(global_time);
     }
 
     pub(crate) fn simulate(&self, delta_time: i64, simulators:&mut Vec<Simulator>) {
+        println!("================SIMULATION================");
         for simulator in simulators {
             simulator.simulate();
+            println!("{:?}", simulator);
         }
     }
 
@@ -169,12 +176,10 @@ impl SimpleTaskSimulator {
         let earliest_task_id: TaskId = earliest_task.task_id;
         let mut new_result_of_experiment: DataFrame = DataFrame::empty();
         let mut update_type: char = 'a';
-        let global_time = std::fs::read_to_string(super::GLOBAL_TIME_PATH).unwrap();
-        let global_time = chrono::DateTime::parse_from_rfc3339(&global_time).unwrap().timestamp();
 
         // Put a clock forward to the time of the earliest task
         let mut earliest_task_time = earliest_task.schedule_timing;
-        let delta_time = earliest_task_time as i64 - global_time;
+        let delta_time = earliest_task_time as i64 - get_current_absolute_time();
         self.put_a_clock_forward(delta_time);
 
         // Simulate cell growth
@@ -187,7 +192,19 @@ impl SimpleTaskSimulator {
             // Implement the processing of the task
             unimplemented!("Implement the processing of the task EXPIRE")
         } else if operation_name == IPS_CULTURE_STATE_NAMES[1] {
-            // PASSAGE
+            // PASSAGE special tag
+            let simulate_log = df!(
+                "time" => [get_current_absolute_time() as f64], 
+                "density" => [0.05 as f64], 
+                "tag" => ["PASSAGE"]
+            ).unwrap();
+            simulators[earliest_task_id].cell_history = concat_df_diagonal(&[
+                simulators[earliest_task_id].cell_history.clone(),
+                simulate_log,
+            ]).unwrap();
+            println!("***SPECIAL TASK*** Passage occurs in {}", earliest_task_id);
+
+            
             new_result_of_experiment = match df!(
                 "density" => [0.05 as f64], 
                 ) {
@@ -229,7 +246,7 @@ impl SimpleTaskSimulator {
         // Add "operation" column to new_result_of_experiment, and fill it with the operation_name
         let column_length = new_result_of_experiment.height().max(1);
         let operation_column = Series::new("operation", vec![operation_name; column_length]);
-        let time_column = Series::new("time", vec![global_time as f64; column_length]);
+        let time_column = Series::new("time", vec![get_current_absolute_time() as f64; column_length]);
         let error_column = Series::new("error", vec![false; column_length]);
         new_result_of_experiment.with_column(operation_column).unwrap();
         new_result_of_experiment.with_column(time_column).unwrap();
@@ -237,7 +254,10 @@ impl SimpleTaskSimulator {
 
 
         let processing_time = earliest_task.processing_time;
-        self.put_a_clock_forward(processing_time as i64);
+        println!("Processed task: {:?}", earliest_task);
+        println!("processing_time: {processing_time}");
+        println!("Now:{}", common_param_type::get_current_absolute_time());
+        self.put_a_clock_forward(processing_time);
         (earliest_task_id, new_result_of_experiment, update_type)
     }
 
@@ -309,7 +329,8 @@ mod tests {
 
     #[test]
     fn test_simulate(){
-        overwrtite_global_time_manualy(60*24*6);
+        let passed_time = 6*24*60;
+        overwrtite_global_time_manualy(passed_time);
         let cell_history = df!(
             "time" => [0.0, ],
             "density" => [0.05, ],
