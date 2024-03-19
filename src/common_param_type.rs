@@ -31,6 +31,7 @@ pub struct Task{
     pub penalty_type: PenaltyType,
     pub experiment_operation: ExperimentOperation,
     pub experiment_name: ExperimentName,
+    pub experiment_uuid: String,
     pub task_id: usize,
 }
 
@@ -41,6 +42,7 @@ pub struct  ScheduledTask {
     pub penalty_type: PenaltyType,
     pub experiment_operation: ExperimentOperation,
     pub experiment_name: ExperimentName,
+    pub experiment_uuid: String,
     pub schedule_timing: ScheduleTiming,
     pub task_id: usize,
 }
@@ -53,6 +55,7 @@ pub struct  ScheduledTaskSerde {
     pub penalty_type: String,
     pub experiment_operation: ExperimentOperation,
     pub experiment_name: ExperimentName,
+    pub experiment_uuid: String,
     pub schedule_timing: ScheduleTiming,
     pub task_id: usize,
 }
@@ -68,6 +71,7 @@ pub(crate) fn scheduled_task_convert_to_csv(output_path: &Path, tasks: &Vec<Sche
                 penalty_type: tasks[i].penalty_type.to_string_format(),
                 experiment_operation: tasks[i].experiment_operation.clone(),
                 experiment_name: tasks[i].experiment_name.clone(),
+                experiment_uuid: tasks[i].experiment_uuid.clone(),
                 schedule_timing: tasks[i].schedule_timing,
                 task_id: tasks[i].task_id,
             }
@@ -89,6 +93,7 @@ pub(crate) fn read_scheduled_task(path: &Path) -> Result<Vec<ScheduledTask>, Box
                 penalty_type: PenaltyType::from_string_format(&scheduled_task_serde[i].penalty_type),
                 experiment_operation: scheduled_task_serde[i].experiment_operation.clone(),
                 experiment_name: scheduled_task_serde[i].experiment_name.clone(),
+                experiment_uuid: scheduled_task_serde[i].experiment_uuid.clone(),
                 schedule_timing: scheduled_task_serde[i].schedule_timing,
                 task_id: scheduled_task_serde[i].task_id,
             }

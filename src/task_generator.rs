@@ -24,7 +24,7 @@ impl TaskGenerator {
         }
     }
 
-    pub fn generate_task(&self, variable_history: &mut DataFrame, experiment_name: ExperimentName) -> Result<Task, Box<dyn Error>> {
+    pub fn generate_task(&self, variable_history: &mut DataFrame, experiment_name: ExperimentName, experiment_uuid: String) -> Result<Task, Box<dyn Error>> {
         // Determine the optimal timing and the penalty type
         let (optimal_timing, penalty_type) = (self.timing_function)(variable_history)?;
         let processing_time = (self.processing_time_function)(variable_history)?;
@@ -39,6 +39,7 @@ impl TaskGenerator {
             penalty_type,
             experiment_operation,
             experiment_name,
+            experiment_uuid,
             task_id: 0,
         })
     }
@@ -132,7 +133,7 @@ mod tests {
         println!("variable_history:\n{}", variable_history);
 
         // Generate a task
-        let task = match manager.generate_task(&mut variable_history, "experiment1".to_string()) {
+        let task = match manager.generate_task(&mut variable_history, "experiment1".to_string(), uuid::Uuid::new_v4().to_string()) {
             Ok(it) => it,
             Err(err) => panic!("{}", err),
         };

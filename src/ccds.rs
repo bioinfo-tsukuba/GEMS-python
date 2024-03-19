@@ -172,7 +172,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         let latest_passage_time = latest_passage_time.column("time")?.iter().nth(0);
         let latest_passage_time = match latest_passage_time{
             Some(it) => it.try_extract::<f64>()?,
-            None => panic!("latest_passage_time is None"),
+            None => 0 as f64,
         };
 
         // Filter the all time > latest_passage_time and shift - latest_passage_time
@@ -288,7 +288,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         let latest_passage_time = latest_passage_time.column("time")?.iter().nth(0);
         let latest_passage_time = match latest_passage_time{
             Some(it) => it.try_extract::<f64>()?,
-            None => panic!("latest_passage_time is None"),
+            None => 0 as f64,
         };
 
         // Filter the all time > latest_passage_time and shift - latest_passage_time
@@ -330,12 +330,12 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         let reach_time = reach_time + latest_passage_time;
         eprintln!("estimated reach_time: {}", reach_time);
 
-        let current_time = get_current_absolute_time() as f64;
+        let current_time = get_current_absolute_time();
 
         // Round the reach_time to the nearest integer
-        let reach_time = (reach_time - current_time).round() as common_param_type::OptimalTiming;
+        let reach_time = reach_time.round() as common_param_type::OptimalTiming;
         
-        if reach_time < 48*60 {
+        if reach_time - current_time < 48*60 {
             Ok((reach_time - 4*60, PenaltyType::LinearWithRange(0, 200, 0, 200)))
         } else {
             panic!()
@@ -531,7 +531,7 @@ mod tests{
         overwrtite_global_time_manualy(global_time);
 
 
-        let mut ips_num = 2;
+        let ips_num = 10;
 
         let dir = Path::new("testcase/volatile");
         match create_dir(&dir){
@@ -549,12 +549,17 @@ mod tests{
 
             // Define the transition functions
             let states = iPS_culture_experiment_states();
-            let shared_variable_history = DataFrame::empty();
+            let shared_variable_history = df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "operation" => ["PASSAGE"],
+                "error" => [false]
+            ).unwrap();
             let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
             let mut cell_culture_experiment = Experiment::new(
                 format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
                 states,
-                1,
+                2,
                 shared_variable_history,
             );
 
@@ -585,7 +590,7 @@ mod tests{
             println!("{:?}", task);
         }
         // std::thread::sleep(std::time::Duration::from_secs(1000));
-        run_simulation(schedule_task, schedule, maholo_simulator, 100, dir);
+        run_simulation(schedule_task, schedule, maholo_simulator, 1000, dir);
 
 
 

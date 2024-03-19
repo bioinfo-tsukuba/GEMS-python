@@ -177,7 +177,9 @@ impl SimpleTaskSimulator {
         let earliest_task = self.scheduled_tasks.first().unwrap();
         println!("Earliest task: {:?}", earliest_task);
         // Process the earliest task
-        let earliest_task_id: TaskId = earliest_task.task_id;
+        let task_id = earliest_task.task_id;
+        let earliest_task_uuid = earliest_task.experiment_uuid.clone();
+        let experiment_index_of_earliest_task = one_machine_experiment.experiments.iter().position(|experiment| experiment.experiment_uuid == earliest_task_uuid).unwrap();
         let mut new_result_of_experiment: DataFrame = DataFrame::empty();
         let mut update_type: char = 'a';
 
@@ -202,11 +204,11 @@ impl SimpleTaskSimulator {
                 "density" => [0.05 as f64], 
                 "tag" => ["PASSAGE"]
             ).unwrap();
-            simulators[earliest_task_id].cell_history = concat_df_diagonal(&[
-                simulators[earliest_task_id].cell_history.clone(),
+            simulators[experiment_index_of_earliest_task].cell_history = concat_df_diagonal(&[
+                simulators[experiment_index_of_earliest_task].cell_history.clone(),
                 simulate_log,
             ]).unwrap();
-            println!("***SPECIAL TASK*** Passage occurs in {}", earliest_task_id);
+            println!("***SPECIAL TASK*** Passage occurs in {:?}", simulators[experiment_index_of_earliest_task]);
 
             
             new_result_of_experiment = match df!(
@@ -219,7 +221,7 @@ impl SimpleTaskSimulator {
         } else if operation_name == IPS_CULTURE_STATE_NAMES[2] {
             // GET_IMAGE_1
             new_result_of_experiment = match df!(
-                "density" => [simulators[earliest_task_id].normal_cell_simulator.current_cell_density as f64], 
+                "density" => [simulators[experiment_index_of_earliest_task].normal_cell_simulator.current_cell_density as f64], 
             ) {
                 Ok(it) => it,
                 Err(err) => panic!("{}", err),
@@ -231,7 +233,7 @@ impl SimpleTaskSimulator {
         } else if operation_name == IPS_CULTURE_STATE_NAMES[4] {
             // GET_IMAGE_2
             new_result_of_experiment = match df!(
-                "density" => [simulators[earliest_task_id].normal_cell_simulator.current_cell_density as f64], 
+                "density" => [simulators[experiment_index_of_earliest_task].normal_cell_simulator.current_cell_density as f64], 
                 ) {
                 Ok(it) => it,
                 Err(err) => panic!("{}", err),
@@ -262,7 +264,7 @@ impl SimpleTaskSimulator {
         println!("processing_time: {processing_time}");
         println!("Now:{}", common_param_type::get_current_absolute_time());
         self.put_a_clock_forward(processing_time);
-        (earliest_task_id, new_result_of_experiment, update_type)
+        (task_id, new_result_of_experiment, update_type)
     }
 
     fn update_global_time(&self, processing_time: i64){

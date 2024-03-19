@@ -44,6 +44,7 @@ pub(crate) struct Experiment {
     pub(crate) states: Vec<State>,
     pub(crate) current_state_index: common_param_type::StateIndex,
     pub(crate) shared_variable_history: polars::frame::DataFrame,// mutability is required
+    pub(crate) experiment_uuid: String,
 }
 
 impl Experiment {
@@ -70,6 +71,7 @@ impl Experiment {
             states,
             current_state_index,
             shared_variable_history,
+            experiment_uuid: uuid::Uuid::new_v4().to_string(),
         }
     }
 
@@ -109,7 +111,7 @@ impl Experiment {
         let task = match self
         .states[self.current_state_index]
         .task_generator
-        .generate_task(&mut self.shared_variable_history, self.experiment_name.clone()) {
+        .generate_task(&mut self.shared_variable_history, self.experiment_name.clone(), self.experiment_uuid.clone()) {
             Ok(it) => it,
             Err(err) => panic!("{}", err),
         };
@@ -125,7 +127,7 @@ impl Experiment {
         let task = match self
         .states[state_index]
         .task_generator
-        .generate_task(&mut self.shared_variable_history.clone(), self.experiment_name.clone()) {
+        .generate_task(&mut self.shared_variable_history.clone(), self.experiment_name.clone(), self.experiment_uuid.clone()) {
             Ok(it) => it,
             Err(err) => panic!("{}", err),
         };
@@ -203,7 +205,9 @@ impl OneMachineExperimentManager {
 
         let experiment_name = self.tasks[task_id].experiment_name.clone();
         eprintln!("Update the state of experiment: {}", experiment_name);
-        let experiment_index = self.experiments.iter().position(|experiment| experiment.experiment_name == experiment_name).unwrap();
+        let experiment_uuid = self.tasks[task_id].experiment_uuid.clone();
+        let experiment_index = self.experiments.iter().position(|experiment| experiment.experiment_uuid == experiment_uuid).unwrap();
+        let state_name_before = self.experiments[experiment_index].states[self.experiments[experiment_index].current_state_index].state_name.clone();
 
         self.delete_tasks_with_task_id(task_id);
         
@@ -225,6 +229,10 @@ impl OneMachineExperimentManager {
 
         // Execute one step
         let task = self.experiments[experiment_index].execute_one_step();
+
+        let state_name_after = self.experiments[experiment_index].states[self.experiments[experiment_index].current_state_index].state_name.clone();
+
+        eprintln!("State transition: {} => {} in experiment: {}, experiment_uuid: {}", state_name_before, state_name_after, experiment_name, experiment_uuid);
 
         // Add the task to the task list
         self.tasks.push(task);

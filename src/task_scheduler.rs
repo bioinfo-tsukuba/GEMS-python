@@ -38,6 +38,7 @@ pub(crate) mod one_machine_schedule_solver{
                 penalty_type: task.penalty_type,
                 experiment_operation: task.experiment_operation,
                 experiment_name: task.experiment_name,
+                experiment_uuid: task.experiment_uuid,
                 task_id: task.task_id,
             }));
         }
@@ -142,6 +143,7 @@ pub(crate) mod one_machine_schedule_solver{
                     penalty_type: PenaltyType::Linear(100),
                     experiment_operation: "A".to_string(),
                     experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
                     task_id: 0,
                 },
                 Task {
@@ -150,6 +152,7 @@ pub(crate) mod one_machine_schedule_solver{
                     penalty_type: PenaltyType::Linear(100),
                     experiment_operation: "A".to_string(),
                     experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
                     task_id: 1,
                 },
                 Task {
@@ -158,6 +161,7 @@ pub(crate) mod one_machine_schedule_solver{
                     penalty_type: PenaltyType::Linear(100),
                     experiment_operation: "A".to_string(),
                     experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
                     task_id: 2,
                 },
             ];
