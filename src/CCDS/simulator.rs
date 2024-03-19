@@ -146,6 +146,10 @@ impl SimpleTaskSimulator {
 
     /// The time unit is minute
     pub(crate) fn put_a_clock_forward(&self, time: i64) {
+        match time {
+            0.. => println!("put a clock forward: {} minutes", time),
+            _ => todo!("Found bug that causes the minus scheduled task!"),
+        }
         let mut global_time = get_current_absolute_time();
         global_time += time;
         overwrtite_global_time_manualy(global_time);

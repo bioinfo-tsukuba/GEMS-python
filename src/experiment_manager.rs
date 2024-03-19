@@ -228,13 +228,15 @@ impl OneMachineExperimentManager {
 
         // Add the task to the task list
         self.tasks.push(task);
+        self.assign_task_id();
 
-        // Reindex the tasks
+        // Reschedule
+        one_machine_schedule_solver::FIFO_scheduler_absolute(self.tasks.clone())
+    }
+
+    pub(crate) fn assign_task_id(&mut self) {
         for (index, task) in self.tasks.iter_mut().enumerate() {
             task.task_id = index;
         }
-
-        // Reschedule
-        one_machine_schedule_solver::FIFO_scheduler(self.tasks.clone())
     }
 }

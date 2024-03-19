@@ -222,12 +222,6 @@ pub(crate) fn output_json<T: Serialize>(output_fn: &str, written_struct: Vec<T>)
 pub(crate) fn overwrtite_global_time_manualy(current_time: i64){
     // Global time in the file, GLOBAL_TIME_PATH, is rewritten manually.
 
-    // Get the global time as i64
-    let global_time = fs::read_to_string(GLOBAL_TIME_PATH).unwrap();
-    println!("global time: {:?}", global_time);
-    let global_time: i64 = chrono::DateTime::parse_from_rfc3339(&global_time).unwrap().timestamp()/60;
-    println!("global time min: {:?}", global_time);
-    let elapsed_time = current_time - global_time;
 
     // current_time(i64, timestamp) -> chrono::DateTime
     let current_time = chrono::TimeZone::timestamp_opt(&chrono::Utc, current_time*60, 0);
@@ -237,7 +231,7 @@ pub(crate) fn overwrtite_global_time_manualy(current_time: i64){
 
     // Elapsed time
     
-    println!("Elapsed time: {}", elapsed_time);
+
 
     // Rewrite the global time
     let mut file = File::create(GLOBAL_TIME_PATH).unwrap();
@@ -248,7 +242,8 @@ pub(crate) fn overwrtite_global_time_manualy(current_time: i64){
 /// The time unit is minute
 pub(crate) fn get_current_absolute_time() -> i64 {
     let global_time = std::fs::read_to_string(GLOBAL_TIME_PATH).unwrap();
-    chrono::DateTime::parse_from_rfc3339(&global_time).unwrap().timestamp()/60
+    let global_time = chrono::DateTime::parse_from_rfc3339(&global_time).unwrap().timestamp()/60;
+    global_time
 }
 
 // Test
