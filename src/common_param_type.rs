@@ -4,7 +4,7 @@ use polars::{datatypes::DataType, df, frame::DataFrame, series::Series};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-pub static GLOBAL_TIME_PATH: &str = "/Users/yuyaarai/Downloads/ExperimentManagementSystem/testcase/global_time";
+pub static GLOBAL_TIME_PATH: &str = "testcase/global_time";
 
 // 共通のパラメータ型を定義
 pub type StateIndex = usize;
