@@ -73,7 +73,10 @@ pub(crate) mod one_machine_schedule_solver{
     }
 
 
-    /// The scheduler manage 
+    /// The scheduler manage the schedule task
+    /// Input: Task with "ABSOLUTE" optimal time
+    /// Output: Scheduled task with "ABSOLUTE" time
+    /// Note: The schedule must finish in Unit time(min)
     pub(crate) fn FIFO_scheduler_absolute(tasks: Vec<Task>) -> Vec<ScheduledTask> {
 
         let current_absolute_time = get_current_absolute_time();
