@@ -23,8 +23,9 @@ pub(crate) mod one_machine_schedule_solver{
     // Define the common parameter types
     use crate::common_param_type::*;
 
-    // Define the the simple task scheduler, FIFO
-    
+    /// The scheduler manage the schedule task
+    /// Input: Task with "RELATIVE" optimal time
+    /// Output: Scheduled task with "RELATIVE" time
     pub(crate) fn FIFO_scheduler_relative(tasks: Vec<Task>) -> Vec<ScheduledTask> {
         let mut scheduled_tasks: Vec<(usize, ScheduledTask)> = Vec::with_capacity(tasks.len());
 
@@ -69,6 +70,11 @@ pub(crate) mod one_machine_schedule_solver{
 
         let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|it| it.1).collect();
 
+        println!("scheduled_tasks (relative)");
+        for scheduled_task in &scheduled_tasks {
+            println!("{:?}", scheduled_task);
+        }
+
         scheduled_tasks
     }
 
@@ -89,9 +95,14 @@ pub(crate) mod one_machine_schedule_solver{
 
         let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
             task.optimal_timing = task.optimal_timing + current_absolute_time;
+            task.schedule_timing = task.schedule_timing + current_absolute_time;
             task
         }).collect();
 
+        println!("scheduled_tasks (absolute)");
+        for scheduled_task in &scheduled_tasks {
+            println!("{:?}", scheduled_task);
+        }
         scheduled_tasks
     }
 
@@ -108,6 +119,7 @@ pub(crate) mod one_machine_schedule_solver{
         let current_absolute_time = get_current_absolute_time();
 
         let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
+            task.optimal_timing = task.optimal_timing + current_absolute_time;
             task.schedule_timing = task.schedule_timing + current_absolute_time;
             task
         }).collect();
