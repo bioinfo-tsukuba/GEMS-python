@@ -525,7 +525,7 @@ mod tests{
     
     #[test]
     fn test_iPSs() {
-        // /Users/yuyaarai/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- CCDS::tests::test_iPSs --exact --nocapture
+        // /Users/yuyaarai/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_iPSs --exact --nocapture
         // /home/cab314/.cargo/bin/cargo test --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_iPSs --exact --nocapture 
         // Reset global time
         let global_time = 0;
