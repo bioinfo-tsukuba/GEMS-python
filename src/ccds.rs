@@ -10,11 +10,11 @@ use crate::experiment_manager::*;
 use crate::task_generator::TaskGenerator;
 use crate::transition_manager;
 use crate::transition_manager::TransitionManager;
-use crate::CCDS::logistic_estimator::calculate_logistic_inverse_binary_search;
-use crate::CCDS::logistic_estimator::calculate_logistic_inverse_function;
-use crate::CCDS::logistic_estimator::CellGrowthProblem;
-use crate::CCDS::simulator::*;
-use crate::CCDS::manager::*;
+use crate::ccds::logistic_estimator::calculate_logistic_inverse_binary_search;
+use crate::ccds::logistic_estimator::calculate_logistic_inverse_function;
+use crate::ccds::logistic_estimator::CellGrowthProblem;
+use crate::ccds::simulator::*;
+use crate::ccds::manager::*;
 
 
 pub(crate) static IPS_EXPERIMENT_NAME:&str = "IPS_CULTURE";
@@ -526,6 +526,7 @@ mod tests{
     #[test]
     fn test_iPSs() {
         // /Users/yuyaarai/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- CCDS::tests::test_iPSs --exact --nocapture
+        // /home/cab314/.cargo/bin/cargo test --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_iPSs --exact --nocapture 
         // Reset global time
         let global_time = 0;
         overwrtite_global_time_manualy(global_time);

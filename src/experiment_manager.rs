@@ -1,4 +1,4 @@
-use std::{error::Error, os::macos::raw::stat, path::{Path, PathBuf}, result};
+use std::{error::Error, path::{Path, PathBuf}, result};
 use crate::{common_param_type::{self, TaskId, TaskResult}, transition_manager, task_generator, task_scheduler::{self, one_machine_schedule_solver}};
 use polars::{functions::concat_df_diagonal, prelude::*};
 
