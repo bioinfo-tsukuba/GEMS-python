@@ -472,7 +472,7 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         Ok(NORMAL_CULTURE_PROCESSING_TIME[2]) 
     };
     let timing_function_state_2 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 24*60, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + 4*60, PenaltyType::Linear(1)))
     };
     let transition_func_state_2 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         // Get the latest density
