@@ -20,6 +20,10 @@
 /// Constraint1: the schedule timing of the next task must be equal to or greater than the schedule timing of the previous task.
 /// Let the schedule timing of the previous task be 'previous_schedule_timing' and the schedule timing of the next task be 'next_schedule_timing'.
 pub(crate) mod one_machine_schedule_solver{
+    use argmin::{core::CostFunction, solver::simulatedannealing::Anneal};
+    use polars::chunked_array::ops::sort;
+    use rand::{Rng, SeedableRng};
+
     // Define the common parameter types
     use crate::common_param_type::*;
 
@@ -126,6 +130,208 @@ pub(crate) mod one_machine_schedule_solver{
         }).collect();
 
         scheduled_tasks
+    }
+
+    /// The scheduler manage the schedule task
+    /// Input: Task with "ABSOLUTE" optimal time
+    /// Output: Scheduled task with "ABSOLUTE" time
+    /// Note: The schedule must finish in Unit time(min)
+    pub(crate) fn simulated_annealing_scheduler_absolute(tasks: Vec<Task>)-> Vec<ScheduledTask> {
+
+        let current_absolute_time = get_current_absolute_time();
+        let tasks: Vec<Task> = tasks.into_iter().map(|mut task| {
+            task.optimal_timing = task.optimal_timing - current_absolute_time;
+            task
+        }).collect();
+
+        let scheduled_tasks = simulated_annealing_scheduler_relative(tasks);
+
+        let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
+            task.optimal_timing = task.optimal_timing + current_absolute_time;
+            task.schedule_timing = task.schedule_timing + current_absolute_time;
+            task
+        }).collect();
+
+        println!("scheduled_tasks (absolute)");
+        for scheduled_task in &scheduled_tasks {
+            println!("{:?}", scheduled_task);
+        }
+        scheduled_tasks
+
+    }
+
+
+    /// The scheduler manage the schedule task
+    /// Input: Task with "RELATIVE" optimal time
+    /// Output: Scheduled task with "RELATIVE" time
+    pub(crate) fn simulated_annealing_scheduler_relative(tasks: Vec<Task>)-> Vec<ScheduledTask>{
+        struct TaskSASchedule {
+            /// The task
+            task: Vec<Task>,
+            /// lower bound of the task
+            lower_bound: Vec<ScheduleTiming>,
+            /// upper bound of the task
+            upper_bound: Vec<ScheduleTiming>,
+
+            /// Random number generator. We use a `Arc<Mutex<_>>` here because `Anneal` requires
+            /// `self` to be passed as an immutable reference. This gives us thread safe interior
+            /// mutability.
+            rng: std::sync::Arc<std::sync::Mutex<rand_xoshiro::Xoshiro256PlusPlus>>,
+        }
+
+        impl TaskSASchedule {
+            /// Create a new `TaskSASchedule` instance.
+            fn new(task: Vec<Task>, lower_bound: Vec<ScheduleTiming>, upper_bound: Vec<ScheduleTiming>) -> Self {
+                Self {
+                    task,
+                    lower_bound,
+                    upper_bound,
+                    rng: std::sync::Arc::new(std::sync::Mutex::new(rand_xoshiro::Xoshiro256PlusPlus::from_entropy())),
+                }
+            }
+        }
+
+        impl CostFunction for TaskSASchedule{
+            type Param = Vec<ScheduleTiming>;
+            type Output = f64;
+
+            fn cost(&self, param: &Self::Param) -> Result<Self::Output, argmin::core::Error> {
+                let mut cost :PenaltyParameter = 0;
+                for (index, task) in self.task.iter().enumerate() {
+                    let schedule_timing = param[index];
+                    let penalty = task.penalty_type.get_penalty(schedule_timing-task.optimal_timing);
+                    if penalty < 0 {
+                        panic!("Penalty must be greater than or equal to 0")
+                    }
+                    cost += penalty;
+                }
+
+                // Overlapping penalty
+                let mut sorted_tasks = param.iter().enumerate().collect::<Vec<_>>();
+                sorted_tasks.sort_by(|a, b| a.1.cmp(b.1));
+                for i in 0..sorted_tasks.len()-1 {
+                    let task1 = &self.task[sorted_tasks[i].0];
+                    let task2 = &self.task[sorted_tasks[i+1].0];
+                    let schedule_timing1 = sorted_tasks[i].1;
+                    let schedule_timing2 = sorted_tasks[i+1].1;
+                    let overlap = schedule_timing1+task1.processing_time-schedule_timing2;
+                    if overlap > 0 {
+                        cost += overlap * 100000;
+                    }
+                }
+                Ok(cost as f64)
+            }
+        }
+
+        impl Anneal for TaskSASchedule {
+            type Param = Vec<ScheduleTiming>;
+            type Output = Vec<ScheduleTiming>;
+            type Float = f64;
+
+            /// Anneal a parameter vector
+            fn anneal(&self, param: &Self::Param, temp: Self::Float) -> Result<Self::Param, argmin::core::Error> {
+                let mut param_n = param.clone();
+                let mut rng = self.rng.lock().unwrap();
+                let distr = rand::distributions::Uniform::from(0..param.len());
+
+                // println!("Temp: {}", temp);
+                // Perform modifications to a degree proportional to the current temperature `temp`.
+                for _ in 0..(temp.floor() as u64 + 1){
+                    // Compute random index of the parameter vector using the supplied random number
+                    // generator.
+                    let idx = rng.sample(distr);
+
+                    // Compute random number in [0.1, 0.1].
+                    let val = rng.sample(rand::distributions::Uniform::new_inclusive(-100, 100));
+
+                    // modify previous parameter value at random position `idx` by `val`
+                    param_n[idx] += val;
+
+                    // check if bounds are violated. If yes, project onto bound.
+                    param_n[idx] = param_n[idx].clamp(self.lower_bound[idx], self.upper_bound[idx]);
+                }
+                Ok(param_n)
+            }
+        }
+        fn initialise_param(tasks: Vec<Task>) -> Vec<ScheduleTiming> {
+            let mut ordered_tasks = tasks;
+            ordered_tasks.sort_by(|a, b| a.optimal_timing.cmp(&b.optimal_timing));
+            let mut previous_release_timing = 0;
+            let mut param = Vec::with_capacity(ordered_tasks.len());
+            for task in ordered_tasks {
+                let schedule_timing = previous_release_timing.max(task.optimal_timing);
+                param.push(schedule_timing);
+                previous_release_timing = schedule_timing + task.processing_time;
+            }
+            param
+        }
+
+        let lower_bound: Vec<ScheduleTiming> = tasks.iter().map(|task| (task.optimal_timing-1000).max(0)).collect();
+        let upper_bound: Vec<ScheduleTiming> = tasks.iter().map(|task| task.optimal_timing+1000).collect();
+
+        // Define the initial parameter
+        let init_param: Vec<ScheduleTiming> = initialise_param(tasks.clone());
+
+        // Define the initial temperature
+        let temp = (tasks.len()*2) as f64;
+
+        // Define the cost function
+        let operator = TaskSASchedule::new(tasks.clone(), lower_bound, upper_bound);
+
+        
+        let solver = argmin::solver::simulatedannealing::SimulatedAnnealing::new(temp).unwrap()
+            // Optional: Define temperature function (defaults to `SATempFunc::TemperatureFast`)
+            .with_temp_func(argmin::solver::simulatedannealing::SATempFunc::Boltzmann)
+            /////////////////////////
+            // Stopping criteria   //
+            /////////////////////////
+            // Optional: stop if there was no new best solution after 1000 iterations
+            .with_stall_best(1000)
+            // Optional: stop if there was no accepted solution after 1000 iterations
+            .with_stall_accepted(1000)
+            /////////////////////////
+            // Reannealing         //
+            /////////////////////////
+            // Optional: Reanneal after 1000 iterations (resets temperature to initial temperature)
+            .with_reannealing_fixed(1000)
+            // Optional: Reanneal after no accepted solution has been found for `iter` iterations
+            .with_reannealing_accepted(500)
+            // Optional: Start reannealing after no new best solution has been found for 800 iterations
+            .with_reannealing_best(800);
+
+            /////////////////////////
+            // Run solver          //
+            /////////////////////////
+        let res = argmin::core::Executor::new(operator, solver)
+            .configure(|state| {
+                state
+                    .param(init_param)
+                    // Optional: Set maximum number of iterations (defaults to `std::u64::MAX`)
+                    .max_iters(10_000)
+                    // Optional: Set target cost function value (defaults to `std::f64::NEG_INFINITY`)
+                    .target_cost(0.0)
+            })
+            // Optional: Attach a observer
+            // .add_observer(argmin::core::observers::SlogLogger::term(), argmin::core::observers::ObserverMode::Always)
+            .run().unwrap();
+
+        // Print result
+        println!("Simulated Annealing Result: {}", res);
+        let best_param = res.state.best_param.unwrap();
+
+        tasks.into_iter().enumerate().map(|(index, task)| {
+            ScheduledTask {
+                schedule_timing: best_param[index],
+                optimal_timing: task.optimal_timing,
+                processing_time: task.processing_time,
+                penalty_type: task.penalty_type,
+                experiment_operation: task.experiment_operation,
+                experiment_name: task.experiment_name,
+                experiment_uuid: task.experiment_uuid,
+                task_id: task.task_id,
+            }
+        }).collect()
+
     }
     
 

@@ -12,6 +12,8 @@ dependencies = [
  "chrono",
  "csv",
  "polars",
+ "rand",
+ "rand_xoshiro",
  "regex",
  "serde",
  "serde_json",

@@ -18,6 +18,9 @@ argmin_testfunctions = "0.1.1"
 
 chrono = { version = "0.4", features = ["serde"] }
 
+rand = "0.8.5"
+rand_xoshiro = "0.6.0"
+
 [dependencies.uuid]
 version = "1.7.0"
 features = [

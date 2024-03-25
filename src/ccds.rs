@@ -562,7 +562,7 @@ mod tests{
     use super::*;
 
 
-    fn run_simulation(schedule_task: Vec<ScheduledTask> , schedule: OneMachineExperimentManager, maholo_simulator: Vec<Simulator>, loop_num: usize, dir: &Path){
+    fn run_simulation_SA(schedule_task: Vec<ScheduledTask> , schedule: OneMachineExperimentManager, maholo_simulator: Vec<Simulator>, loop_num: usize, dir: &Path){
         let mut schedule_task = schedule_task;
         let mut schedule = schedule;
         let mut maholo_simulator = maholo_simulator;
@@ -582,7 +582,84 @@ mod tests{
             .process_earliest_task(&schedule, &mut maholo_simulator);
 
             println!("task_id: {}, new_result_of_experiment: {:?}, update_type: {}", task_id, new_result_of_experiment, update_type);
-            schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type);
+            schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type, 's');
+            
+
+
+            // for task_id in earliest_task_ids{
+            //     let new_result_of_experiment = match df!("density" => [0.6], "time" => [6+step]) {
+            //         Ok(it) => it,
+            //         Err(err) => panic!("{}", err),
+            //     };
+                
+            // }
+            
+            println!("simulate: schedule.tasks");
+            for task in &schedule_task{
+                println!("{:?}", task);
+            }
+            schedule.experiments[0].show_current_state_name();
+
+            // create csv of the shared_variable_history as dir/step_{}.csv
+            let mut file = std::fs::File::create(&step_dir.join("shared_variable_history.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut schedule.experiments[0].shared_variable_history)
+                .unwrap();
+
+            let schedule_path = step_dir.join("schedule.csv");
+            match scheduled_task_convert_to_csv(&schedule_path, &schedule_task) {
+                Ok(_) => (),
+                Err(err) => panic!("{}", err),
+            }
+            schedule_task = read_scheduled_task(&schedule_path).unwrap();
+            schedule.show_experiment_names_and_state_names();
+        }
+
+        // Save the simulation result df
+        for experiment_index in 0..schedule.experiments.len(){
+            let mut experiment = &mut schedule.experiments[experiment_index];
+            let name = experiment.experiment_name.clone();
+            // Make the directory
+            let dir = dir.join(name);
+            match create_dir(&dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+            let mut file = std::fs::File::create(dir.join("simulation_result.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut experiment.shared_variable_history)
+                .unwrap();
+            let mut file = std::fs::File::create(dir.join("simulator_result.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut maholo_simulator[experiment_index].cell_history().clone())
+                .unwrap();    
+        }
+        
+         
+    }
+
+
+    fn run_simulation_fifo(schedule_task: Vec<ScheduledTask> , schedule: OneMachineExperimentManager, maholo_simulator: Vec<Simulator>, loop_num: usize, dir: &Path){
+        let mut schedule_task = schedule_task;
+        let mut schedule = schedule;
+        let mut maholo_simulator = maholo_simulator;
+        println!("Test the simulator --------------------------\n\n");
+        for step in 0..loop_num {
+            println!("step: {}=================", step);
+
+            let step_dir = dir.join(format!("step_{}", step));
+
+            match create_dir(&step_dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+
+            // // Get the earliest task
+            let (task_id, new_result_of_experiment, update_type) = SimpleTaskSimulator::new(schedule_task.clone())
+            .process_earliest_task(&schedule, &mut maholo_simulator);
+
+            println!("task_id: {}, new_result_of_experiment: {:?}, update_type: {}", task_id, new_result_of_experiment, update_type);
+            schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type, 'f');
             
 
 
@@ -639,17 +716,126 @@ mod tests{
     }
 
     #[test]
-    fn test_iPS_normal_mixed() {
+    fn test_iPS_normal_mixed_SA() {
+        //  time /Users/yuyaarai/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_iPS_normal_mixed --exact --nocapture > testcase/aaa.txt
         // Reset global time
         let global_time = 0;
         overwrtite_global_time_manualy(global_time);
 
 
-        let ips_num = 1;
-        let normal_num = 1;
+        let ips_num = 5;
+        let normal_num = 5;
         let all_num = ips_num + normal_num;
 
-        let dir = Path::new("testcase/volatile/mix");
+        let dir = Path::new("testcase/volatile/mix/SA");
+        match create_dir_all(&dir){
+            Ok(_) => (),
+            Err(err) => println!("{}", err),
+        }
+
+        let mut schedule = OneMachineExperimentManager::new(
+            Vec::with_capacity(all_num),
+            Vec::with_capacity(all_num),
+            PathBuf::new(),
+        );
+
+        for i in 0..ips_num{
+
+            // Define the transition functions
+            let states = iPS_culture_experiment_states();
+            let shared_variable_history = df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "operation" => ["PASSAGE"],
+                "error" => [false]
+            ).unwrap();
+            let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+            let mut cell_culture_experiment = Experiment::new(
+                format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
+                states,
+                2,
+                shared_variable_history,
+            );
+
+            let new_task = cell_culture_experiment.generate_task_of_the_state();
+            schedule.experiments.push(cell_culture_experiment);
+            schedule.tasks.push(new_task);
+        }
+
+        let initial_df = match df!(
+            "density" => [0.05], 
+            "time" => [0.0],
+            "tag" => ["PASSAGE"]
+        ) {
+            Ok(it) => it,
+            Err(err) => panic!("{}", err),
+        };
+        let mut maholo_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)); ips_num];
+
+        for i in 0..normal_num{
+
+            // Define the transition functions
+            let states = normal_culture_experiment_states();
+            let shared_variable_history = df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "tag" => ["PASSAGE"]
+            ).unwrap();
+            let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+            let mut cell_culture_experiment = Experiment::new(
+                format!("{}_{}", NORMAL_EXPERIMENT_NAME.to_string(), i),
+                states,
+                2,
+                shared_variable_history,
+            );
+
+            let new_task = cell_culture_experiment.generate_task_of_the_state();
+            schedule.experiments.push(cell_culture_experiment);
+            schedule.tasks.push(new_task);
+        }
+
+        let initial_df = match df!(
+            "density" => [0.05], 
+            "time" => [0.0],
+            "tag" => ["PASSAGE"]
+        ) {
+            Ok(it) => it,
+            Err(err) => panic!("{}", err),
+        };
+        let mut maholo_simulator2 = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.0012, 0.05, 1.0, 0.05)); normal_num];
+        maholo_simulator.append(&mut maholo_simulator2);
+
+
+        schedule.show_experiment_names_and_state_names();
+        // unimplemented!("Implement the FIFO_scheduler");
+        println!("tasks: {:?}", schedule.tasks);
+        schedule.assign_task_id();
+        println!("tasks with assigned task id: {:?}", schedule.tasks);
+        let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(schedule.tasks.clone());
+        println!("schedule_task:");
+        for task in &schedule_task{
+            println!("{:?}", task);
+        }
+        // std::thread::sleep(std::time::Duration::from_secs(1000));
+        run_simulation_SA(schedule_task, schedule, maholo_simulator, 1000, dir);
+
+
+
+    }
+
+    #[test]
+    fn test_iPS_normal_mixed_FIFO() {
+        //  time /Users/yuyaarai/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_iPS_normal_mixed --exact --nocapture > testcase/aaa.txt
+        // Reset global time
+        let global_time = 0;
+        overwrtite_global_time_manualy(global_time);
+
+
+        let ips_num = 5;
+        let normal_num = 5;
+        let all_num = ips_num + normal_num;
+
+        let dir = Path::new("testcase/volatile/mix/FIFO");
         match create_dir_all(&dir){
             Ok(_) => (),
             Err(err) => println!("{}", err),
@@ -739,7 +925,7 @@ mod tests{
             println!("{:?}", task);
         }
         // std::thread::sleep(std::time::Duration::from_secs(1000));
-        run_simulation(schedule_task, schedule, maholo_simulator, 1000, dir);
+        run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
 
 
 
@@ -816,7 +1002,7 @@ mod tests{
             println!("{:?}", task);
         }
         // std::thread::sleep(std::time::Duration::from_secs(1000));
-        run_simulation(schedule_task, schedule, maholo_simulator, 1000, dir);
+        run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
 
 
 
@@ -899,7 +1085,7 @@ mod tests{
             .process_earliest_task(&schedule, &mut maholo_simulator);
 
             println!("task_id: {}, new_result_of_experiment: {:?}, update_type: {}", task_id, new_result_of_experiment, update_type);
-            schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type);
+            schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type, 'f');
             
 
 
@@ -1092,7 +1278,7 @@ mod tests{
             Err(err) => panic!("{}", err),
         };
 
-        let mut schedule_task = schedule.update_state_and_reschedule(0, new_result_of_experiment, 'a');
+        let mut schedule_task = schedule.update_state_and_reschedule(0, new_result_of_experiment, 'a', 'f');
         println!("schedule.tasks: {:?}", schedule.tasks);
 
         println!("Test the simulator --------------------------\n\n");

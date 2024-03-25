@@ -121,10 +121,12 @@ pub enum PenaltyType {
 }
 
 impl PenaltyType {
+    /// Get the penalty
+    /// diff: ScheduleTiming - OptimalTiming
     pub fn get_penalty(&self, diff:PenaltyParameter ) -> PenaltyParameter {
         match self {
             PenaltyType::None => 0,
-            PenaltyType::Linear(coefficient) => diff * coefficient,
+            PenaltyType::Linear(coefficient) => diff.abs() * coefficient,
             PenaltyType::LinearWithRange(lower, lower_coefficient, upper, upper_coefficient) => {
                 if &diff < lower {
                     (lower-diff) * lower_coefficient

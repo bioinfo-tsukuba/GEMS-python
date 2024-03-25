@@ -196,11 +196,13 @@ impl OneMachineExperimentManager {
 
     /// Update the state and reschedule
     /// update_type: 'a' for add, 'w' for replace
+    /// scheduling_method: 's' for simulated annealing, 'f' for FIFO
     pub(crate) fn update_state_and_reschedule(
         &mut self, 
         task_id: TaskId,
         new_result_of_experiment: TaskResult,
         update_type: char,
+        scheduling_method: char,
     ) -> Vec<common_param_type::ScheduledTask> {
 
         let experiment_name = self.tasks[task_id].experiment_name.clone();
@@ -239,7 +241,18 @@ impl OneMachineExperimentManager {
         self.assign_task_id();
 
         // Reschedule
-        one_machine_schedule_solver::FIFO_scheduler_absolute(self.tasks.clone())
+        match scheduling_method {
+            's' => {
+                // Absolute scheduling
+                crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(self.tasks.clone())
+            },
+            'f' => {
+                // Relative scheduling
+                crate::task_scheduler::one_machine_schedule_solver::FIFO_scheduler_absolute(self.tasks.clone())
+            },
+            _ => panic!("The scheduling method is not supported."),
+            
+        }
     }
 
     pub(crate) fn assign_task_id(&mut self) {
