@@ -5,6 +5,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 pub static GLOBAL_TIME_PATH: &str = "testcase/global_time";
+pub static RESULT_PATH: &str = "/data01/cab314/GEMS";
 
 // 共通のパラメータ型を定義
 pub type StateIndex = usize;

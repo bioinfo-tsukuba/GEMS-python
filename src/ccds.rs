@@ -727,7 +727,9 @@ mod tests{
         let normal_num = 5;
         let all_num = ips_num + normal_num;
 
-        let dir = Path::new("testcase/volatile/mix/SA");
+        let dir = Path::new(RESULT_PATH);
+        let dir = &dir.join("2024-03-26/sa_vs_fifo/mix/SA");
+        println!("dir: {:?}", dir);
         match create_dir_all(&dir){
             Ok(_) => (),
             Err(err) => println!("{}", err),
@@ -835,7 +837,8 @@ mod tests{
         let normal_num = 5;
         let all_num = ips_num + normal_num;
 
-        let dir = Path::new("testcase/volatile/mix/FIFO");
+        let dir = Path::new(RESULT_PATH);
+        let dir = &dir.join("2024-03-26/sa_vs_fifo/mix/FIFO");
         match create_dir_all(&dir){
             Ok(_) => (),
             Err(err) => println!("{}", err),
