@@ -336,7 +336,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         let reach_time = reach_time.round() as common_param_type::OptimalTiming;
         
         if reach_time - current_time < 48*60 {
-            Ok((reach_time - 4*60, PenaltyType::Linear(1)))
+            Ok((reach_time - 4*60, PenaltyType::LinearWithRange(0, 100, 0, 100)))
         } else {
             panic!()
         }
