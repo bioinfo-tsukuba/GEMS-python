@@ -213,9 +213,6 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
             _ => return Ok(5),
         };
 
-    // DEBUG
-    println!("debug point 1");
-
         let best = res.state();
         let best = argmin::core::State::get_best_param(best).unwrap();
         eprintln!("best params MEDIUM CHANGE 2: {:?}", best);

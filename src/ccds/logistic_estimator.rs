@@ -78,8 +78,6 @@ impl MyProblem {
         .filter(col(time_col_name).is_not_null().and(col(cell_count_col_name).is_not_null()))
         .collect()?;
 
-    // DEBUG
-    eprintln!("filtered_df: {:?}", filtered_df);
         
         let cell_growth_history: Vec<CellGrowthHistory> = filtered_df
         .column(time_col_name)?.f64()?
@@ -91,8 +89,6 @@ impl MyProblem {
         })
         .collect();
 
-    // DEBUG
-    eprintln!("cell_growth_history: {:?}", cell_growth_history);
         Ok(Self { history: cell_growth_history })
     }
 
