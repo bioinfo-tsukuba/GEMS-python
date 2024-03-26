@@ -1,4 +1,4 @@
 /target
 /testcase/*
-/testcase
 .DS_Store
+!/testcase/global_time
