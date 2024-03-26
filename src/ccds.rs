@@ -67,7 +67,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[1]) 
     };
     let timing_function_state_1 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 4 * 60, PenaltyType::LinearWithRange(0, 100, 0, 1)))
+        Ok((get_current_absolute_time() + 4 * 60, PenaltyType::LinearWithRange(0, 100, 0, 100)))
     };
     let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         Ok(2)  
@@ -336,7 +336,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         let reach_time = reach_time.round() as common_param_type::OptimalTiming;
         
         if reach_time - current_time < 48*60 {
-            Ok((reach_time - 4*60, PenaltyType::LinearWithRange(0, 200, 0, 200)))
+            Ok((reach_time - 4*60, PenaltyType::Linear(1)))
         } else {
             panic!()
         }
@@ -714,6 +714,104 @@ mod tests{
         
          
     }
+
+
+    #[test]
+    fn test_iPS_SA_vs_FIFO() {
+        //  time /Users/yuyaarai/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_iPS_normal_mixed --exact --nocapture > testcase/aaa.txt
+        // Reset global time
+
+        let patterns = ["SA", "FIFO"];
+        let sim_num = 10;
+        for pattern in patterns.iter(){
+            for i in 0..sim_num{
+                let global_time = 0;
+                overwrtite_global_time_manualy(global_time);
+
+
+                let ips_num = 10;
+
+                let dir = Path::new(RESULT_PATH);
+                let dir = &dir.join("2024-03-26/sa_vs_fifo/ips").join(pattern).join(format!("sim_{}", i));
+                println!("dir: {:?}", dir);
+                match create_dir_all(&dir){
+                    Ok(_) => (),
+                    Err(err) => println!("{}", err),
+                }
+
+                let mut schedule = OneMachineExperimentManager::new(
+                    Vec::with_capacity(ips_num),
+                    Vec::with_capacity(ips_num),
+                    PathBuf::new(),
+                );
+
+                for i in 0..ips_num{
+
+                    // Define the transition functions
+                    let states = iPS_culture_experiment_states();
+                    let shared_variable_history = df!(
+                        "density" => [0.05], 
+                        "time" => [0.0],
+                        "operation" => ["PASSAGE"],
+                        "error" => [false]
+                    ).unwrap();
+                    let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                    let mut cell_culture_experiment = Experiment::new(
+                        format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
+                        states,
+                        2,
+                        shared_variable_history,
+                    );
+
+                    let new_task = cell_culture_experiment.generate_task_of_the_state();
+                    schedule.experiments.push(cell_culture_experiment);
+                    schedule.tasks.push(new_task);
+                }
+
+                let initial_df = match df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ) {
+                    Ok(it) => it,
+                    Err(err) => panic!("{}", err),
+                };
+                let mut maholo_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)); ips_num];
+
+                schedule.show_experiment_names_and_state_names();
+                // unimplemented!("Implement the FIFO_scheduler");
+                println!("tasks: {:?}", schedule.tasks);
+                schedule.assign_task_id();
+                println!("tasks with assigned task id: {:?}", schedule.tasks);
+                match pattern {
+                    &"SA" => {
+                        let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(schedule.tasks.clone());
+                        println!("schedule_task:");
+                        for task in &schedule_task{
+                            println!("{:?}", task);
+                        }
+                        // std::thread::sleep(std::time::Duration::from_secs(1000));
+                        run_simulation_SA(schedule_task, schedule, maholo_simulator, 1000, dir);
+                    },
+                    &"FIFO" => {
+                        let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::FIFO_scheduler_absolute(schedule.tasks.clone());
+                        println!("schedule_task:");
+                        for task in &schedule_task{
+                            println!("{:?}", task);
+                        }
+                        // std::thread::sleep(std::time::Duration::from_secs(1000));
+                        run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
+                    },
+                    _ => panic!(),
+            }
+        }
+
+
+
+
+
+    }
+}
 
     #[test]
     fn test_iPS_normal_mixed_SA() {
