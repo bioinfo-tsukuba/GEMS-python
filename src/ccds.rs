@@ -55,10 +55,10 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[0]) 
     };
     let timing_function_state_0 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 0, PenaltyType::None)) // ここでは単純化のため、常に1を返す
+        Ok((get_current_absolute_time() + 0, PenaltyType::None))  
     };
     let transition_func_state_0 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-        Ok(0) // ここでは単純化のため、常に1を返す
+        Ok(0)  
     };
 
     // PASSAGE
@@ -70,7 +70,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok((get_current_absolute_time() + 4 * 60, PenaltyType::LinearWithRange(0, 100, 0, 1)))
     };
     let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-        Ok(2) // ここでは単純化のため、常に1を返す
+        Ok(2)  
     };
 
     // GET_IMAGE_1
@@ -123,7 +123,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok((get_current_absolute_time() + 48 * 60, PenaltyType::Linear(1)))
     };
     let transition_func_state_3 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-        Ok(4) // ここでは単純化のため、常に1を返す
+        Ok(4)  
     };
 
 
@@ -245,7 +245,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok((get_current_absolute_time() + 24 * 60, PenaltyType::Linear(1)))
     };
     let transition_func_state_5 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-        Ok(4) // ここでは単純化のため、常に1を返す
+        Ok(4)  
     };
 
     // PLATE_COATING
@@ -448,10 +448,10 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         Ok(NORMAL_CULTURE_PROCESSING_TIME[0]) 
     };
     let timing_function_state_0 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 0, PenaltyType::None)) // ここでは単純化のため、常に1を返す
+        Ok((get_current_absolute_time() + 0, PenaltyType::None))  
     };
     let transition_func_state_0 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-        Ok(0) // ここでは単純化のため、常に1を返す
+        Ok(0)  
     };
 
     // PASSAGE
@@ -463,7 +463,7 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         Ok((get_current_absolute_time() + 0, PenaltyType::Linear(1)))
     };
     let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-        Ok(2) // ここでは単純化のため、常に1を返す
+        Ok(2)  
     };
 
     // GET_IMAGE_1
@@ -1149,31 +1149,31 @@ mod tests{
         // Define the transition functions
         let experiment_operation_state_0 = "Expire".to_string();
         let processing_time_function_state_0 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
-            Ok(10) // ここでは単純化のため、常に1を返す
+            Ok(10)  
         };
         let timing_function_state_0 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-            Ok((0, PenaltyType::None)) // ここでは単純化のため、常に1を返す
+            Ok((0, PenaltyType::None))  
         };
         let transition_func_state_0 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-            Ok(0) // ここでは単純化のため、常に1を返す
+            Ok(0)  
         };
     
 
         let experiment_operation_state_1 = "PASSAGE".to_string();
         let processing_time_function_state_1 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
-            Ok(10) // ここでは単純化のため、常に1を返す
+            Ok(10)  
         };
         let timing_function_state_1 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-            Ok((0, PenaltyType::Linear(1))) // ここでは単純化のため、常に1を返す
+            Ok((0, PenaltyType::Linear(1)))  
         };
         let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-            Ok(2) // ここでは単純化のため、常に1を返す
+            Ok(2)  
         };
 
 
         let experiment_operation_state_2 = "GET_IMAGE".to_string();
         let processing_time_function_state_2 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
-            Ok(10) // ここでは単純化のため、常に1を返す
+            Ok(10)  
         };
         let timing_function_state_2 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
             Ok((24*60, PenaltyType::Linear(1)))
