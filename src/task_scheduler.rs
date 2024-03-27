@@ -267,7 +267,7 @@ pub(crate) mod one_machine_schedule_solver{
         }
 
         let lower_bound: Vec<ScheduleTiming> = tasks.iter().map(|task| (task.optimal_timing-1000).max(0)).collect();
-        let upper_bound: Vec<ScheduleTiming> = tasks.iter().map(|task| task.optimal_timing+1000).collect();
+        let upper_bound: Vec<ScheduleTiming> = tasks.iter().map(|task| (task.optimal_timing+1000).max(0)).collect();
 
         // Define the initial parameter
         let init_param: Vec<ScheduleTiming> = initialise_param(tasks.clone());
