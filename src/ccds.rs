@@ -16,6 +16,9 @@ use crate::ccds::logistic_estimator::CellGrowthProblem;
 use crate::ccds::simulator::*;
 use crate::ccds::manager::*;
 
+pub(crate) const IPS_OPERATION_INTERVAL: i64 = 24*60;
+pub(crate) const NORMAL_CELL_OPERATION_INTERVAL: i64 = 4*60;
+
 
 pub(crate) static IPS_EXPERIMENT_NAME:&str = "IPS_CULTURE";
 
@@ -79,7 +82,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[2]) 
     };
     let timing_function_state_2 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 24*60, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + IPS_OPERATION_INTERVAL/*replace for search:GET_IMAGE_1;ips*/, PenaltyType::Linear(1)))
     };
     let transition_func_state_2 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
@@ -134,7 +137,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[4])
     };
     let timing_function_state_4 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 24*60, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + 0/*replace for search:GET_IMAGE_2;ips*/, PenaltyType::Linear(1)))
     };
     let transition_func_state_4 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
@@ -226,7 +229,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         // Round the reach_time to the nearest integer
         let reach_time = (reach_time - current_time).round() as i64;
         
-        if reach_time < 48*60 {
+        if reach_time < IPS_OPERATION_INTERVAL*2 {
             Ok(6)
         } else {
             Ok(5)
@@ -234,19 +237,19 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
     };
 
     // MEDIUM_CHANGE_2
-    let experiment_operation_state_5 = IPS_CULTURE_STATE_NAMES[3].to_string();
+    let experiment_operation_state_5 = IPS_CULTURE_STATE_NAMES[5].to_string();
     let processing_time_function_state_5 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
         Ok(IPS_CULTURE_PROCESSING_TIME[5])
     };
     let timing_function_state_5 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 24 * 60, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + IPS_OPERATION_INTERVAL, PenaltyType::Linear(1)))
     };
     let transition_func_state_5 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         Ok(4)  
     };
 
     // PLATE_COATING
-    let experiment_operation_state_6 = IPS_CULTURE_STATE_NAMES[5].to_string();
+    let experiment_operation_state_6 = IPS_CULTURE_STATE_NAMES[6].to_string();
     let processing_time_function_state_6 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
         Ok(IPS_CULTURE_PROCESSING_TIME[6])
     };
@@ -332,7 +335,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         // Round the reach_time to the nearest integer
         let reach_time = reach_time.round() as common_param_type::OptimalTiming;
         
-        if reach_time - current_time < 48*60 {
+        if reach_time - current_time < IPS_OPERATION_INTERVAL {
             Ok((reach_time - 4*60, PenaltyType::LinearWithRange(0, 100, 0, 100)))
         } else {
             panic!()
@@ -457,7 +460,92 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         Ok(NORMAL_CULTURE_PROCESSING_TIME[1]) 
     };
     let timing_function_state_1 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 0, PenaltyType::Linear(1)))
+
+        // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
+
+        // sort the variable_history by "time", then get the latest density named "latest_density"
+        let q = variable_history
+            .clone()
+            .lazy()
+            .filter(
+                col("time").is_not_null()
+                .and(col("density").is_not_null())
+            )
+            ;
+        let df = q.collect().unwrap();
+
+        // Sort by time with operation == "PASSAGE"
+        let latest_passage_time = df
+            .clone()
+            .lazy()
+            .filter(
+                col("operation").eq(lit("PASSAGE"))
+            )
+            .sort("time", 
+            SortOptions {
+                descending: true,
+                nulls_last: false,
+                multithreaded: false,
+                maintain_order: false,
+                }
+            )
+            .select([col("time")]);
+        let latest_passage_time = latest_passage_time.collect().unwrap();
+        let latest_passage_time = latest_passage_time.column("time")?.iter().nth(0);
+        let latest_passage_time = match latest_passage_time{
+            Some(it) => it.try_extract::<f64>()?,
+            None => 0 as f64,
+        };
+
+        // Filter the all time > latest_passage_time and shift - latest_passage_time
+        let df = df
+            .clone()
+            .lazy()
+            .filter(
+                col("time").gt_eq(latest_passage_time)
+            )
+            .with_columns(
+                [
+                    (col("time") - lit(latest_passage_time)).alias("time"),
+                ]
+            )
+            .select([col("time").cast(DataType::Float64), col("density")]);
+
+        let df = df.collect().unwrap();
+        eprintln!("Passage clipped df: {:?}", df);
+
+
+        let problem = CellGrowthProblem::new_from_df(df, "time", "density").unwrap();
+        let init_param = problem.default_parameter()?;
+        // Using Nelder-Mead
+        let solver = NelderMead::new(init_param);
+        
+        // Create an `Executor` object 
+        let res = Executor::new(problem, solver)
+        .configure(|state|
+            state
+                .max_iters(1000)
+                .target_cost(0.0)
+        )
+        .run()?;
+        let best = res.state();
+        let best = argmin::core::State::get_best_param(best).unwrap();
+        eprintln!("best params PLATE COATING: {:?}", best);
+        
+        let reach_time = calculate_logistic_inverse_function(0.3, best[0], best[1], best[2]);
+        let reach_time = reach_time + latest_passage_time;
+        eprintln!("estimated reach_time: {}", reach_time);
+
+        let current_time = get_current_absolute_time();
+
+        // Round the reach_time to the nearest integer
+        let reach_time = reach_time.round() as common_param_type::OptimalTiming;
+        
+        if reach_time - current_time < NORMAL_CELL_OPERATION_INTERVAL*2 {
+            Ok((reach_time, PenaltyType::Linear(1)))
+        } else {
+            panic!()
+        }
     };
     let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         Ok(2)  
@@ -469,16 +557,31 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         Ok(NORMAL_CULTURE_PROCESSING_TIME[2]) 
     };
     let timing_function_state_2 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 4*60, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + NORMAL_CELL_OPERATION_INTERVAL/*replace for search:GET_IMAGE_1;normalcell*/, PenaltyType::Linear(1)))
     };
     let transition_func_state_2 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
-        // Get the latest density
-        // If the latest density ("time" = max(time)) is less than 0.7, MediumChange, otherwise, Passage
+       // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
 
         // sort the variable_history by "time", then get the latest density named "latest_density"
+        // Convert time (sec) to time (min)
         let q = variable_history
             .clone()
             .lazy()
+            .filter(
+                col("time").is_not_null()
+                .and(col("density").is_not_null())
+            )
+            ;
+        let df = q.collect().unwrap();
+        
+
+        // Sort by time with operation == "PASSAGE"
+        let latest_passage_time = df
+            .clone()
+            .lazy()
+            .filter(
+                col("operation").eq(lit("PASSAGE"))
+            )
             .sort("time", 
             SortOptions {
                 descending: true,
@@ -487,19 +590,69 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
                 maintain_order: false,
                 }
             )
-            .select([col("density")])
-            ;
-        let latest_density = q.collect().unwrap();
-        let latest_density = latest_density.column("density").unwrap().get(0).unwrap();
-        let latest_density = match latest_density{
-            AnyValue::Float64(it) => it,
-            _ => panic!("unexpected type"),
+            .select([col("time")]);
+        let latest_passage_time = latest_passage_time.collect().unwrap();
+        let latest_passage_time = latest_passage_time.column("time")?.iter().nth(0);
+        let latest_passage_time = match latest_passage_time{
+            Some(it) => it.try_extract::<f64>()?,
+            None => 0 as f64,
         };
 
-        if latest_density < 0.7 {
-            Ok(2)
-        } else {
+        // Filter the all time > latest_passage_time and shift - latest_passage_time
+        let df = df
+            .clone()
+            .lazy()
+            .filter(
+                col("time").gt_eq(latest_passage_time)
+            )
+            .with_columns(
+                [
+                    (col("time") - lit(latest_passage_time)).alias("time"),
+                ]
+            )
+            .select([col("time").cast(DataType::Float64), col("density")]);
+
+        let df = df.collect().unwrap();
+        eprintln!("Passage clipped df: {:?}", df);
+
+
+        let problem = CellGrowthProblem::new_from_df(df, "time", "density").unwrap();
+        let init_param = problem.default_parameter()?;
+        // Using Nelder-Mead
+        let solver = NelderMead::new(init_param);
+
+
+        // Create an `Executor` object 
+        // If the cell growth is abnormal, return 5
+        let res = 
+        match Executor::new(problem, solver)
+        .configure(|state|
+            state
+                .max_iters(1000)
+                .target_cost(0.0)
+        )
+        .run() {
+            Ok(it) => it,
+            _ => return Ok(5),
+        };
+
+        let best = res.state();
+        let best = argmin::core::State::get_best_param(best).unwrap();
+        eprintln!("best params MEDIUM CHANGE 2: {:?}", best);
+        
+        let reach_time = calculate_logistic_inverse_function(0.7, best[0], best[1], best[2]);
+        let reach_time = reach_time + latest_passage_time;
+        eprintln!("estimated reach_time: {}", reach_time);
+
+        let current_time = get_current_absolute_time() as f64;
+
+        // Round the reach_time to the nearest integer
+        let reach_time = (reach_time - current_time).round() as i64;
+        
+        if reach_time < NORMAL_CELL_OPERATION_INTERVAL*2 {
             Ok(1)
+        } else {
+            Ok(2)
         }
     };
 
