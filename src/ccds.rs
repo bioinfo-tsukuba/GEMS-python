@@ -532,7 +532,7 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         let best = argmin::core::State::get_best_param(best).unwrap();
         eprintln!("best params PLATE COATING: {:?}", best);
         
-        let reach_time = calculate_logistic_inverse_function(0.3, best[0], best[1], best[2]);
+        let reach_time = calculate_logistic_inverse_function(0.7, best[0], best[1], best[2]);
         let reach_time = reach_time + latest_passage_time;
         eprintln!("estimated reach_time: {}", reach_time);
 
