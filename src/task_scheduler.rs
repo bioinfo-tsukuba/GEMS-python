@@ -302,18 +302,25 @@ pub(crate) mod one_machine_schedule_solver{
             /////////////////////////
             // Run solver          //
             /////////////////////////
-        let res = argmin::core::Executor::new(operator, solver)
-            .configure(|state| {
-                state
-                    .param(init_param)
-                    // Optional: Set maximum number of iterations (defaults to `std::u64::MAX`)
-                    .max_iters(10_000)
-                    // Optional: Set target cost function value (defaults to `std::f64::NEG_INFINITY`)
-                    .target_cost(0.0)
-            })
-            // Optional: Attach a observer
-            // .add_observer(argmin::core::observers::SlogLogger::term(), argmin::core::observers::ObserverMode::Always)
-            .run().unwrap();
+        let res = 
+        match  argmin::core::Executor::new(operator, solver)
+        .configure(|state| {
+            state
+                .param(init_param)
+                // Optional: Set maximum number of iterations (defaults to `std::u64::MAX`)
+                .max_iters(10_000)
+                // Optional: Set target cost function value (defaults to `std::f64::NEG_INFINITY`)
+                .target_cost(0.0)
+        })
+        // Optional: Attach a observer
+        // .add_observer(argmin::core::observers::SlogLogger::term(), argmin::core::observers::ObserverMode::Always)
+        .run(){
+            Ok(res) => res,
+            Err(e) => {
+                println!("Simulated Annealing Error: {}", e);
+                return FIFO_scheduler_relative(tasks);
+            }
+        };
 
         // Print result
         println!("Simulated Annealing Result: {}", res);

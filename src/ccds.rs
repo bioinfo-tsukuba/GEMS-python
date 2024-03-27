@@ -335,7 +335,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         // Round the reach_time to the nearest integer
         let reach_time = reach_time.round() as common_param_type::OptimalTiming;
         
-        if reach_time - current_time < IPS_OPERATION_INTERVAL {
+        if reach_time - current_time < IPS_OPERATION_INTERVAL*2 {
             Ok((reach_time - 4*60, PenaltyType::LinearWithRange(0, 100, 0, 100)))
         } else {
             panic!()
