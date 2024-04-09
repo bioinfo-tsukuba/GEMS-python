@@ -1,11 +1,13 @@
 use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, os::unix::process, path::Path};
 
+use csv::DeserializeError;
 use polars::{datatypes::DataType, df, frame::DataFrame, series::Series};
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{ser, Deserialize, Serialize};
 
 pub static GLOBAL_TIME_PATH: &str = "testcase/global_time";
 pub static RESULT_PATH: &str = "/data01/cab314/GEMS";
+pub static PENALTY_MAXIMUM: i64 = 1_000_000_000_000;
 
 // 共通のパラメータ型を定義
 pub type StateIndex = usize;
@@ -105,30 +107,39 @@ pub(crate) fn read_scheduled_task(path: &Path) -> Result<Vec<ScheduledTask>, Box
 
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PenaltyType {
     /// 0: None
     None,
     /// 1: Linear, let an earliness or a delay be "diff" (ScheduleTiming - OptimalTiming), then the penalty is abs(diff * coefficient)
-    Linear(PenaltyParameter),
+    Linear{coefficient:PenaltyParameter},
 
     /// 2: LinearWithRange, let an earliness or a delay be "diff", 
     /// then the penalty of LinearWithRange(lower, lower_coefficient, upper, upper_coefficient) is
     /// if diff < lower, then (lower-diff) * lower_coefficient
     /// if lower <= diff <= upper, then 0
     /// if upper < diff, then (diff-upper) * upper_coefficient
-    LinearWithRange(PenaltyParameter, PenaltyParameter, PenaltyParameter, PenaltyParameter),
+    LinearWithRange{lower:PenaltyParameter, lower_coefficient:PenaltyParameter, upper:PenaltyParameter, upper_coefficient:PenaltyParameter},
+
+    /// 3: CyclicalRestPenalty, this penalty is used for the rest time, like holidays.
+    /// The penalty is calculated by the following steps:
+    /// 1. Calculate the diff = ScheduleTiming - start_minute, which is the time from the start_minute.
+    /// 2. Calculate the diff = diff % cycle_minute, which is the time from the start_minute in the cycle.
+    /// 3. If diff is in the ranges, then the penalty is 0, otherwise the penalty is PENALTY_MAXIMUM.
+    /// The ranges are defined by the vector of (start, end) in the ranges.
+    CyclicalRestPenalty { start_minute: i64, cycle_minute: i64, ranges: Vec<(i64, i64)>},
     
 }
 
 impl PenaltyType {
     /// Get the penalty
     /// diff: ScheduleTiming - OptimalTiming
-    pub fn get_penalty(&self, diff:PenaltyParameter ) -> PenaltyParameter {
+    pub fn get_penalty(&self, scheduled_timing: ScheduleTiming, optimal_timing: OptimalTiming) -> i64 {
+        let diff = scheduled_timing - optimal_timing;
         match self {
             PenaltyType::None => 0,
-            PenaltyType::Linear(coefficient) => diff.abs() * coefficient,
-            PenaltyType::LinearWithRange(lower, lower_coefficient, upper, upper_coefficient) => {
+            PenaltyType::Linear{coefficient: coefficient} => diff * coefficient,
+            PenaltyType::LinearWithRange{lower: lower, lower_coefficient: lower_coefficient, upper: upper, upper_coefficient: upper_coefficient} => {
                 if &diff < lower {
                     (lower-diff) * lower_coefficient
                 } else if lower <= &diff && &diff <= upper {
@@ -137,48 +148,39 @@ impl PenaltyType {
                     (diff-upper) * upper_coefficient
                 }
             },
+            PenaltyType::CyclicalRestPenalty { start_minute: start_minute, cycle_minute: cycle_minute, ranges: ranges} => {
+                let mut penalty = 0;
+                let mut in_the_rest_time: bool = false;
+                let diff = scheduled_timing - start_minute;
+                if diff < 0 {
+                    return 0;
+                }
+                let diff = diff % cycle_minute;
+                for (start, end) in ranges {
+                    if start <= &diff && &diff <= end {
+                        in_the_rest_time = true;
+                        break;
+                    }
+                }
+                match in_the_rest_time {
+                    // Scheduler has to respect the rest time
+                    true => PENALTY_MAXIMUM,
+                    // Thank you for your work
+                    false => 0,
+                }
+            },
             _ => panic!("The penalty type is not supported."),
         }
     }
 
     /// Convert the penalty type to a string format
     pub fn to_string_format(&self) -> String {
-        match self {
-            PenaltyType::None => "None()".to_string(),
-            PenaltyType::Linear(coefficient) => format!("Linear({})", coefficient),
-            PenaltyType::LinearWithRange(lower, lower_coefficient, upper, upper_coefficient) => format!("LinearWithRange({},{},{},{})", lower, lower_coefficient, upper, upper_coefficient),
-            _ => panic!("The penalty type is not supported."),
-        }
-    }
-
-    ///Split the string by "title" and "parameters", e.g., "Linear(1)" -> "Linear" and [1]
-    fn parse_param_string(param_string: &str) -> Result<(String, Vec<PenaltyParameter>), Box<dyn Error>> {
-        let re = Regex::new(r"(\w+)\((.*)\)").unwrap();
-        let captures = re.captures(param_string).unwrap();
-        let title = captures.get(1).unwrap().as_str();
-        let parameters = captures.get(2).unwrap().as_str();
-
-        // Convert the parameters to Vec<PenaltyParameter>
-        // e.g., "1,2,3,4" -> [1,2,3,4]
-
-        // None does not have parameters
-        if title == "None" {
-            return Ok((title.to_string(), vec![]));
-        }
-        let parameters: Vec<PenaltyParameter> = parameters.split(",").map(|x| x.parse::<PenaltyParameter>().unwrap()).collect();
-
-        Ok((title.to_string(), parameters))
+        serde_json::to_string(&self).unwrap()
     }
 
     /// Convert a string format to the penalty type
     pub fn from_string_format(penalty_type_string: &str) -> Self {
-        let (title, parameters) = Self::parse_param_string(penalty_type_string).unwrap();
-        match title.as_str() {
-            "None" => PenaltyType::None,
-            "Linear" => PenaltyType::Linear(parameters[0]),
-            "LinearWithRange" => PenaltyType::LinearWithRange(parameters[0], parameters[1], parameters[2], parameters[3]),
-            _ => panic!("The penalty type is not supported."),
-        }
+        serde_json::from_str(penalty_type_string).unwrap()
     }
 
 
@@ -261,28 +263,27 @@ mod tests {
 
     // Test penalty_type
     #[test]
-    fn test_penalty_type() {
-        let penalty_type_string = "Linear(1)";
-        let penalty_type = PenaltyType::from_string_format(penalty_type_string);
-        assert_eq!(penalty_type, PenaltyType::Linear(1));
+    fn test_penalty_type_to_string() {
+        let penalty_type = PenaltyType::Linear { coefficient: 1 };
+        println!("{:?}", penalty_type.to_string_format());
 
-        let penalty_type_string = "LinearWithRange(1,2,3,4)";
-        let penalty_type = PenaltyType::from_string_format(penalty_type_string);
-        assert_eq!(penalty_type, PenaltyType::LinearWithRange(1,2,3,4));
+        let penalty_type = PenaltyType::LinearWithRange { lower: 1, lower_coefficient: 1, upper: 2, upper_coefficient: 2 };
+        println!("{:?}", penalty_type.to_string_format());
 
-        let penalty_type_string = "None()";
-        let penalty_type = PenaltyType::from_string_format(penalty_type_string);
-        assert_eq!(penalty_type, PenaltyType::None);
+        let penalty_type = PenaltyType::CyclicalRestPenalty { start_minute: 1, cycle_minute: 2, ranges: vec![(1, 2)]};
+        println!("{:?}", penalty_type.to_string_format());
+    }
 
+    #[test]
+    fn test_penalty_type_cyclical_rest_penalty() {
+        let penalty_type = PenaltyType::CyclicalRestPenalty { 
+            start_minute: 0, cycle_minute: 10, ranges: vec![(1, 2)]};
 
-        let penalty_type = PenaltyType::Linear(1);
-        assert_eq!(penalty_type.to_string_format(), "Linear(1)");
+        let optimal_timing = 0;
 
-        let penalty_type = PenaltyType::LinearWithRange(1,2,3,4);
-        assert_eq!(penalty_type.to_string_format(), "LinearWithRange(1,2,3,4)");
-
-        let penalty_type = PenaltyType::None;
-        assert_eq!(penalty_type.to_string_format(), "None()");
+        for scheduled_timing in 0..10 {
+            println!("scheduled_timing: {:?}, penalty: {:?}", scheduled_timing, penalty_type.get_penalty(scheduled_timing, optimal_timing));   
+        }
     }
 
     #[test]

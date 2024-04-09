@@ -70,7 +70,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[1]) 
     };
     let timing_function_state_1 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 4 * 60, PenaltyType::LinearWithRange(0, 100, 0, 100)))
+        Ok((get_current_absolute_time() + 4 * 60, PenaltyType::LinearWithRange{ lower: 0, lower_coefficient: 100, upper: 0, upper_coefficient: 100 }))
     };
     let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         Ok(2)  
@@ -82,7 +82,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[2]) 
     };
     let timing_function_state_2 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + IPS_OPERATION_INTERVAL/*replace for search:GET_IMAGE_1;ips*/, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + IPS_OPERATION_INTERVAL/*replace for search:GET_IMAGE_1;ips*/, PenaltyType::Linear { coefficient: 1 }))
     };
     let transition_func_state_2 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
@@ -123,7 +123,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[3]) 
     };
     let timing_function_state_3 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 48 * 60, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + 48 * 60, PenaltyType::Linear { coefficient: 1 }))
     };
     let transition_func_state_3 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         Ok(4)  
@@ -137,7 +137,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[4])
     };
     let timing_function_state_4 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + 0/*replace for search:GET_IMAGE_2;ips*/, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + 0/*replace for search:GET_IMAGE_2;ips*/, PenaltyType::Linear { coefficient: 1 }))
     };
     let transition_func_state_4 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
@@ -242,7 +242,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         Ok(IPS_CULTURE_PROCESSING_TIME[5])
     };
     let timing_function_state_5 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + IPS_OPERATION_INTERVAL, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + IPS_OPERATION_INTERVAL, PenaltyType::Linear { coefficient: 1 }))
     };
     let transition_func_state_5 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
         Ok(4)  
@@ -336,7 +336,7 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         let reach_time = reach_time.round() as common_param_type::OptimalTiming;
         
         if reach_time - current_time < IPS_OPERATION_INTERVAL*2 {
-            Ok((reach_time - 4*60, PenaltyType::LinearWithRange(0, 100, 0, 100)))
+            Ok((reach_time - 4*60, PenaltyType::LinearWithRange{ lower: 0, lower_coefficient: 100, upper: 0, upper_coefficient: 100 }))
         } else {
             panic!()
         }
@@ -542,7 +542,7 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         let reach_time = reach_time.round() as common_param_type::OptimalTiming;
         
         if reach_time - current_time < NORMAL_CELL_OPERATION_INTERVAL*2 {
-            Ok((reach_time, PenaltyType::Linear(1)))
+            Ok((reach_time, PenaltyType::Linear { coefficient: 1 }))
         } else {
             panic!()
         }
@@ -557,7 +557,7 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         Ok(NORMAL_CULTURE_PROCESSING_TIME[2]) 
     };
     let timing_function_state_2 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-        Ok((get_current_absolute_time() + NORMAL_CELL_OPERATION_INTERVAL/*replace for search:GET_IMAGE_1;normalcell*/, PenaltyType::Linear(1)))
+        Ok((get_current_absolute_time() + NORMAL_CELL_OPERATION_INTERVAL/*replace for search:GET_IMAGE_1;normalcell*/, PenaltyType::Linear { coefficient: 1 }))
     };
     let transition_func_state_2 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
        // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage
@@ -1593,7 +1593,7 @@ mod tests{
             Ok(10)  
         };
         let timing_function_state_1 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-            Ok((0, PenaltyType::Linear(1)))  
+            Ok((0, PenaltyType::Linear { coefficient: 1 }))
         };
         let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
             Ok(2)  
@@ -1605,7 +1605,7 @@ mod tests{
             Ok(10)  
         };
         let timing_function_state_2 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
-            Ok((24*60, PenaltyType::Linear(1)))
+            Ok((24*60, PenaltyType::Linear { coefficient: 1 }))
         };
         let transition_func_state_2 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
             // If the latest density ("time" = max(time)) is less than 0.5, MediumChange, otherwise, Passage

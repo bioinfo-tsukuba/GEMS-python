@@ -199,7 +199,7 @@ pub(crate) mod one_machine_schedule_solver{
                 let mut cost :PenaltyParameter = 0;
                 for (index, task) in self.task.iter().enumerate() {
                     let schedule_timing = param[index];
-                    let penalty = task.penalty_type.get_penalty(schedule_timing-task.optimal_timing);
+                    let penalty = task.penalty_type.get_penalty(schedule_timing, task.optimal_timing);
                     if penalty < 0 {
                         panic!("Penalty must be greater than or equal to 0")
                     }
@@ -358,7 +358,7 @@ pub(crate) mod one_machine_schedule_solver{
                 Task {
                     optimal_timing: 0,
                     processing_time: 100,
-                    penalty_type: PenaltyType::Linear(100),
+                    penalty_type: PenaltyType::Linear { coefficient: 100 },
                     experiment_operation: "A".to_string(),
                     experiment_name: "A".to_string(),
                     experiment_uuid: uuid::Uuid::new_v4().to_string(),
@@ -367,7 +367,7 @@ pub(crate) mod one_machine_schedule_solver{
                 Task {
                     optimal_timing: 1,
                     processing_time: 100,
-                    penalty_type: PenaltyType::Linear(100),
+                    penalty_type: PenaltyType::Linear { coefficient: 100 },
                     experiment_operation: "A".to_string(),
                     experiment_name: "A".to_string(),
                     experiment_uuid: uuid::Uuid::new_v4().to_string(),
@@ -376,7 +376,7 @@ pub(crate) mod one_machine_schedule_solver{
                 Task {
                     optimal_timing: 500,
                     processing_time: 1,
-                    penalty_type: PenaltyType::Linear(100),
+                    penalty_type: PenaltyType::Linear { coefficient: 100 },
                     experiment_operation: "A".to_string(),
                     experiment_name: "A".to_string(),
                     experiment_uuid: uuid::Uuid::new_v4().to_string(),

@@ -118,7 +118,7 @@ mod tests {
             let variable = variable_history.column("variable").unwrap();
             let time = variable_history.column("time").unwrap();
             let optimal_timing = linear_regression(&variable, &time, 10.0);
-            Ok((optimal_timing, PenaltyType::Linear(10)))
+            Ok((optimal_timing, PenaltyType::Linear { coefficient: 10 }))
         };
 
         let processing_time_func = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
