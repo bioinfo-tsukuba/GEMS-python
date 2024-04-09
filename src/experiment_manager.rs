@@ -1,4 +1,4 @@
-use std::{error::Error, path::{Path, PathBuf}, result};
+use std::{error::Error, path::{self, Path, PathBuf}, result};
 use crate::{common_param_type::{self, TaskId, TaskResult}, transition_manager, task_generator, task_scheduler::{self, one_machine_schedule_solver}};
 use polars::{functions::concat_df_diagonal, prelude::*};
 
@@ -90,6 +90,11 @@ impl Experiment {
     pub(crate) fn show_current_state_name(&self) {
         self.show_experiment_name_and_state_names();
         println!("\nCurrent state name: {}", self.states[self.current_state_index].state_name);
+    }
+    
+    /// Get the current state name
+    pub(crate) fn get_current_state_name(&self) -> common_param_type::StateName {
+        self.states[self.current_state_index].state_name.clone()
     }
 }
 

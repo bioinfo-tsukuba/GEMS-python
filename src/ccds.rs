@@ -701,7 +701,7 @@ pub(crate) mod logistic_estimator;
 
 #[cfg(test)]
 mod tests{
-    use std::{default, f32::consts::E, fmt::format, fs::{create_dir, create_dir_all}, path::{Path, PathBuf}, vec};
+    use std::{default, f32::consts::E, fmt::format, fs::{create_dir, create_dir_all, remove_dir_all}, path::{Path, PathBuf}, vec};
 
     use argmin::{core::{Executor}, solver::neldermead::NelderMead};
     use polars::lazy::dsl::col;
@@ -793,6 +793,21 @@ mod tests{
         let mut schedule_task = schedule_task;
         let mut schedule = schedule;
         let mut maholo_simulator = maholo_simulator;
+        // Save the all experiment and the states
+        for experiment in &schedule.experiments{
+            let uuid = experiment.experiment_uuid.clone();
+            let uuid = format!("EXPERIMENT_{}", uuid);
+            let experiment_dir = dir.join(uuid);
+            match create_dir(&experiment_dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+            let mut file = std::fs::File::create(experiment_dir.join("experiment.csv")).unwrap();
+            // create string vec from the state names
+            let names: Vec<String> = experiment.states.iter().map(|state| state.state_name.clone()).collect();
+            let names = names.join(",");
+            std::io::Write::write_all(&mut file, names.as_bytes()).unwrap();
+        }
         println!("Test the simulator --------------------------\n\n");
         for step in 0..loop_num {
             println!("step: {}=================", step);
@@ -825,9 +840,30 @@ mod tests{
             for task in &schedule_task{
                 println!("{:?}", task);
             }
-            schedule.experiments[0].show_current_state_name();
 
             // create csv of the shared_variable_history as dir/step_{}.csv
+            for experiment in &schedule.experiments{
+                let uuid = experiment.experiment_uuid.clone();
+                let uuid = format!("EXPERIMENT_{}", uuid);
+                let experiment_dir = step_dir.join(uuid);
+                match create_dir_all(&experiment_dir){
+                    Ok(_) => (),
+                    Err(err) => println!("{}", err),
+                }
+                let mut file = std::fs::File::create(experiment_dir.join("shared_variable_history.csv")).unwrap();
+                CsvWriter::new(&mut file)
+                    .finish(&mut experiment.shared_variable_history.clone())
+                    .unwrap();
+
+                let mut file = std::fs::File::create(experiment_dir.join("current_state.csv")).unwrap();
+                let mut current_state = df!(
+                    "current_state" => [experiment.get_current_state_name()]
+                ).unwrap();
+                CsvWriter::new(&mut file)
+                    .finish(&mut current_state)
+                    .unwrap();
+
+            }
             let mut file = std::fs::File::create(&step_dir.join("shared_variable_history.csv")).unwrap();
             CsvWriter::new(&mut file)
                 .finish(&mut schedule.experiments[0].shared_variable_history)
@@ -838,16 +874,21 @@ mod tests{
                 Ok(_) => (),
                 Err(err) => panic!("{}", err),
             }
+
+            let absolute_time = get_current_absolute_time();
+            let absolute_time = format!("{}", absolute_time);
+            let mut file = std::fs::File::create(&step_dir.join("absolute_time.txt")).unwrap();
+            std::io::Write::write_all(&mut file, absolute_time.as_bytes()).unwrap();
             schedule_task = read_scheduled_task(&schedule_path).unwrap();
-            schedule.show_experiment_names_and_state_names();
         }
 
         // Save the simulation result df
         for experiment_index in 0..schedule.experiments.len(){
             let mut experiment = &mut schedule.experiments[experiment_index];
-            let name = experiment.experiment_name.clone();
+            let uuid = experiment.experiment_uuid.clone();
+            let uuid = format!("EXPERIMENT_{}", uuid);
             // Make the directory
-            let dir = dir.join(name);
+            let dir = dir.join(uuid);
             match create_dir(&dir){
                 Ok(_) => (),
                 Err(err) => println!("{}", err),
@@ -1218,7 +1259,12 @@ mod tests{
         let all_num = ips_num + normal_num;
 
         let dir = Path::new(RESULT_PATH);
-        let dir = &dir.join("2024-03-26/sa_vs_fifo/mix/FIFO");
+        let dir = &dir.join("2024-03-28/volatile/mix/FIFO");
+        match remove_dir_all(&dir){
+            Ok(_) => (),
+            Err(err) => println!("{}", err),
+        }
+        std::thread::sleep(std::time::Duration::from_secs(10));
         match create_dir_all(&dir){
             Ok(_) => (),
             Err(err) => println!("{}", err),
