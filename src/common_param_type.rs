@@ -138,7 +138,7 @@ impl PenaltyType {
         let diff = scheduled_timing - optimal_timing;
         match self {
             PenaltyType::None => 0,
-            PenaltyType::Linear{coefficient: coefficient} => diff * coefficient,
+            PenaltyType::Linear{coefficient: coefficient} => diff.abs() * coefficient,
             PenaltyType::LinearWithRange{lower: lower, lower_coefficient: lower_coefficient, upper: upper, upper_coefficient: upper_coefficient} => {
                 if &diff < lower {
                     (lower-diff) * lower_coefficient
