@@ -141,6 +141,14 @@ pub(crate) mod one_machine_schedule_solver{
         let current_absolute_time = get_current_absolute_time();
         let tasks: Vec<Task> = tasks.into_iter().map(|mut task| {
             task.optimal_timing = task.optimal_timing - current_absolute_time;
+            task.penalty_type = match task.penalty_type {
+                PenaltyType::CyclicalRestPenalty { start_minute, cycle_minute, ranges }
+                => {
+                    let start_minute = start_minute - current_absolute_time;
+                    PenaltyType::CyclicalRestPenalty { start_minute, cycle_minute, ranges }
+                },
+                _ => {task.penalty_type}
+            };
             task
         }).collect();
 
@@ -149,6 +157,14 @@ pub(crate) mod one_machine_schedule_solver{
         let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
             task.optimal_timing = task.optimal_timing + current_absolute_time;
             task.schedule_timing = task.schedule_timing + current_absolute_time;
+            task.penalty_type = match task.penalty_type {
+                PenaltyType::CyclicalRestPenalty { start_minute, cycle_minute, ranges }
+                => {
+                    let start_minute = start_minute + current_absolute_time;
+                    PenaltyType::CyclicalRestPenalty { start_minute, cycle_minute, ranges }
+                },
+                _ => {task.penalty_type}
+            };
             task
         }).collect();
 
@@ -286,18 +302,18 @@ pub(crate) mod one_machine_schedule_solver{
             // Stopping criteria   //
             /////////////////////////
             // Optional: stop if there was no new best solution after 1000 iterations
-            .with_stall_best(1000)
+            .with_stall_best(1_000_000)
             // Optional: stop if there was no accepted solution after 1000 iterations
-            .with_stall_accepted(1000)
+            .with_stall_accepted(1_000_000)
             /////////////////////////
             // Reannealing         //
             /////////////////////////
             // Optional: Reanneal after 1000 iterations (resets temperature to initial temperature)
-            .with_reannealing_fixed(1000)
+            .with_reannealing_fixed(100_000)
             // Optional: Reanneal after no accepted solution has been found for `iter` iterations
-            .with_reannealing_accepted(500)
+            .with_reannealing_accepted(5_000)
             // Optional: Start reannealing after no new best solution has been found for 800 iterations
-            .with_reannealing_best(800);
+            .with_reannealing_best(8_000);
 
             /////////////////////////
             // Run solver          //
