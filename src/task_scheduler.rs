@@ -308,7 +308,7 @@ pub(crate) mod one_machine_schedule_solver{
             state
                 .param(init_param)
                 // Optional: Set maximum number of iterations (defaults to `std::u64::MAX`)
-                .max_iters(10_000)
+                .max_iters(10_000_000)
                 // Optional: Set target cost function value (defaults to `std::f64::NEG_INFINITY`)
                 .target_cost(0.0)
         })
@@ -339,6 +339,11 @@ pub(crate) mod one_machine_schedule_solver{
             }
         }).collect()
 
+    }
+
+    pub(crate) fn greedy_optimisation_relative(pre_scheduled_tasks: Vec<ScheduledTask>)-> Vec<ScheduledTask>{
+
+        todo!()
     }
     
 
