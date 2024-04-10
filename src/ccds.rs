@@ -987,7 +987,7 @@ mod tests{
                 let all_num = ips_num + normal_num + 1;
 
                 let dir = Path::new(RESULT_PATH);
-                let dir = &dir.join("2024-04-10/sa_vs_fifo_reagent_chenge/small_mix").join(pattern).join(format!("sim_{}", i));
+                let dir = &dir.join("2024-04-10/sa_vs_fifo_reagent_chenge/small_mix/with_opt_SA").join(pattern).join(format!("sim_{}", i));
                 println!("dir: {:?}", dir);
                 match create_dir_all(&dir){
                     Ok(_) => (),
