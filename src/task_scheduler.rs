@@ -258,7 +258,7 @@ pub(crate) mod one_machine_schedule_solver{
                     let idx = rng.sample(distr);
 
                     // Compute random number in [0.1, 0.1].
-                    let val = rng.sample(rand::distributions::Uniform::new_inclusive(-100, 100));
+                    let val = rng.sample(rand::distributions::Uniform::new_inclusive(-120, 120));
 
                     // modify previous parameter value at random position `idx` by `val`
                     param_n[idx] += val;
@@ -289,7 +289,7 @@ pub(crate) mod one_machine_schedule_solver{
         let init_param: Vec<ScheduleTiming> = initialise_param(tasks.clone());
 
         // Define the initial temperature
-        let temp = (tasks.len()*2) as f64;
+        let temp = (tasks.len()*10) as f64;
 
         // Define the cost function
         let operator = TaskSASchedule::new(tasks.clone(), lower_bound, upper_bound);
@@ -402,6 +402,120 @@ pub(crate) mod one_machine_schedule_solver{
 
             // Schedule the tasks
             let scheduled_tasks = FIFO_scheduler(tasks);
+
+            // Check the scheduled_tasks
+            for scheduled_task in scheduled_tasks {
+                println!("{:?}", scheduled_task);
+            }
+        }
+
+        #[test]
+        fn test_FIFO_scheduler_bad_pattern() {
+            // Define the tasks
+            let tasks = vec![
+                Task {
+                    optimal_timing: 0,
+                    processing_time: 100,
+                    penalty_type: PenaltyType::Linear { coefficient: 1 },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 0,
+                },
+                Task {
+                    optimal_timing: 1,
+                    processing_time: 100,
+                    penalty_type: PenaltyType::Linear { coefficient: 1000 },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 1,
+                },
+                Task {
+                    optimal_timing: 500,
+                    processing_time: 1,
+                    penalty_type: PenaltyType::Linear { coefficient: 100 },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 2,
+                },
+            ];
+
+            // Schedule the tasks
+            let scheduled_tasks = FIFO_scheduler(tasks);
+
+            // Check the scheduled_tasks
+            for scheduled_task in scheduled_tasks {
+                println!("{:?}", scheduled_task);
+            }
+        }
+
+        #[test]
+        fn test_sa_scheduler() {
+            // Set absolute time
+            let current_absolute_time = 0;
+            overwrtite_global_time_manualy(current_absolute_time);
+            // Define the tasks
+            let tasks = vec![
+                Task {
+                    optimal_timing: 0,
+                    processing_time: 100,
+                    penalty_type: PenaltyType::Linear { coefficient: 1 },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 0,
+                },
+                Task {
+                    optimal_timing: 1,
+                    processing_time: 100,
+                    penalty_type: PenaltyType::Linear { coefficient: 1000 },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 1,
+                },
+                Task {
+                    optimal_timing: 500,
+                    processing_time: 1,
+                    penalty_type: PenaltyType::Linear { coefficient: 100 },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 2,
+                },
+                Task {
+                    optimal_timing: 100,
+                    processing_time: 1,
+                    penalty_type: PenaltyType::CyclicalRestPenalty{
+                        start_minute: 0,
+                        cycle_minute: 24*60,
+                        ranges: vec![(0, 9*60), (18*60, 24*60)],
+                    },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 3,
+                },
+                Task {
+                    optimal_timing: 100,
+                    processing_time: 1,
+                    penalty_type: PenaltyType::CyclicalRestPenaltyWithLinear {
+                        start_minute: 0,
+                        cycle_minute: 24*60,
+                        ranges: vec![(0, 9*60), (18*60, 24*60)],
+                        coefficient: 100
+                    },
+                    experiment_operation: "A".to_string(),
+                    experiment_name: "A".to_string(),
+                    experiment_uuid: uuid::Uuid::new_v4().to_string(),
+                    task_id: 4,
+                },
+            ];
+
+            // Schedule the tasks
+            let scheduled_tasks = simulated_annealing_scheduler_relative(tasks);
 
             // Check the scheduled_tasks
             for scheduled_task in scheduled_tasks {

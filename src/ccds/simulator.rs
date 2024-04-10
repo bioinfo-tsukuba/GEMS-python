@@ -3,7 +3,7 @@ use std::{arch::global_asm, fs::File, io::{self, BufReader, Read, Write}, os::un
 use polars::{functions::concat_df_diagonal, lazy::dsl::max, prelude::*};
 use polars::lazy::dsl::col;
 
-use crate::{ccds::IPS_CULTURE_STATE_NAMES, common_param_type::{self, get_current_absolute_time}};
+use crate::{ccds::{IPS_CULTURE_STATE_NAMES, REAGENT_EXPERIMENT_NAME, REAGENT_STATE_NAMES}, common_param_type::{self, get_current_absolute_time}};
 
 use super::{overwrtite_global_time_manualy, ScheduledTask, TaskId};
 
@@ -245,7 +245,11 @@ impl SimpleTaskSimulator {
         } else if operation_name == IPS_CULTURE_STATE_NAMES[6] {
             // PLATE_COATING
             update_type = 'a';
-        } else {
+        } else if operation_name == REAGENT_STATE_NAMES[1] {
+            // "REAGENT_FILL"
+            update_type = 'a';
+        }
+        else {
             unreachable!();
         }
 

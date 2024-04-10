@@ -424,6 +424,68 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
     ]
 }
 
+pub(crate) static REAGENT_EXPERIMENT_NAME:&str = "REAGENT";
+
+pub(crate) static REAGENT_STATE_NAMES:[&str; 2] = [
+    "EXPIRE",
+    "REAGENT_FILL",
+];
+
+pub(crate) static REAGENT_PROCESSING_TIME:[common_param_type::ProcessingTime; 2] = [
+    0,
+    60,
+];
+
+
+pub(crate) fn reagent_experiment_states() -> Vec<State>{
+    // EXPIRE
+    let experiment_operation_state_0 = REAGENT_STATE_NAMES[0].to_string();
+    let processing_time_function_state_0 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
+        Ok(REAGENT_PROCESSING_TIME[0]) 
+    };
+    let timing_function_state_0 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
+        Ok((get_current_absolute_time() + 0, PenaltyType::None))  
+    };
+    let transition_func_state_0 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
+        Ok(0)  
+    };
+
+    // REAGENT_FILL
+    let experiment_operation_state_1 = REAGENT_STATE_NAMES[1].to_string();
+    let processing_time_function_state_1 = |variable_history: &DataFrame| -> Result<ProcessingTime, Box<dyn Error>> {
+        Ok(REAGENT_PROCESSING_TIME[1]) 
+    };
+    let timing_function_state_1 = |variable_history: &DataFrame| -> Result<(OptimalTiming, PenaltyType), Box<dyn Error>> {
+        Ok((get_current_absolute_time() + 7*24*60, PenaltyType::CyclicalRestPenaltyWithLinear { start_minute: 0, cycle_minute: 24*60, ranges: vec![(0, 9*60), (18*60, 24*60)], coefficient: 1 }))
+    };
+    let transition_func_state_1 = |variable_history: &mut DataFrame| -> Result<StateIndex, Box<dyn Error>> {
+        Ok(1)  
+    };
+
+    vec![
+        State::new(
+            TransitionManager::new(Box::new(transition_func_state_0)),
+            TaskGenerator::new(
+                Box::new(experiment_operation_state_0),
+                Box::new(processing_time_function_state_0),
+                Box::new(timing_function_state_0),
+            ),
+            0, 
+            REAGENT_STATE_NAMES[0].to_string()
+        ),
+
+        State::new(
+            TransitionManager::new(Box::new(transition_func_state_1)),
+            TaskGenerator::new(
+                Box::new(experiment_operation_state_1),
+                Box::new(processing_time_function_state_1),
+                Box::new(timing_function_state_1),
+            ),
+            1, 
+            REAGENT_STATE_NAMES[1].to_string()
+        ),
+    ]
+}
 
 
 
@@ -905,6 +967,461 @@ mod tests{
         
          
     }
+
+
+    #[test]
+    fn test_small_mix_SA_long_vs_FIFO_with_reagent_change() {
+        // /home/cab314/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_mix_SA_vs_FIFO --exact --nocapture  > testcase/aaa.txt
+        // Reset global time
+
+        let patterns = ["SA", "FIFO"];
+        let sim_num = 1;
+        for pattern in patterns.iter(){
+            for i in 0..sim_num{
+                let global_time = 0;
+                overwrtite_global_time_manualy(global_time);
+
+
+                let ips_num = 1;
+                let normal_num = 1;
+                let all_num = ips_num + normal_num + 1;
+
+                let dir = Path::new(RESULT_PATH);
+                let dir = &dir.join("2024-04-10/sa_vs_fifo_reagent_chenge/small_mix").join(pattern).join(format!("sim_{}", i));
+                println!("dir: {:?}", dir);
+                match create_dir_all(&dir){
+                    Ok(_) => (),
+                    Err(err) => println!("{}", err),
+                }
+
+                let mut schedule = OneMachineExperimentManager::new(
+                    Vec::with_capacity(all_num),
+                    Vec::with_capacity(all_num),
+                    PathBuf::new(),
+                );
+
+                for i in 0..ips_num{
+
+                    // Define the transition functions
+                    let states = iPS_culture_experiment_states();
+                    let shared_variable_history = df!(
+                        "density" => [0.05], 
+                        "time" => [0.0],
+                        "operation" => ["PASSAGE"],
+                        "error" => [false]
+                    ).unwrap();
+                    let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                    let mut cell_culture_experiment = Experiment::new(
+                        format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
+                        states,
+                        2,
+                        shared_variable_history,
+                    );
+
+                    let new_task = cell_culture_experiment.generate_task_of_the_state();
+                    schedule.experiments.push(cell_culture_experiment);
+                    schedule.tasks.push(new_task);
+                }
+
+                let initial_df = match df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ) {
+                    Ok(it) => it,
+                    Err(err) => panic!("{}", err),
+                };
+                let mut maholo_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)); ips_num];
+
+                for i in 0..normal_num{
+
+                    // Define the transition functions
+                    let states = normal_culture_experiment_states();
+                    let shared_variable_history = df!(
+                        "density" => [0.05], 
+                        "time" => [0.0],
+                        "tag" => ["PASSAGE"]
+                    ).unwrap();
+                    let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                    let mut cell_culture_experiment = Experiment::new(
+                        format!("{}_{}", NORMAL_EXPERIMENT_NAME.to_string(), i),
+                        states,
+                        2,
+                        shared_variable_history,
+                    );
+        
+                    let new_task = cell_culture_experiment.generate_task_of_the_state();
+                    schedule.experiments.push(cell_culture_experiment);
+                    schedule.tasks.push(new_task);
+                }
+        
+                let initial_df = match df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ) {
+                    Ok(it) => it,
+                    Err(err) => panic!("{}", err),
+                };
+                let mut maholo_simulator2 = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.0012, 0.05, 1.0, 0.05)); normal_num];
+                maholo_simulator.append(&mut maholo_simulator2);
+
+                let reagent_states = reagent_experiment_states();
+                let shared_variable_history = DataFrame::empty();
+                let mut reagent_experiment = Experiment::new(
+                    REAGENT_EXPERIMENT_NAME.to_string(),
+                    reagent_states,
+                    1,
+                    SharedVariableHistoryInput::DataFrame(shared_variable_history),
+                );
+
+                let new_task = reagent_experiment.generate_task_of_the_state();
+                schedule.experiments.push(reagent_experiment);
+                schedule.tasks.push(new_task);
+
+                let initial_df = match df!(
+                    "density" => [0.00], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ) {
+                    Ok(it) => it,
+                    Err(err) => panic!("{}", err),
+                };
+                let mut reagent_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.00, 0.00, 1.0, 0.00)); 1];
+                maholo_simulator.append(&mut reagent_simulator);
+
+
+                schedule.show_experiment_names_and_state_names();
+                // unimplemented!("Implement the FIFO_scheduler");
+                println!("tasks: {:?}", schedule.tasks);
+                schedule.assign_task_id();
+                println!("tasks with assigned task id: {:?}", schedule.tasks);
+                match pattern {
+                    &"SA" => {
+                        let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(schedule.tasks.clone());
+                        println!("schedule_task:");
+                        for task in &schedule_task{
+                            println!("{:?}", task);
+                        }
+                        // std::thread::sleep(std::time::Duration::from_secs(1000));
+                        run_simulation_SA(schedule_task, schedule, maholo_simulator, 1000, dir);
+                    },
+                    &"FIFO" => {
+                        let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::FIFO_scheduler_absolute(schedule.tasks.clone());
+                        println!("schedule_task:");
+                        for task in &schedule_task{
+                            println!("{:?}", task);
+                        }
+                        // std::thread::sleep(std::time::Duration::from_secs(1000));
+                        run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
+                        break;
+                    },
+                    _ => panic!(),
+            }
+        }
+
+
+
+
+
+    }
+}
+
+
+
+#[test]
+fn test_mix_SA_long_vs_FIFO_with_reagent_change() {
+    // /home/cab314/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_mix_SA_vs_FIFO --exact --nocapture  > testcase/aaa.txt
+    // Reset global time
+
+    let patterns = ["SA", "FIFO"];
+    let sim_num = 1;
+    for pattern in patterns.iter(){
+        for i in 0..sim_num{
+            let global_time = 0;
+            overwrtite_global_time_manualy(global_time);
+
+
+            let ips_num = 5;
+            let normal_num = 5;
+            let all_num = ips_num + normal_num + 1;
+
+            let dir = Path::new(RESULT_PATH);
+            let dir = &dir.join("2024-04-10/sa_vs_fifo_reagent_chenge/mix").join(pattern).join(format!("sim_{}", i));
+            println!("dir: {:?}", dir);
+            match create_dir_all(&dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+
+            let mut schedule = OneMachineExperimentManager::new(
+                Vec::with_capacity(all_num),
+                Vec::with_capacity(all_num),
+                PathBuf::new(),
+            );
+
+            for i in 0..ips_num{
+
+                // Define the transition functions
+                let states = iPS_culture_experiment_states();
+                let shared_variable_history = df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "operation" => ["PASSAGE"],
+                    "error" => [false]
+                ).unwrap();
+                let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                let mut cell_culture_experiment = Experiment::new(
+                    format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
+                    states,
+                    2,
+                    shared_variable_history,
+                );
+
+                let new_task = cell_culture_experiment.generate_task_of_the_state();
+                schedule.experiments.push(cell_culture_experiment);
+                schedule.tasks.push(new_task);
+            }
+
+            let initial_df = match df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "tag" => ["PASSAGE"]
+            ) {
+                Ok(it) => it,
+                Err(err) => panic!("{}", err),
+            };
+            let mut maholo_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)); ips_num];
+
+            for i in 0..normal_num{
+
+                // Define the transition functions
+                let states = normal_culture_experiment_states();
+                let shared_variable_history = df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ).unwrap();
+                let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                let mut cell_culture_experiment = Experiment::new(
+                    format!("{}_{}", NORMAL_EXPERIMENT_NAME.to_string(), i),
+                    states,
+                    2,
+                    shared_variable_history,
+                );
+    
+                let new_task = cell_culture_experiment.generate_task_of_the_state();
+                schedule.experiments.push(cell_culture_experiment);
+                schedule.tasks.push(new_task);
+            }
+    
+            let initial_df = match df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "tag" => ["PASSAGE"]
+            ) {
+                Ok(it) => it,
+                Err(err) => panic!("{}", err),
+            };
+            let mut maholo_simulator2 = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.0012, 0.05, 1.0, 0.05)); normal_num];
+            maholo_simulator.append(&mut maholo_simulator2);
+
+            let reagent_states = reagent_experiment_states();
+            let shared_variable_history = DataFrame::empty();
+            let mut reagent_experiment = Experiment::new(
+                REAGENT_EXPERIMENT_NAME.to_string(),
+                reagent_states,
+                1,
+                SharedVariableHistoryInput::DataFrame(shared_variable_history),
+            );
+
+            let new_task = reagent_experiment.generate_task_of_the_state();
+            schedule.experiments.push(reagent_experiment);
+            schedule.tasks.push(new_task);
+
+            let initial_df = match df!(
+                "density" => [0.00], 
+                "time" => [0.0],
+                "tag" => ["PASSAGE"]
+            ) {
+                Ok(it) => it,
+                Err(err) => panic!("{}", err),
+            };
+            let mut reagent_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.00, 0.00, 1.0, 0.00)); 1];
+            maholo_simulator.append(&mut reagent_simulator);
+
+
+            schedule.show_experiment_names_and_state_names();
+            // unimplemented!("Implement the FIFO_scheduler");
+            println!("tasks: {:?}", schedule.tasks);
+            schedule.assign_task_id();
+            println!("tasks with assigned task id: {:?}", schedule.tasks);
+            match pattern {
+                &"SA" => {
+                    let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(schedule.tasks.clone());
+                    println!("schedule_task:");
+                    for task in &schedule_task{
+                        println!("{:?}", task);
+                    }
+                    // std::thread::sleep(std::time::Duration::from_secs(1000));
+                    run_simulation_SA(schedule_task, schedule, maholo_simulator, 1000, dir);
+                },
+                &"FIFO" => {
+                    let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::FIFO_scheduler_absolute(schedule.tasks.clone());
+                    println!("schedule_task:");
+                    for task in &schedule_task{
+                        println!("{:?}", task);
+                    }
+                    // std::thread::sleep(std::time::Duration::from_secs(1000));
+                    run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
+                    break;
+                },
+                _ => panic!(),
+        }
+    }
+
+
+
+
+
+}
+}
+
+
+
+
+    #[test]
+    fn test_mix_SA_long_vs_FIFO() {
+        // /home/cab314/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_mix_SA_vs_FIFO --exact --nocapture  > testcase/aaa.txt
+        // Reset global time
+
+        let patterns = ["SA", "FIFO"];
+        let sim_num = 3;
+        for pattern in patterns.iter(){
+            for i in 0..sim_num{
+                let global_time = 0;
+                overwrtite_global_time_manualy(global_time);
+
+
+                let ips_num = 5;
+                let normal_num = 5;
+                let all_num = ips_num + normal_num;
+
+                let dir = Path::new(RESULT_PATH);
+                let dir = &dir.join("2024-04-10/sa_vs_fifo/mix").join(pattern).join(format!("sim_{}", i));
+                println!("dir: {:?}", dir);
+                match create_dir_all(&dir){
+                    Ok(_) => (),
+                    Err(err) => println!("{}", err),
+                }
+
+                let mut schedule = OneMachineExperimentManager::new(
+                    Vec::with_capacity(all_num),
+                    Vec::with_capacity(all_num),
+                    PathBuf::new(),
+                );
+
+                for i in 0..ips_num{
+
+                    // Define the transition functions
+                    let states = iPS_culture_experiment_states();
+                    let shared_variable_history = df!(
+                        "density" => [0.05], 
+                        "time" => [0.0],
+                        "operation" => ["PASSAGE"],
+                        "error" => [false]
+                    ).unwrap();
+                    let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                    let mut cell_culture_experiment = Experiment::new(
+                        format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
+                        states,
+                        2,
+                        shared_variable_history,
+                    );
+
+                    let new_task = cell_culture_experiment.generate_task_of_the_state();
+                    schedule.experiments.push(cell_culture_experiment);
+                    schedule.tasks.push(new_task);
+                }
+
+                let initial_df = match df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ) {
+                    Ok(it) => it,
+                    Err(err) => panic!("{}", err),
+                };
+                let mut maholo_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)); ips_num];
+
+                for i in 0..normal_num{
+
+                    // Define the transition functions
+                    let states = normal_culture_experiment_states();
+                    let shared_variable_history = df!(
+                        "density" => [0.05], 
+                        "time" => [0.0],
+                        "tag" => ["PASSAGE"]
+                    ).unwrap();
+                    let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                    let mut cell_culture_experiment = Experiment::new(
+                        format!("{}_{}", NORMAL_EXPERIMENT_NAME.to_string(), i),
+                        states,
+                        2,
+                        shared_variable_history,
+                    );
+        
+                    let new_task = cell_culture_experiment.generate_task_of_the_state();
+                    schedule.experiments.push(cell_culture_experiment);
+                    schedule.tasks.push(new_task);
+                }
+        
+                let initial_df = match df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ) {
+                    Ok(it) => it,
+                    Err(err) => panic!("{}", err),
+                };
+                let mut maholo_simulator2 = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.0012, 0.05, 1.0, 0.05)); normal_num];
+                maholo_simulator.append(&mut maholo_simulator2);
+
+                schedule.show_experiment_names_and_state_names();
+                // unimplemented!("Implement the FIFO_scheduler");
+                println!("tasks: {:?}", schedule.tasks);
+                schedule.assign_task_id();
+                println!("tasks with assigned task id: {:?}", schedule.tasks);
+                match pattern {
+                    &"SA" => {
+                        let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(schedule.tasks.clone());
+                        println!("schedule_task:");
+                        for task in &schedule_task{
+                            println!("{:?}", task);
+                        }
+                        // std::thread::sleep(std::time::Duration::from_secs(1000));
+                        run_simulation_SA(schedule_task, schedule, maholo_simulator, 1000, dir);
+                    },
+                    &"FIFO" => {
+                        let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::FIFO_scheduler_absolute(schedule.tasks.clone());
+                        println!("schedule_task:");
+                        for task in &schedule_task{
+                            println!("{:?}", task);
+                        }
+                        // std::thread::sleep(std::time::Duration::from_secs(1000));
+                        run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
+                        break;
+                    },
+                    _ => panic!(),
+            }
+        }
+
+
+
+
+
+    }
+}
 
 
     #[test]

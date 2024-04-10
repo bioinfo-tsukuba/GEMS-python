@@ -128,6 +128,14 @@ pub enum PenaltyType {
     /// 3. If diff is in the ranges, then the penalty is 0, otherwise the penalty is PENALTY_MAXIMUM.
     /// The ranges are defined by the vector of (start, end) in the ranges.
     CyclicalRestPenalty { start_minute: i64, cycle_minute: i64, ranges: Vec<(i64, i64)>},
+
+    /// 4: CyclicalRestPenaltyWithLinear, this penalty is used for the rest time, like holidays.
+    /// The penalty is calculated by the following steps:
+    /// 1. Calculate the diff = ScheduleTiming - start_minute, which is the time from the start_minute.
+    /// 2. Calculate the diff = diff % cycle_minute, which is the time from the start_minute in the cycle.
+    /// 3. If diff is in the ranges, then the penalty is PENALTY_MAXIMUM, otherwise the penalty is abs(diff * coefficient).
+    /// The ranges are defined by the vector of (start, end) in the ranges.
+    CyclicalRestPenaltyWithLinear { start_minute: i64, cycle_minute: i64, ranges: Vec<(i64, i64)>, coefficient: i64},
     
 }
 
@@ -167,6 +175,27 @@ impl PenaltyType {
                     true => PENALTY_MAXIMUM,
                     // Thank you for your work
                     false => 0,
+                }
+            },
+            PenaltyType::CyclicalRestPenaltyWithLinear { start_minute: start_minute, cycle_minute: cycle_minute, ranges: ranges, coefficient: coefficient} => {
+                let mut penalty = 0;
+                let mut in_the_rest_time: bool = false;
+                let diff = scheduled_timing - start_minute;
+                if diff < 0 {
+                    return 0;
+                }
+                let diff = diff % cycle_minute;
+                for (start, end) in ranges {
+                    if start <= &diff && &diff <= end {
+                        in_the_rest_time = true;
+                        break;
+                    }
+                }
+                match in_the_rest_time {
+                    // Scheduler has to respect the rest time
+                    true => PENALTY_MAXIMUM,
+                    // Thank you for your work
+                    false => diff.abs() * coefficient,
                 }
             },
             _ => panic!("The penalty type is not supported."),
@@ -278,6 +307,18 @@ mod tests {
     fn test_penalty_type_cyclical_rest_penalty() {
         let penalty_type = PenaltyType::CyclicalRestPenalty { 
             start_minute: 0, cycle_minute: 10, ranges: vec![(1, 2)]};
+
+        let optimal_timing = 0;
+
+        for scheduled_timing in 0..10 {
+            println!("scheduled_timing: {:?}, penalty: {:?}", scheduled_timing, penalty_type.get_penalty(scheduled_timing, optimal_timing));   
+        }
+    }
+
+    #[test]
+    fn test_penalty_type_cyclical_rest_penalty_with_linear() {
+        let penalty_type = PenaltyType::CyclicalRestPenaltyWithLinear { 
+            start_minute: 0, cycle_minute: 10, ranges: vec![(1, 8)], coefficient: 1};
 
         let optimal_timing = 0;
 
