@@ -157,7 +157,7 @@ pub(crate) mod one_machine_schedule_solver{
             task
         }).collect();
 
-        let scheduled_tasks = simulated_annealing_scheduler_relative(tasks);
+        let scheduled_tasks = simulated_annealing_scheduler_relative_naive(tasks);
 
         let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
             task.optimal_timing = task.optimal_timing + current_absolute_time;
@@ -393,6 +393,7 @@ pub(crate) mod one_machine_schedule_solver{
         }).collect();
 
         let scheduled_tasks = simulated_annealing_scheduler_relative(tasks);
+        // let scheduled_tasks = simulated_annealing_scheduler_relative_naive(tasks);
 
         let scheduled_tasks: Vec<ScheduledTask> = scheduled_tasks.into_iter().map(|mut task| {
             task.optimal_timing = task.optimal_timing + current_absolute_time;
