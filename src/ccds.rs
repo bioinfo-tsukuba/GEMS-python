@@ -178,6 +178,11 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
             None => 0 as f64,
         };
 
+        let passed_time_from_latest_passage = get_current_absolute_time() as f64 - latest_passage_time;
+        if passed_time_from_latest_passage < 24.0 * 60.0 * 2.0 {
+            return Ok(4);
+        }
+
         // Filter the all time > latest_passage_time and shift - latest_passage_time
         let df = df
             .clone()
@@ -660,6 +665,11 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
             None => 0 as f64,
         };
 
+        let passed_time_from_latest_passage = get_current_absolute_time() as f64 - latest_passage_time;
+        if passed_time_from_latest_passage < 24.0 * 60.0 {
+            return Ok(2);
+        }
+
         // Filter the all time > latest_passage_time and shift - latest_passage_time
         let df = df
             .clone()
@@ -685,7 +695,7 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
 
 
         // Create an `Executor` object 
-        // If the cell growth is abnormal, return 5
+        // If the cell growth is abnormal, return 2
         let res = 
         match Executor::new(problem, solver)
         .configure(|state|
@@ -695,7 +705,7 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         )
         .run() {
             Ok(it) => it,
-            _ => return Ok(5),
+            _ => return Ok(2),
         };
 
         let best = res.state();
@@ -711,8 +721,8 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         // Round the reach_time to the nearest integer
         let reach_time = (reach_time - current_time).round() as i64;
         
-        if reach_time < NORMAL_CELL_OPERATION_INTERVAL*2 {
-            Ok(1)
+        if reach_time >= NORMAL_CELL_OPERATION_INTERVAL*2 {
+            Ok(2)
         } else {
             Ok(2)
         }
@@ -1167,6 +1177,142 @@ mod tests{
 
     }
 }
+
+
+#[test]
+fn test_mix_SA_long_vs_FIFO_without_reagent_change() {
+    // /home/cab314/.cargo/bin/cargo test -r --package ExperimentManagementSystem --bin ExperimentManagementSystem -- ccds::tests::test_mix_SA_vs_FIFO --exact --nocapture  > testcase/aaa.txt
+    // Reset global time
+
+    let patterns = ["SA", "FIFO"];
+    let sim_num = 3;
+    for pattern in patterns.iter(){
+        for i in 0..sim_num{
+            let global_time = 0;
+            overwrtite_global_time_manualy(global_time);
+
+
+            let ips_num = 5;
+            let normal_num = 5;
+            let all_num = ips_num + normal_num + 1;
+
+            let dir = Path::new(RESULT_PATH);
+            let dir = &dir.join("2024-04-12/sa_vs_fifo_without_reagent_chenge/mix").join(pattern).join(format!("sim_{}", i));
+            println!("dir: {:?}", dir);
+            match create_dir_all(&dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+
+            let mut schedule = OneMachineExperimentManager::new(
+                Vec::with_capacity(all_num),
+                Vec::with_capacity(all_num),
+                PathBuf::new(),
+            );
+
+            for i in 0..ips_num{
+
+                // Define the transition functions
+                let states = iPS_culture_experiment_states();
+                let shared_variable_history = df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "operation" => ["PASSAGE"],
+                    "error" => [false]
+                ).unwrap();
+                let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                let mut cell_culture_experiment = Experiment::new(
+                    format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
+                    states,
+                    2,
+                    shared_variable_history,
+                );
+
+                let new_task = cell_culture_experiment.generate_task_of_the_state();
+                schedule.experiments.push(cell_culture_experiment);
+                schedule.tasks.push(new_task);
+            }
+
+            let initial_df = match df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "tag" => ["PASSAGE"]
+            ) {
+                Ok(it) => it,
+                Err(err) => panic!("{}", err),
+            };
+            let mut maholo_simulator = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)); ips_num];
+
+            for i in 0..normal_num{
+
+                // Define the transition functions
+                let states = normal_culture_experiment_states();
+                let shared_variable_history = df!(
+                    "density" => [0.05], 
+                    "time" => [0.0],
+                    "tag" => ["PASSAGE"]
+                ).unwrap();
+                let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+                let mut cell_culture_experiment = Experiment::new(
+                    format!("{}_{}", NORMAL_EXPERIMENT_NAME.to_string(), i),
+                    states,
+                    2,
+                    shared_variable_history,
+                );
+    
+                let new_task = cell_culture_experiment.generate_task_of_the_state();
+                schedule.experiments.push(cell_culture_experiment);
+                schedule.tasks.push(new_task);
+            }
+    
+            let initial_df = match df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "tag" => ["PASSAGE"]
+            ) {
+                Ok(it) => it,
+                Err(err) => panic!("{}", err),
+            };
+            let mut maholo_simulator2 = vec![Simulator::new(initial_df, NormalCellSimulator::new(0, 0.0012, 0.05, 1.0, 0.05)); normal_num];
+            maholo_simulator.append(&mut maholo_simulator2);
+
+            schedule.show_experiment_names_and_state_names();
+            // unimplemented!("Implement the FIFO_scheduler");
+            println!("tasks: {:?}", schedule.tasks);
+            schedule.assign_task_id();
+            println!("tasks with assigned task id: {:?}", schedule.tasks);
+            match pattern {
+                &"SA" => {
+                    let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(schedule.tasks.clone());
+                    println!("schedule_task:");
+                    for task in &schedule_task{
+                        println!("{:?}", task);
+                    }
+                    // std::thread::sleep(std::time::Duration::from_secs(1000));
+                    run_simulation_SA(schedule_task, schedule, maholo_simulator, 1000, dir);
+                },
+                &"FIFO" => {
+                    let mut schedule_task = crate::task_scheduler::one_machine_schedule_solver::FIFO_scheduler_absolute(schedule.tasks.clone());
+                    println!("schedule_task:");
+                    for task in &schedule_task{
+                        println!("{:?}", task);
+                    }
+                    // std::thread::sleep(std::time::Duration::from_secs(1000));
+                    run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
+                    break;
+                },
+                _ => panic!(),
+        }
+    }
+
+
+
+
+
+}
+}
+
+
 
 
 
