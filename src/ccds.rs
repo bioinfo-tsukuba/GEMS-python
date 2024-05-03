@@ -179,7 +179,9 @@ pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
         };
 
         let passed_time_from_latest_passage = get_current_absolute_time() as f64 - latest_passage_time;
+        println!("passed_time_from_latest_passage: {}", passed_time_from_latest_passage);
         if passed_time_from_latest_passage < 24.0 * 60.0 * 2.0 {
+            println!("passed_time_from_latest_passage < 24.0 * 60.0 * 2.0");
             return Ok(4);
         }
 
@@ -666,7 +668,9 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         };
 
         let passed_time_from_latest_passage = get_current_absolute_time() as f64 - latest_passage_time;
+        println!("passed_time_from_latest_passage: {}", passed_time_from_latest_passage);
         if passed_time_from_latest_passage < 24.0 * 60.0 {
+            println!("passed_time_from_latest_passage < 24.0 * 60.0");
             return Ok(2);
         }
 
@@ -721,8 +725,8 @@ pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
         // Round the reach_time to the nearest integer
         let reach_time = (reach_time - current_time).round() as i64;
         
-        if reach_time >= NORMAL_CELL_OPERATION_INTERVAL*2 {
-            Ok(2)
+        if reach_time < NORMAL_CELL_OPERATION_INTERVAL*2 {
+            Ok(1)
         } else {
             Ok(2)
         }
@@ -783,6 +787,143 @@ mod tests{
 
     use super::*;
 
+    fn robot_mediator(
+        one_machine_experiment: &super::OneMachineExperimentManager, 
+        simulators: &mut Vec<Simulator>,
+        step_dir: &Path,
+    ) -> (TaskId, DataFrame, char) {
+
+        let task_id_path = step_dir.join("task_id.txt");
+        let new_result_of_experiment_path = step_dir.join("new_result_of_experiment.csv");
+        let update_type_path = step_dir.join("update_type.txt");
+
+        'read_result_loop: loop{
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            if task_id_path.exists() && new_result_of_experiment_path.exists() && update_type_path.exists(){
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                break 'read_result_loop;
+            }
+        }
+
+        let task_id = std::fs::read_to_string(&task_id_path).unwrap().parse::<TaskId>().unwrap();
+        let new_result_of_experiment = CsvReader::from_path(&new_result_of_experiment_path).unwrap()
+            .has_header(true)
+            .finish()
+            .unwrap();
+        let update_type = std::fs::read_to_string(&update_type_path).unwrap().parse::<char>().unwrap();
+        (task_id, new_result_of_experiment, update_type)
+    }
+
+
+
+
+    fn run_simulation_SA_with_stop(schedule_task: Vec<ScheduledTask> , schedule: OneMachineExperimentManager, maholo_simulator: Vec<Simulator>, loop_num: usize, dir: &Path){
+        let mut schedule_task = schedule_task;
+        let mut schedule = schedule;
+        let mut maholo_simulator = maholo_simulator;
+        // Save the all experiment and the states
+        for experiment in &schedule.experiments{
+            let uuid = experiment.experiment_uuid.clone();
+            let uuid = format!("EXPERIMENT_{}", uuid);
+            let experiment_dir = dir.join(uuid);
+            match create_dir(&experiment_dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+            let mut file = std::fs::File::create(experiment_dir.join("experiment.csv")).unwrap();
+            // create string vec from the state names
+            let names: Vec<String> = experiment.states.iter().map(|state| state.state_name.clone()).collect();
+            let names = names.join(",");
+            std::io::Write::write_all(&mut file, names.as_bytes()).unwrap();
+        }
+        println!("Test the simulator --------------------------\n\n");
+        for step in 0..loop_num {
+            println!("step: {}=================", step);
+
+            let step_dir = dir.join(format!("step_{}", step));
+
+            match create_dir(&step_dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+
+            // // Get the earliest task
+            let (task_id, new_result_of_experiment, update_type) = SimpleTaskSimulator::new(schedule_task.clone())
+            .process_earliest_task(&schedule, &mut maholo_simulator);
+
+            println!("task_id: {}, new_result_of_experiment: {:?}, update_type: {}", task_id, new_result_of_experiment, update_type);
+            schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type, 's');
+            
+            println!("simulate: schedule.tasks");
+            for task in &schedule_task{
+                println!("{:?}", task);
+            }
+
+            // create csv of the shared_variable_history as dir/step_{}.csv
+            for experiment in &schedule.experiments{
+                let uuid = experiment.experiment_uuid.clone();
+                let uuid = format!("EXPERIMENT_{}", uuid);
+                let experiment_dir = step_dir.join(uuid);
+                match create_dir_all(&experiment_dir){
+                    Ok(_) => (),
+                    Err(err) => println!("{}", err),
+                }
+                let mut file = std::fs::File::create(experiment_dir.join("shared_variable_history.csv")).unwrap();
+                CsvWriter::new(&mut file)
+                    .finish(&mut experiment.shared_variable_history.clone())
+                    .unwrap();
+
+                let mut file = std::fs::File::create(experiment_dir.join("current_state.csv")).unwrap();
+                let mut current_state = df!(
+                    "current_state" => [experiment.get_current_state_name()]
+                ).unwrap();
+                CsvWriter::new(&mut file)
+                    .finish(&mut current_state)
+                    .unwrap();
+
+            }
+            let mut file = std::fs::File::create(&step_dir.join("shared_variable_history.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut schedule.experiments[0].shared_variable_history)
+                .unwrap();
+
+            let schedule_path = step_dir.join("schedule.csv");
+            match scheduled_task_convert_to_csv(&schedule_path, &schedule_task) {
+                Ok(_) => (),
+                Err(err) => panic!("{}", err),
+            }
+
+            let absolute_time = get_current_absolute_time();
+            let absolute_time = format!("{}", absolute_time);
+            let mut file = std::fs::File::create(&step_dir.join("absolute_time.txt")).unwrap();
+            std::io::Write::write_all(&mut file, absolute_time.as_bytes()).unwrap();
+            schedule_task = read_scheduled_task(&schedule_path).unwrap();
+        }
+
+        // Save the simulation result df
+        for experiment_index in 0..schedule.experiments.len(){
+            let mut experiment = &mut schedule.experiments[experiment_index];
+            let uuid = experiment.experiment_uuid.clone();
+            let uuid = format!("EXPERIMENT_{}", uuid);
+            // Make the directory
+            let dir = dir.join(uuid);
+            match create_dir(&dir){
+                Ok(_) => (),
+                Err(err) => println!("{}", err),
+            }
+            let mut file = std::fs::File::create(dir.join("simulation_result.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut experiment.shared_variable_history)
+                .unwrap();
+            let mut file = std::fs::File::create(dir.join("simulator_result.csv")).unwrap();
+            CsvWriter::new(&mut file)
+                .finish(&mut maholo_simulator[experiment_index].cell_history().clone())
+                .unwrap();    
+        }
+        
+         
+    }
+
 
     fn run_simulation_SA(schedule_task: Vec<ScheduledTask> , schedule: OneMachineExperimentManager, maholo_simulator: Vec<Simulator>, loop_num: usize, dir: &Path){
         let mut schedule_task = schedule_task;
@@ -820,16 +961,6 @@ mod tests{
 
             println!("task_id: {}, new_result_of_experiment: {:?}, update_type: {}", task_id, new_result_of_experiment, update_type);
             schedule_task = schedule.update_state_and_reschedule(task_id, new_result_of_experiment, update_type, 's');
-            
-
-
-            // for task_id in earliest_task_ids{
-            //     let new_result_of_experiment = match df!("density" => [0.6], "time" => [6+step]) {
-            //         Ok(it) => it,
-            //         Err(err) => panic!("{}", err),
-            //     };
-                
-            // }
             
             println!("simulate: schedule.tasks");
             for task in &schedule_task{
@@ -1019,6 +1150,23 @@ mod tests{
          
     }
 
+    #[test]
+    fn test_robot_mediator(){
+        let schedule = OneMachineExperimentManager::new(
+            Vec::with_capacity(1),
+            Vec::with_capacity(1),
+            PathBuf::new(),
+        );
+
+        let mut maholo_simulator = vec![Simulator::new(DataFrame::empty(), NormalCellSimulator::new(0, 0.000252219650877879, 0.05, 1.0, 0.05)); 1];
+        let mut schedule_task = vec![];
+        let task = ScheduledTask::default();
+        schedule_task.push(task);
+        let dir = Path::new("/home/cab314/Project/GEMS/testcase");
+        let (task_id, new_result_of_experiment, update_type) = robot_mediator(&schedule, &mut maholo_simulator, dir);
+        println!("task_id: {}, new_result_of_experiment: {:?}, update_type: {}", task_id, new_result_of_experiment, update_type);
+    }
+
 
     #[test]
     fn test_small_mix_SA_long_vs_FIFO_with_reagent_change() {
@@ -1197,7 +1345,7 @@ fn test_mix_SA_long_vs_FIFO_without_reagent_change() {
             let all_num = ips_num + normal_num + 1;
 
             let dir = Path::new(RESULT_PATH);
-            let dir = &dir.join("2024-04-12/sa_vs_fifo_without_reagent_chenge/mix").join(pattern).join(format!("sim_{}", i));
+            let dir = &dir.join("2024-04-15/sa_vs_fifo_without_reagent_chenge/mix").join(pattern).join(format!("sim_{}", i));
             println!("dir: {:?}", dir);
             match create_dir_all(&dir){
                 Ok(_) => (),
@@ -1334,7 +1482,7 @@ fn test_mix_SA_long_vs_FIFO_with_reagent_change() {
             let all_num = ips_num + normal_num + 1;
 
             let dir = Path::new(RESULT_PATH);
-            let dir = &dir.join("2024-04-10/sa_vs_fifo_reagent_chenge/mix").join(pattern).join(format!("sim_{}", i));
+            let dir = &dir.join("2024-04-15/sa_vs_fifo_reagent_chenge/mix").join(pattern).join(format!("sim_{}", i));
             println!("dir: {:?}", dir);
             match create_dir_all(&dir){
                 Ok(_) => (),

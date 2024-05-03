@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, os::unix::process, path::Path};
+use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, os::unix::process, path::{Path, PathBuf}};
 
 use csv::DeserializeError;
 use polars::{datatypes::DataType, df, frame::DataFrame, series::Series};
@@ -27,6 +27,15 @@ pub type TaskResult = DataFrame;
 
 pub type ExperimentOperation = String;
 pub type TaskId = usize;
+
+
+
+pub(crate) enum NewResultOfExperimentInput{
+    PathInput(PathBuf),
+    DataFrame(polars::frame::DataFrame),
+}
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Task{
     pub optimal_timing: OptimalTiming,
@@ -38,7 +47,7 @@ pub struct Task{
     pub task_id: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct  ScheduledTask {
     pub optimal_timing: OptimalTiming,
     pub processing_time: ProcessingTime,
@@ -137,6 +146,12 @@ pub enum PenaltyType {
     /// The ranges are defined by the vector of (start, end) in the ranges.
     CyclicalRestPenaltyWithLinear { start_minute: i64, cycle_minute: i64, ranges: Vec<(i64, i64)>, coefficient: i64},
     
+}
+
+impl Default for PenaltyType {
+    fn default() -> Self {
+        PenaltyType::None
+    }
 }
 
 impl PenaltyType {

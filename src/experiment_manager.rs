@@ -37,6 +37,23 @@ pub(crate) enum SharedVariableHistoryInput{
     DataFrame(polars::frame::DataFrame),
 }
 
+impl SharedVariableHistoryInput{
+    pub(crate) fn new(path: PathBuf) -> Self {
+        Self::PathInput(path)
+    }
+    pub(crate) fn get_history(&self) -> polars::frame::DataFrame {
+        match self {
+            Self::PathInput(path) => {
+                CsvReader::from_path(path).unwrap()
+                .has_header(true)
+                .finish()
+                .unwrap()
+            },
+            Self::DataFrame(data_frame) => data_frame.clone(),
+        }
+    }
+}
+
 /// Experiment has a several states and a shared variable history.
 /// Define the struct of Experiment
 pub(crate) struct Experiment {
@@ -178,6 +195,26 @@ impl OneMachineExperimentManager {
 
 impl OneMachineExperimentManager {
 
+    /// Delete the [`Experiment`] with the experiment_uuid
+    /// experiment_uuid: The unique identifier of the experiment
+    pub(crate) fn delete_experiment_with_experiment_uuid(
+        &mut self, 
+        experiment_uuid: String,
+    ){
+        self.experiments.retain(|experiment| experiment.experiment_uuid != experiment_uuid);
+    }
+
+    /// Add the [`Experiment`] to the [`OneMachineExperimentManager`]
+    /// experiment: The experiment to be added
+    /// shared_variable_history: The shared variable history of the experiment
+    pub(crate) fn add_experiment(
+        &mut self, 
+        experiment: Experiment,
+    ){
+        self.experiments.push(experiment);
+    }
+
+    /// Show the experiment names and the state names
     pub(crate) fn show_experiment_names_and_state_names(&self) {
         println!("Experiment names and state names:");
         let mut experiment_index = 0;
