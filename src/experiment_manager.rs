@@ -201,6 +201,7 @@ impl OneMachineExperimentManager {
         &mut self, 
         experiment_uuid: String,
     ){
+        self.delete_tasks_with_experiment_uuid(&experiment_uuid);
         self.experiments.retain(|experiment| experiment.experiment_uuid != experiment_uuid);
     }
 
@@ -225,6 +226,17 @@ impl OneMachineExperimentManager {
             experiment_index += 1;
         }
         println!("End of experiment names and state names");
+    }
+
+
+
+    /// Delete the tasks with experiment uuid
+    pub(crate) fn delete_tasks_with_experiment_uuid(
+        &mut self, 
+        experiment_uuid: &String,
+    ){
+        // Delete the tasks with task_id
+        self.tasks.retain(|task| task.experiment_uuid != *experiment_uuid);
     }
 
     /// Delete the tasks with task_id
