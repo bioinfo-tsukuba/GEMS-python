@@ -51,6 +51,7 @@ pub(crate) static CELL_CULTURE_STATE_NAMES:[&str; 4] = [
     "MEDIUM_CHANGE",
 ];
 
+/// Generate the states of the cell culture experiment
 pub(crate) fn iPS_culture_experiment_states() -> Vec<State>{
     // EXPIRE
     let experiment_operation_state_0 = IPS_CULTURE_STATE_NAMES[0].to_string();
@@ -443,7 +444,7 @@ pub(crate) static REAGENT_PROCESSING_TIME:[common_param_type::ProcessingTime; 2]
     60,
 ];
 
-
+/// Generate the states of the reagent experiment
 pub(crate) fn reagent_experiment_states() -> Vec<State>{
     // EXPIRE
     let experiment_operation_state_0 = REAGENT_STATE_NAMES[0].to_string();
@@ -510,6 +511,7 @@ pub(crate) static NORMAL_CULTURE_PROCESSING_TIME:[common_param_type::ProcessingT
     10,
 ];
 
+/// Generate the states of the normal culture experiment
 pub(crate) fn normal_culture_experiment_states() -> Vec<State>{
     // EXPIRE
     let experiment_operation_state_0 = NORMAL_CULTURE_STATE_NAMES[0].to_string();
