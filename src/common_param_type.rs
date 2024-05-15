@@ -59,6 +59,109 @@ pub struct  ScheduledTask {
     pub task_id: usize,
 }
 
+impl ScheduledTask{
+    /// Plot gannt chart
+    pub(crate) fn plot(scheduled_tasks: &[ScheduledTask], output_path: &Path) -> Result<(), Box<dyn Error>> {
+        use plotters::prelude::*;
+        let root = BitMapBackend::new(output_path, (1024, 768)).into_drawing_area();
+        root.fill(&WHITE)?;
+
+        // グラフの設定
+        let max_time = 1440;
+        let max_tasks = scheduled_tasks.len();
+        eprintln!("max_time: {:?}, max_tasks: {:?}", max_time, max_tasks);
+
+        // グラフの描画
+        // caption: グラフのタイトル
+        // margin: グラフの余白
+        // x_label_area_size: x軸のラベルのサイズ
+        // y_label_area_size: y軸のラベルのサイズ
+        // build_cartesian_2d: 2次元の直交座標系を作成
+        let mut chart = ChartBuilder::on(&root)
+            .caption("Experiment Schedule", ("sans-serif", 50).into_font())
+            .margin(5)
+            .x_label_area_size(30)
+            .y_label_area_size(80)
+            .build_cartesian_2d(0..max_time, 0..max_tasks)?;
+
+        // メッシュの設定
+        // chart にメッシュを設定（注意：root ではない。rootに設定すると、場所がずれる）
+        chart.configure_mesh()
+            .x_labels(10)
+            .y_labels(max_tasks-1)
+            .y_label_formatter(&|y: &usize| scheduled_tasks[*y].experiment_name.clone())
+            .x_label_formatter(&|x: &i64| format!("{}", x)) // Change the type of x to i64
+            .draw()?;
+
+        // タスクを描画
+        for (i, task) in scheduled_tasks.iter().enumerate() {
+            let start = task.schedule_timing;
+            let duration = task.processing_time;
+            if start < max_time {
+                let end = start + duration;
+                chart.draw_series(std::iter::once(Rectangle::new(
+                    [(start as i64, i), (end as i64, i + 1)],
+                    HSLColor(240.0, 0.7, 0.3).filled(),
+                )))?;
+            }
+        }
+
+        eprintln!("{:?}", root.present()?);
+        Ok(())
+    }
+
+    fn test_sample()->Self{
+        ScheduledTask{
+            optimal_timing: 0,
+            processing_time: 10,
+            penalty_type: PenaltyType::None,
+            experiment_operation: "test".to_string(),
+            experiment_name: "test".to_string(),
+            experiment_uuid: "test".to_string(),
+            schedule_timing: 0,
+            task_id: 0,
+        }
+    }
+
+
+    /// Generate test samples [ScheduledTask]
+    fn test_samples()->Vec<Self>{
+        vec![
+            ScheduledTask{
+                optimal_timing: 0,
+                processing_time: 100,
+                penalty_type: PenaltyType::None,
+                experiment_operation: "test1".to_string(),
+                experiment_name: "test1".to_string(),
+                experiment_uuid: "test1".to_string(),
+                schedule_timing: 0,
+                task_id: 0,
+            },
+            ScheduledTask{
+                optimal_timing: 200,
+                processing_time: 100,
+                penalty_type: PenaltyType::None,
+                experiment_operation: "test2".to_string(),
+                experiment_name: "test2".to_string(),
+                experiment_uuid: "test2".to_string(),
+                schedule_timing: 200,
+                task_id: 1,
+            },
+            ScheduledTask{
+                optimal_timing: 300,
+                processing_time: 100,
+                penalty_type: PenaltyType::None,
+                experiment_operation: "test3".to_string(),
+                experiment_name: "test3".to_string(),
+                experiment_uuid: "test3".to_string(),
+                schedule_timing: 300,
+                task_id: 2,
+            },
+        ]
+    }
+
+}
+
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct  ScheduledTaskSerde {
@@ -345,5 +448,11 @@ mod tests {
     #[test]
     fn overwrtite_global_time_manualy_test(){
         overwrtite_global_time_manualy(0);
+    }
+
+    #[test]
+    fn plot_test(){
+        let scheduled_tasks = ScheduledTask::test_samples();
+        ScheduledTask::plot(&scheduled_tasks, Path::new("test.png")).unwrap();
     }
 }
