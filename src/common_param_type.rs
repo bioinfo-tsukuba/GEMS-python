@@ -70,6 +70,7 @@ impl ScheduledTask{
         let max_time = 1440;
         let max_tasks = scheduled_tasks.len();
         eprintln!("max_time: {:?}, max_tasks: {:?}", max_time, max_tasks);
+        println!("{:?}", scheduled_tasks);
 
         // グラフの描画
         // caption: グラフのタイトル
@@ -86,29 +87,35 @@ impl ScheduledTask{
 
         // メッシュの設定
         // chart にメッシュを設定（注意：root ではない。rootに設定すると、場所がずれる）
-        chart.configure_mesh()
-            .x_labels(10)
-            .y_labels(max_tasks-1)
-            .y_label_formatter(&|y: &usize| scheduled_tasks[*y].experiment_name.clone())
-            .x_label_formatter(&|x: &i64| format!("{}", x)) // Change the type of x to i64
-            .draw()?;
 
-        // タスクを描画
-        for (i, task) in scheduled_tasks.iter().enumerate() {
-            let start = task.schedule_timing;
-            let duration = task.processing_time;
-            if start < max_time {
-                let end = start + duration;
-                chart.draw_series(std::iter::once(Rectangle::new(
-                    [(start as i64, i), (end as i64, i + 1)],
-                    HSLColor(240.0, 0.7, 0.3).filled(),
-                )))?;
-            }
+    chart.configure_mesh()
+        .x_labels(10)
+        .y_labels(max_tasks)
+        .x_label_formatter(&|x: &i64| format!("{}", x))
+        .y_label_formatter(&|y: &usize| format!("{}", y + 1)) // y軸のラベルをタスク番号に
+        .draw()?;
+
+    for (i, task) in scheduled_tasks.iter().enumerate() {
+        let start = task.schedule_timing;
+        let duration = task.processing_time;
+        if start < max_time {
+            let end = start + duration;
+            chart.draw_series(std::iter::once(Rectangle::new(
+                [(start as i64, i), (end as i64, i + 1)],
+                HSLColor(240.0, 0.7, 0.3).filled(),
+            )))?;
+
+            chart.draw_series(std::iter::once(Text::new(
+                task.experiment_name.clone(),
+                ((start + end) / 2, i),
+                ("sans-serif", 20).into_font().color(&BLACK).pos(plotters::style::text_anchor::Pos::new(plotters::style::text_anchor::HPos::Center, plotters::style::text_anchor::VPos::Center)),
+            )))?;
         }
-
-        eprintln!("{:?}", root.present()?);
-        Ok(())
     }
+
+    eprintln!("{:?}", root.present()?);
+    Ok(())
+}
 
     fn test_sample()->Self{
         ScheduledTask{
