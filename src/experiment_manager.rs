@@ -121,6 +121,81 @@ impl Experiment {
         println!();
     }
 
+
+    fn visualise_experiments_simple(experiments: &Vec<Self>, file_path: PathBuf){
+        use petgraph::dot::{Dot, Config};
+        use petgraph::graph::{DiGraph, NodeIndex};
+        use std::fs::File;
+        use std::io::Write;
+        use std::process::Command;
+        let mut bef = 0;
+        let mut graph = DiGraph::new();
+        for i in 0..experiments.len(){
+            let experiment_name = &experiments[i].experiment_name;
+            let states = &experiments[i].states;
+            let current_state_name = &states[experiments[i].current_state_index].state_name;
+            graph.add_node(format!("Experiment: {}", experiment_name));
+            bef += 1;
+            for i in 0..states.len(){
+                let label;
+                let id = &states[i].state_index;
+                let state_name = &states[i].state_name;
+                if &states[i].state_name == current_state_name{
+                    label = format!("{}:{} (current)", id, state_name);
+                }else{
+                    label = format!("{}:{}", id, state_name);
+                }
+                graph.add_node(label);
+            }
+            for i in 0..states.len(){
+                graph.add_edge(NodeIndex::new(bef + i), NodeIndex::new((i+1)%states.len() + bef), "");
+            }
+            graph.add_edge(NodeIndex::new(bef - 1), NodeIndex::new(bef), "");
+            bef += states.len();
+        }
+        // Graphvizのdotフォーマットに変換
+        let dot = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
+    
+        // dotファイルとして保存
+        let dot_file_path = "graph.dot";
+        let mut file = File::create(dot_file_path).expect("Unable to create dot file");
+        write!(file, "{:?}", dot).expect("Unable to write to dot file");
+    
+        // ファイルを開く
+        let input_file = File::open(&dot_file_path).unwrap();
+        let reader = std::io::BufReader::new(input_file);
+        let lines = std::io::BufRead::lines(reader).collect::<Result<Vec<String>, _>>().unwrap();
+    
+        let mut output_file = File::create(&dot_file_path).unwrap();
+    
+        // 各行を読み込み、修正
+        for line in lines {
+            let mut line = line;
+            if line.contains("(current)") {
+                line = line.replace("]", ", color=red]");
+            }
+            eprintln!("{}", line);
+            writeln!(output_file, "{}", line).unwrap();
+        }
+        
+    
+        // dotファイルをPNGに変換するコマンドを実行
+        let output = Command::new("dot".to_string())
+            .args(&["-Tpng", dot_file_path, "-o", file_path.to_str().unwrap()])
+            .output()
+            .expect("Failed to execute dot command");
+    
+        if !output.status.success() {
+            panic!(
+                "dot command failed with output: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    
+        println!("Graph exported to graph.png");
+
+    }
+
     /// Show the current state name
     pub(crate) fn show_current_state_name(&self) {
         self.show_experiment_name_and_state_names();
@@ -196,6 +271,14 @@ pub(crate) struct OneMachineExperimentManager {
 }
 
 impl OneMachineExperimentManager {
+
+    /// Plot states status
+    pub(crate) fn vis(&self){
+        let file_path = self.dir.join("graph.png");
+        Experiment::visualise_experiments_simple(&self.experiments, file_path);
+    }
+
+
     /// Create a new OneMachineExperimentManager
     /// * `experiments` - The experiments of the experiment [`Experiment`]
     /// * `tasks` - The tasks of the experiment [`common_param_type::Task`]
