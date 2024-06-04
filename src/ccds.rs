@@ -1614,15 +1614,15 @@ fn test_mix_SA_long_vs_FIFO_with_reagent_change() {
                     break;
                 },
                 _ => panic!(),
+            }
         }
+
+
+
+
+
     }
-
-
-
-
-
-}
-}
+    }
 
 
 
@@ -1750,15 +1750,15 @@ fn test_mix_SA_long_vs_FIFO_with_reagent_change() {
                         break;
                     },
                     _ => panic!(),
+                }
             }
+
+
+
+
+
         }
-
-
-
-
-
     }
-}
 
 
     #[test]
@@ -1883,15 +1883,15 @@ fn test_mix_SA_long_vs_FIFO_with_reagent_change() {
                         run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
                     },
                     _ => panic!(),
+                }
             }
+
+
+
+
+
         }
-
-
-
-
-
     }
-}
 
     #[test]
     fn test_iPS_SA_vs_FIFO() {
@@ -1980,15 +1980,15 @@ fn test_mix_SA_long_vs_FIFO_with_reagent_change() {
                         run_simulation_fifo(schedule_task, schedule, maholo_simulator, 1000, dir);
                     },
                     _ => panic!(),
+                }
             }
+
+
+
+
+
         }
-
-
-
-
-
     }
-}
 
     #[test]
     fn test_iPS_normal_mixed_SA() {
@@ -2609,5 +2609,55 @@ fn test_mix_SA_long_vs_FIFO_with_reagent_change() {
     
     
         
+    }
+
+    #[test]
+    fn experiment_visualise(){
+        let global_time = 0;
+        overwrtite_global_time_manualy(global_time);
+
+
+        let ips_num = 5;
+        let normal_num = 5;
+        let all_num = ips_num + normal_num;
+        let dir = Path::new("2024-06-04/visualise");
+        println!("dir: {:?}", dir);
+        match create_dir_all(&dir){
+            Ok(_) => (),
+            Err(err) => println!("{}", err),
+        }
+
+        let mut schedule = OneMachineExperimentManager::new(
+            Vec::with_capacity(all_num),
+            Vec::with_capacity(all_num),
+            dir.to_path_buf(),
+        );
+
+        for i in 0..ips_num{
+
+            // Define the transition functions
+            let states = iPS_culture_experiment_states();
+            let shared_variable_history = df!(
+                "density" => [0.05], 
+                "time" => [0.0],
+                "operation" => ["PASSAGE"],
+                "error" => [false]
+            ).unwrap();
+            let shared_variable_history = SharedVariableHistoryInput::DataFrame(shared_variable_history);
+            let mut cell_culture_experiment = Experiment::new(
+                format!("{}_{}", IPS_EXPERIMENT_NAME.to_string(), i),
+                states,
+                2,
+                shared_variable_history,
+            );
+
+            let new_task = cell_culture_experiment.generate_task_of_the_state();
+            schedule.experiments.push(cell_culture_experiment);
+            schedule.tasks.push(new_task);
+        }
+
+        println!("schedule.tasks: {:?}", schedule.dir);
+
+        schedule.vis();
     }
 }

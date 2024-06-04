@@ -5,8 +5,13 @@ use polars::{datatypes::DataType, df, frame::DataFrame, series::Series};
 use regex::Regex;
 use serde::{ser, Deserialize, Serialize};
 
+/// The path of the global time
 pub static GLOBAL_TIME_PATH: &str = "testcase/global_time";
+
+/// The path of the result
 pub static RESULT_PATH: &str = "/data01/cab314/GEMS";
+
+/// Penalty maximum
 pub static PENALTY_MAXIMUM: i64 = 1_000_000_000_000;
 
 // 共通のパラメータ型を定義

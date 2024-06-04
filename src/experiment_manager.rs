@@ -174,7 +174,7 @@ impl Experiment {
             if line.contains("(current)") {
                 line = line.replace("]", ", color=red]");
             }
-            eprintln!("{}", line);
+            // eprintln!("{}", line);
             writeln!(output_file, "{}", line).unwrap();
         }
         
@@ -192,7 +192,7 @@ impl Experiment {
             );
         }
     
-        println!("Graph exported to graph.png");
+        println!("Graph exported to {}", file_path.to_str().unwrap());
 
     }
 
