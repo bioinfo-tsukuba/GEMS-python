@@ -2,3 +2,4 @@
 /testcase/*
 .DS_Store
 !/testcase/global_time
+Cargo.lock

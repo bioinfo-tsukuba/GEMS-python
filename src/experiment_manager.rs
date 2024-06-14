@@ -110,6 +110,33 @@ impl Experiment {
         }
     }
 
+    pub(crate) fn new_with_id(
+        experiment_name: common_param_type::ExperimentName,
+        states: Vec<State>,
+        current_state_index: common_param_type::StateIndex,
+        shared_variable_history: SharedVariableHistoryInput,
+        experiment_uuid: String,
+    ) -> Self {
+
+        let shared_variable_history = match shared_variable_history{
+            SharedVariableHistoryInput::PathInput(path) => {
+                CsvReader::from_path(path).unwrap()
+                .has_header(true)
+                .finish()
+                .unwrap()
+            },
+            SharedVariableHistoryInput::DataFrame(data_frame) => data_frame,
+        };
+
+
+        Self {
+            experiment_name,
+            states,
+            current_state_index,
+            shared_variable_history,
+            experiment_uuid,
+        }
+    }
     /// Show the experiment name and the state names
     pub(crate) fn show_experiment_name_and_state_names(&self) {
         println!("Experiment name: {}", self.experiment_name);
@@ -385,6 +412,9 @@ impl OneMachineExperimentManager {
         self.delete_tasks_with_task_id(task_id);
         
         // Update the shared variable history
+        println!("Update the shared variable history");
+        println!("Old\n {:?}", self.experiments[experiment_index].shared_variable_history);
+        println!("New\n {:?}", new_result_of_experiment);
         match update_type {
             'a' => {
                 // Add the new result of experiment to the shared variable history
@@ -410,6 +440,7 @@ impl OneMachineExperimentManager {
         // Add the task to the task list
         self.tasks.push(task);
         self.assign_task_id();
+        self.vis();
 
         // Reschedule
         match scheduling_method {

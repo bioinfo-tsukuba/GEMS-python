@@ -54,6 +54,7 @@ pub struct Task{
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct  ScheduledTask {
+    /// The unit is minute
     pub optimal_timing: OptimalTiming,
     pub processing_time: ProcessingTime,
     pub penalty_type: PenaltyType,
@@ -387,7 +388,7 @@ pub(crate) fn output_json<T: Serialize>(output_fn: &str, written_struct: Vec<T>)
     Ok(())
 }
 
-/// The time unit is minute
+/// The time input unit is minute
 pub(crate) fn overwrtite_global_time_manualy(current_time: i64){
     // Global time in the file, GLOBAL_TIME_PATH, is rewritten manually.
 
