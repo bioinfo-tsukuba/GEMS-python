@@ -1,3 +1,5 @@
+use experiment_manager::test_process_commands_delete;
+
 // common_param_type モジュール
 pub(crate) mod common_param_type;
 
@@ -14,4 +16,5 @@ pub(crate) mod task_scheduler;
 pub(crate) mod experiment_manager;
 
 fn main(){
+    test_process_commands_delete();
 }

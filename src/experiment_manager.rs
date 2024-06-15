@@ -1,5 +1,5 @@
 use std::{error::Error, path::{self, Path, PathBuf}, result};
-use crate::{common_param_type::{self, TaskId, TaskResult}, transition_manager, task_generator, task_scheduler::{self, one_machine_schedule_solver}};
+use crate::{common_param_type::{self, get_current_absolute_time, overwrtite_global_time_manualy, Task, TaskId, TaskResult}, task_generator, task_scheduler::{self, one_machine_schedule_solver}, transition_manager};
 use polars::{functions::concat_df_diagonal, prelude::*};
 
 
@@ -141,11 +141,15 @@ impl Experiment {
     pub(crate) fn show_experiment_name_and_state_names(&self) {
         println!("Experiment name: {}", self.experiment_name);
         println!("State names:");
-        print!("{}", self.states[0].state_name);
-        for state in &self.states[1..] {
-            print!(" => {}", state.state_name);
+        if self.states.len() == 0{
+            println!("No state is registered");
+        }else {
+            print!("{}", self.states[0].state_name);
+            for state in &self.states[1..] {
+                print!(" => {}", state.state_name);
+            }
+            println!();
         }
-        println!();
     }
 
 
@@ -271,7 +275,7 @@ impl Experiment {
     /// Return the generated task
     pub(crate) fn generate_task_of_the_state(
         &self,
-    ) -> common_param_type::Task {
+    ) -> Task {
         // Generate a task
         let state_index = self.current_state_index;
         let task = match self
@@ -293,7 +297,7 @@ impl Experiment {
 /// * `dir` - The directory of the experiment [`PathBuf`]
 pub(crate) struct OneMachineExperimentManager {
     pub(crate) experiments: Vec<Experiment>,
-    pub(crate) tasks: Vec<common_param_type::Task>,
+    pub(crate) tasks: Vec<Task>,
     pub(crate) dir: PathBuf,
 }
 
@@ -337,7 +341,134 @@ impl OneMachineExperimentManager {
 
 impl OneMachineExperimentManager {
 
-    /// Delete the [`Experiment`] with the experiment_uuid
+
+    const DELETE_COMMAND: &str = "DELETE";
+    const PAUSE_COMMAND: &str = "PAUSE";
+    const RESUME_COMMAND: &str = "RESUME";
+    const EXECUTED_FLAG: &str = "executed";
+    const INVALID_FLAG: &str = "invalid";
+
+    fn command_cap_df(cap: &str) -> DataFrame{
+        overwrtite_global_time_manualy(101);
+        let time = get_current_absolute_time();
+        // サンプルのDataFrameを作成
+        df![
+            "cmd" => [cap],
+            "time" => [time as i32],
+        ].unwrap()
+    }
+
+    fn delete_command_handler(&mut self, experiment_uuid: &String){
+        let experiment_index = self.experiments.iter().position(|experiment| experiment.experiment_uuid == *experiment_uuid).unwrap();
+        self.experiments[experiment_index].shared_variable_history = concat_df_diagonal(&[
+            self.experiments[experiment_index].shared_variable_history.clone(),
+            Self::command_cap_df(Self::EXECUTED_FLAG),
+        ]).unwrap();
+
+        println!("{:?}", self.experiments[experiment_index].shared_variable_history);
+
+        // Self::command_cap_df(Self::EXECUTED_FLAG)
+        self.delete_experiment_with_experiment_uuid(experiment_uuid.clone());
+        println!("Delete command is executed.");
+    }
+
+    fn pause_command_handler(&mut self, experiment_uuid: &String){
+        let experiment_index = self.experiments.iter().position(|experiment| experiment.experiment_uuid == *experiment_uuid).unwrap();
+        self.experiments[experiment_index].shared_variable_history = concat_df_diagonal(&[
+            self.experiments[experiment_index].shared_variable_history.clone(),
+            Self::command_cap_df(Self::EXECUTED_FLAG),
+        ]).unwrap();
+        println!("Pause command is executed.");
+    }
+
+    fn resume_command_handler(&mut self, experiment_uuid: &String){
+        let experiment_index = self.experiments.iter().position(|experiment| experiment.experiment_uuid == *experiment_uuid).unwrap();
+        self.experiments[experiment_index].shared_variable_history = concat_df_diagonal(&[
+            self.experiments[experiment_index].shared_variable_history.clone(),
+            Self::command_cap_df(Self::EXECUTED_FLAG),
+        ]).unwrap();
+        println!("Resume command is executed.");
+    }
+
+    fn execute_pre_defined_commands(&mut self, experiment_uuid: &String) -> Option<()> {
+        let shared_variable_history = self.experiments.iter_mut().find(|experiment| experiment.experiment_uuid == *experiment_uuid).unwrap().shared_variable_history.clone();
+        let target_column = "cmd";
+
+        // "cmd"列が存在するか確認
+        if shared_variable_history.get_column_names().contains(&target_column) {
+
+            let df = shared_variable_history
+            .clone()
+            .lazy()
+            .sort("time", 
+            SortOptions {
+                descending: true,
+                nulls_last: false,
+                multithreaded: false,
+                maintain_order: false,
+                }
+            );
+
+            let df = df.collect().unwrap();
+
+            println!("Sorted DataFrame: {:?}", df);
+            if let Some(latest_cmd) = df.column("cmd").unwrap().str().unwrap().get(0) {
+                let latest_cmd: String = latest_cmd.to_string();
+                println!("Latest cmd: {}", latest_cmd);
+                match latest_cmd.as_str() {
+                    Self::DELETE_COMMAND => {
+                        self.delete_command_handler(experiment_uuid);
+                        Some(())
+                    },
+                    Self::PAUSE_COMMAND => {
+                        self.pause_command_handler(experiment_uuid);
+                        Some(())
+                    },
+                    Self::RESUME_COMMAND => {
+                        self.resume_command_handler(experiment_uuid);
+                        Some(())
+                    },
+                    Self::EXECUTED_FLAG => {
+                        println!("The latest cmd is already executed.");
+                        None
+                    },
+                    Self::INVALID_FLAG => {
+                        println!("The latest cmd is already skipped.");
+                        None
+                    },
+                    _ => {
+                        println!("The latest cmd is not a pre-defined command.");
+                        unreachable!()
+                    },
+                }
+            } else {
+                println!("No cmd found.");
+                None
+            }
+        } else {
+            println!("'cmd' column does not exist.");
+            None
+        }
+    }
+
+    /// Process commands for all experiments
+    pub(crate) fn process_commands(&mut self) {
+        let mut experimental_index = 0;
+        self.show_experiment_names_and_state_names();
+        while self.experiments.len() > experimental_index {
+            let experiment_uuid = &self.experiments[experimental_index].experiment_uuid.clone();
+            match self.execute_pre_defined_commands(experiment_uuid) {
+                Some(_) => {
+                    eprintln!("EXECUTE");
+                },
+                None => {
+                    experimental_index += 1;
+                },   
+            }
+        }
+    }
+
+    /// Delete the [`Experiment`] and also delete the [`Task`] with the experiment_uuid
     /// experiment_uuid: The unique identifier of the experiment
     pub(crate) fn delete_experiment_with_experiment_uuid(
         &mut self, 
@@ -462,4 +593,106 @@ impl OneMachineExperimentManager {
             task.task_id = index;
         }
     }
+}
+
+pub(crate) fn test_process_commands_delete() {
+    let mut manager = OneMachineExperimentManager::new(
+        vec![
+            Experiment {
+                experiment_name: "Experiment 2".into(),
+                states: vec![],
+                current_state_index: 0,
+                shared_variable_history: df![
+                    "cmd" => ["PAUSE"],
+                    "time" => [100],
+                ].unwrap(),
+                experiment_uuid: "uuid-2".into(),
+            },
+            Experiment {
+                experiment_name: "Experiment 1".into(),
+                states: vec![],
+                current_state_index: 0,
+                shared_variable_history: df![
+                    "cmd" => ["DELETE"],
+                    "time" => [100],
+                ].unwrap(),
+                experiment_uuid: "uuid-1".into(),
+            },
+        ],
+        vec![Task::default(), Task::default()],
+        PathBuf::from("/path/to/dir"),
+    );
+
+    manager.show_experiment_names_and_state_names();
+
+    manager.process_commands();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common_param_type::*;
+    use crate::transition_manager;
+    use crate::task_generator;
+    use crate::task_scheduler;
+    use polars::prelude::*;
+
+    #[test]
+    fn test_process_commands_delete() {
+        let mut manager = OneMachineExperimentManager::new(
+            vec![
+                Experiment {
+                    experiment_name: "Experiment 2".into(),
+                    states: vec![],
+                    current_state_index: 0,
+                    shared_variable_history: df![
+                        "cmd" => ["PAUSE"],
+                        "time" => [100],
+                    ].unwrap(),
+                    experiment_uuid: "uuid-2".into(),
+                },
+                Experiment {
+                    experiment_name: "Experiment 1".into(),
+                    states: vec![],
+                    current_state_index: 0,
+                    shared_variable_history: df![
+                        "cmd" => ["DELETE"],
+                        "time" => [100],
+                    ].unwrap(),
+                    experiment_uuid: "uuid-1".into(),
+                },
+            ],
+            vec![Task::default(), Task::default()],
+            PathBuf::from("/path/to/dir"),
+        );
+
+        manager.show_experiment_names_and_state_names();
+
+        manager.process_commands();
+    }
+
+    #[test]
+    fn test_process_commands_pause() {
+        let mut manager = OneMachineExperimentManager::new(
+            vec![
+                Experiment {
+                    experiment_name: "Experiment 1".into(),
+                    states: vec![],
+                    current_state_index: 0,
+                    shared_variable_history: df![
+                        "cmd" => ["PAUSE"],
+                        "time" => [100],
+                    ].unwrap(),
+                    experiment_uuid: "uuid-1".into(),
+                },
+            ],
+            vec![Task::default(), Task::default()],
+            PathBuf::from("/path/to/dir"),
+        );
+
+        manager.process_commands();
+
+        // Check if the command was processed and the shared_variable_history was updated
+    }
+
 }
