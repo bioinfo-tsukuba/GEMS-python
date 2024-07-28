@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "gems-python"
+version = "0.1.0"
+description = ""
+authors = ["CAB314 <85389241+CAB314@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+polars = "^1.3.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
