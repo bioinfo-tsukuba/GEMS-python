@@ -243,6 +243,7 @@ class OneMachineTask:
         :param tasks: List of tasks to schedule.
         :return: Scheduled tasks.
         """
+        print("SA_schedule:")
         class TaskAnnealer(Annealer):
 
             def __init__(self, state):
@@ -305,7 +306,7 @@ class OneMachineTask:
 
 
     @classmethod
-    def vis(cls, tasks: List['OneMachineTask']):
+    def vis(cls, tasks: List['OneMachineTask'], save_path: Path = None):
         """
         Visualizes the scheduled tasks as a Gantt chart.
         :param tasks: List of scheduled tasks to visualize.
@@ -342,11 +343,14 @@ class OneMachineTask:
         plt.legend(handles=patches)
 
         # グラフを表示
-        plt.show()
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
 
 
     @classmethod
-    def vis_with_diff(cls, tasks: List['OneMachineTask']):
+    def vis_with_diff(cls, tasks: List['OneMachineTask'], save_path: Path = None):
         """
         Visualizes the scheduled tasks as a Gantt chart with differences between optimal and scheduled timings.
         :param tasks: List of scheduled tasks to visualize.
@@ -388,7 +392,10 @@ class OneMachineTask:
         plt.legend(handles=patches)
 
         # グラフを表示
-        plt.show()
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
 
 """MODULE: State
 """

@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Tuple, Type
 import unittest
 import polars as pl
+import inspect
 from gems_python.transition_manager import LinearPenalty, NonePenalty, OneMachineTask, PenaltyType, State, CyclicalRestPenaltyWithLinear, LinearWithRange
 
 @dataclass
@@ -61,8 +63,11 @@ class TestScheduler(unittest.TestCase):
         ]
 
         scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks)
-        OneMachineTask.vis(scheduled_tasks)
-        OneMachineTask.vis_with_diff(scheduled_tasks)
+        save_path = Path("tests")
+        func_name = inspect.currentframe().f_code.co_name
+        save_path = save_path / f"{func_name}.png"
+        # OneMachineTask.vis()
+        OneMachineTask.vis_with_diff(scheduled_tasks, save_path)
 
         for t in scheduled_tasks:
             print(t)
@@ -73,12 +78,16 @@ class TestScheduler(unittest.TestCase):
         tasks = [
             OneMachineTask(optimal_timing=1, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
             OneMachineTask(optimal_timing=3, processing_time=3, penalty_type=CyclicalRestPenaltyWithLinear(cycle_start_time=0, cycle_duration=10, rest_time_ranges=[(0, 5), (10, 15)], penalty_coefficient=10), experiment_operation="op2", experiment_name="exp2", experiment_uuid="uuid2", task_id=2),
-            OneMachineTask(optimal_timing=5, processing_time=8, penalty_type=LinearWithRange(lower=20, upper=40, lower_coefficient=10, upper_coefficient=20), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
+            OneMachineTask(optimal_timing=5, processing_time=8, penalty_type=LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
         ]
 
         scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks)
-        OneMachineTask.vis(scheduled_tasks)
-        OneMachineTask.vis_with_diff(scheduled_tasks)
+        save_path = Path("tests")
+        func_name = inspect.currentframe().f_code.co_name
+        save_path = save_path / f"{func_name}.png"
+        # OneMachineTask.vis()
+        OneMachineTask.vis_with_diff(scheduled_tasks, save_path)
+
 
         for t in scheduled_tasks:
             print(t)
@@ -89,16 +98,18 @@ class TestScheduler(unittest.TestCase):
             OneMachineTask(optimal_timing=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
         ]
 
-        scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks)
+        scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks.copy())
 
         desired_tasks = [
             OneMachineTask(optimal_timing=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1, scheduled_timing = 5)
         ]
 
-        assert(tasks==scheduled_tasks)
-
-        for t in scheduled_tasks:
-            print(t)
+        assert(desired_tasks[0].scheduled_timing==scheduled_tasks[0].scheduled_timing)
+        save_path = Path("tests")
+        func_name = inspect.currentframe().f_code.co_name
+        save_path = save_path / f"{func_name}.png"
+        # OneMachineTask.vis()
+        OneMachineTask.vis_with_diff(scheduled_tasks, save_path)
 
 if __name__ == '__main__':
     unittest.main()
