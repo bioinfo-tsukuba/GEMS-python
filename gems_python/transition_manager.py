@@ -180,8 +180,15 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
         # Thank you for your hard work.
         return abs(scheduled_timing - optimal_timing) * self.penalty_coefficient
 
-
-OneMachineTaskLocalInformation = Tuple[str, int, Type[PenaltyType]]
+class OneMachineTaskLocalInformation:
+    """
+    OneMachineTaskLocalInformation class.
+    This class is used as a data class for the task.
+    """
+    optimal_timing: int
+    processing_time: int
+    penalty_type: Type[PenaltyType]
+    experiment_operation: str
 
 from simanneal import Annealer
 import matplotlib.pyplot as plt
@@ -199,7 +206,7 @@ class OneMachineTask:
     experiment_operation: str
     experiment_name: str
     experiment_uuid: str
-    task_id: int
+    task_id: int = field(default=None)
     scheduled_timing: int = field(default=None)
 
     def to_dict(self) -> dict:
@@ -309,7 +316,8 @@ class OneMachineTask:
     def vis(cls, tasks: List['OneMachineTask'], save_path: Path = None):
         """
         Visualizes the scheduled tasks as a Gantt chart.
-        :param tasks: List of scheduled tasks to visualize.
+            - tasks: List of scheduled tasks to visualize.
+            - save_path: Path to save the visualization. If None, the visualization is shown.
         """
         fig, ax = plt.subplots()
         tasks = sorted(tasks, key=lambda x: x.scheduled_timing)
@@ -352,8 +360,9 @@ class OneMachineTask:
     @classmethod
     def vis_with_diff(cls, tasks: List['OneMachineTask'], save_path: Path = None):
         """
-        Visualizes the scheduled tasks as a Gantt chart with differences between optimal and scheduled timings.
-        :param tasks: List of scheduled tasks to visualize.
+        Visualizes the scheduled tasks as a Gantt chart.
+            - tasks: List of scheduled tasks to visualize.
+            - save_path: Path to save the visualization. If None, the visualization is shown.
         """
         fig, ax = plt.subplots()
         tasks = sorted(tasks, key=lambda x: x.scheduled_timing)
@@ -440,26 +449,18 @@ class Experiment:
         current_state_index (int): The current state index of the experiment.
         shared_variable_history (pl.DataFrame): The shared variable history of the experiment.
         experiment_uuid (str): The unique identifier of the experiment.
-        parent_dir_path (Path): The parent directory path of the experiment.
-
-    Note:
-        parent_dir_path is required to save the experiment data.
-        Normally, parent_dir_path/uuid/ is used to save the experiment data.
     """
     experiment_name: str
     states: List[Type[State]]
     current_state_index: int
     shared_variable_history: pl.DataFrame  # mutability is required
-    parent_dir_path: Path # The parent directory path of the experiment
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
-    current_task: OneMachineTaskLocalInformation = field(default=None)
+    current_task: OneMachineTask = field(default=None)
 
     def __post_init__(self):
         """
         Initialize the experiment.
         """
-        # Create the parent directory if it does not exist
-        self.parent_dir_path.mkdir(parents=True, exist_ok=True)
         if self.current_task is None:
             self.current_task = self.generate_task_of_the_state()
 
@@ -478,7 +479,7 @@ class Experiment:
     
 
 
-    def execute_one_step(self) -> OneMachineTaskLocalInformation:
+    def execute_one_step(self) -> OneMachineTask:
         """
         Execute one step. Determine the next state index and generate a task.
         Note: The shared variable history is updated.
@@ -504,7 +505,7 @@ class Experiment:
         return task
     
 
-    def generate_task_of_the_state(self) -> OneMachineTaskLocalInformation:
+    def generate_task_of_the_state(self) -> OneMachineTask:
         """
         Generate a task of the state.
         :return: Generated task.
@@ -512,7 +513,15 @@ class Experiment:
         # Generate a task
         state_index = self.current_state_index
         try:
-            task = self.states[state_index].task_generator(self.shared_variable_history.clone(), self.experiment_name, self.experiment_uuid)
+            task_local_information = self.states[state_index].task_generator(self.shared_variable_history.clone())
+            task = OneMachineTask(
+                optimal_timing=task_local_information.optimal_timing,
+                processing_time=task_local_information.processing_time,
+                penalty_type=task_local_information.penalty_type,
+                experiment_operation=task_local_information.experiment_operation,
+                experiment_name=self.experiment_name,
+                experiment_uuid=self.experiment_uuid,
+            )
         except Exception as err:
             raise RuntimeError(f"Error generating task: {err}")
 
@@ -531,6 +540,35 @@ class Experiment:
 
         return next_state_index
  
+
+
+"""MODULE: Experiments
+"""
+
+@dataclass
+class Experiments:
+    
+    """
+    Experiments class.
+    This class is used as a data class for the experiments.
+    """
+
+    experiments: List[Experiment]
+    parent_dir_path: Path
+    # Automatically generated fields, not accept user input
+    tasks: List[OneMachineTask] = field(default=None)
+
+    def __post_init__(self):
+        """
+        Initialize the experiments.
+        """
+        if self.tasks is None:
+            self.tasks = list()
+            for experiment in self.experiments:
+                self.tasks.append(experiment.current_task.copy())
+
+            for index in range(len(self.experiments)):
+                self.tasks[index].task_id = index
 
 # テスト
 def test_transition_manager():
