@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import copy
 from dataclasses import asdict, dataclass, field, fields
 from enum import Enum
 import json
@@ -181,6 +182,7 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
         # Thank you for your hard work.
         return abs(scheduled_timing - optimal_timing) * self.penalty_coefficient
 
+@dataclass
 class OneMachineTaskLocalInformation:
     """
     OneMachineTaskLocalInformation class.
@@ -232,6 +234,7 @@ class OneMachineTask:
         :return: JSON string representation of the task object.
         """
         data = self.to_dict()
+        data["penalty_type"] = self.penalty_type.to_json()
         return json.dumps(data)
 
     @classmethod
@@ -322,7 +325,7 @@ class OneMachineTask:
                 earliest_scheduled_task_index = i
                 earliest_scheduled_task_scheduled_timing = tasks[i].scheduled_timing
 
-        return tasks[earliest_scheduled_task_index].copy()
+        return copy.deepcopy(tasks[earliest_scheduled_task_index])
 
 
     @classmethod
@@ -464,23 +467,75 @@ class Experiment:
         current_state_index (int): The current state index of the experiment.
         shared_variable_history (pl.DataFrame): The shared variable history of the experiment.
         experiment_uuid (str): The unique identifier of the experiment.
+        TODO: UPDATE FIELD EXPLANATION
     """
     experiment_name: str
     states: List[Type[State]]
     current_state_name: str
     shared_variable_history: pl.DataFrame  # mutability is required
-    current_state_index: int = field(default=None)
+    current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
-    current_task: OneMachineTask = field(default=None)
+    current_task: OneMachineTask = field(default=None, init=False)
+
+
+    def to_dict(self) -> dict:
+        """
+        Converts the experiment object to a dictionary.
+        :return: Dictionary representation of the experiment object.
+        """
+        data = asdict(self)
+        data['states'] = [state.__class__.__name__ for state in self.states]  # Store class names instead of class objects
+        data['shared_variable_history'] = self.shared_variable_history.to_dict(as_series=False)
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Experiment':
+        """
+        Creates an experiment object from a dictionary.
+        :param data: Dictionary containing the experiment data.
+        :return: Experiment object.
+        """
+        data['states'] = [globals()[state_name] for state_name in data['states']]
+        data['shared_variable_history'] = pl.DataFrame(data['shared_variable_history'])
+        return cls(**data)
+
+    def to_json(self) -> str:
+        """
+        Converts the experiment object to a JSON string.
+        :return: JSON string representation of the experiment object.
+        """
+        data = self.to_dict()
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(cls, json_str: str) -> 'Experiment':
+        """
+        Creates an experiment object from a JSON string.
+        :param json_str: JSON string containing the experiment data.
+        :return: Experiment object.
+        """
+        data = json.loads(json_str)
+        return cls.from_dict(data)
+    
+    def save_all(self, save_dir: Path = None):
+        """
+        Save the experiment and its states.
+        """
+        save_path = save_dir if save_dir is not None else Path("experiments")
+        os.makedirs(save_path, exist_ok=True)
+        with open(save_path / f"{self.experiment_name}.json", "w") as f:
+            f.write(self.to_json())
+        
+        # for state in self.states:
+        #     state.save_all(save_path)
 
     def __post_init__(self):
         """
         Initialize the experiment.
         """
+        self.update_current_state_name_and_index(self.current_state_name)
         if self.current_task is None:
             self.current_task = self.generate_task_of_the_state()
-
-        self.current_state_index = self.get_current_state_index_from_current_state_name()
 
     def update_current_state_name_and_index(self, new_state_name: str):
         self.current_state_index = self.get_current_state_index_from_input_state_name(new_state_name)
@@ -511,11 +566,10 @@ class Experiment:
             print(f"  - {state.state_name}")
 
     def show_current_state_name(self):
-        current_state = self.states[self.current_state_index]
-        print(f"Current state: {current_state.state_name}")
+        print(f"Current state: {self.current_state_name}")
 
     def get_current_state_name(self) -> str:
-        return self.states[self.current_state_index].state_name
+        return self.current_state_name
     
 
 
@@ -596,7 +650,7 @@ class Experiments:
     experiments: List[Experiment]
     parent_dir_path: Path
     # Automatically generated fields, not accept user input
-    tasks: List[OneMachineTask] = field(default=None)
+    tasks: List[OneMachineTask] = field(default=None, init=False)
 
     def __post_init__(self):
         """
@@ -605,13 +659,29 @@ class Experiments:
         if self.tasks is None:
             self.tasks = list()
             for experiment in self.experiments:
-                self.tasks.append(experiment.current_task.copy())
+                self.tasks.append(copy.deepcopy(experiment.current_task))
 
             for index in range(len(self.tasks)):
                 self.tasks[index].task_id = index
 
-    def save_all(self):
-        os.makedirs(self.parent_dir_path, exist_ok=True)
+    def save_all(self, save_dir: Path = None, under_parent_dir: bool = True):
+        if under_parent_dir:
+            save_path = self.parent_dir_path / (save_dir if save_dir is not None else "")
+        else:
+            save_path = save_dir if save_dir is not None else self.parent_dir_path
+
+        os.makedirs(save_path, exist_ok=True)
+        tasks = [task.to_json() for task in self.tasks]
+        print(f"{tasks=}")
+        for task in self.tasks:
+            print(f"{task.to_json()=}")
+        with open(save_path / "tasks.json", "w") as f:
+            json.dump(tasks, f, ensure_ascii=False, indent=2)
+        
+        experiments_dir = save_path / "experiments"
+        os.makedirs(experiments_dir, exist_ok=True)
+        for experiment in self.experiments:
+            experiment.save_all(experiments_dir)
 
 
     def assign_task_ids(self):
@@ -627,7 +697,7 @@ class Experiments:
         new_tasks = list()
         for task in range(len(self.tasks)):
             if self.tasks[task].task_id != task_id:
-                new_tasks.append(self.tasks[task].copy())
+                new_tasks.append(copy.deepcopy(self.tasks[task]))
         pass
 
     """
