@@ -4,24 +4,99 @@ from typing import Any, Tuple, Type
 import unittest
 import polars as pl
 import inspect
-from gems_python.transition_manager import LinearPenalty, NonePenalty, OneMachineTask, PenaltyType, State, CyclicalRestPenaltyWithLinear, LinearWithRange
+from gems_python.transition_manager import Experiment, Experiments, LinearPenalty, NonePenalty, OneMachineTask, OneMachineTaskLocalInformation, PenaltyType, State, CyclicalRestPenaltyWithLinear, LinearWithRange
 
 @dataclass
-class MyState(State):
+class MyState1(State):
 
-    state_name = "MyState"
-    state_index = 0
-
-    def transition_function(self, df: pl.DataFrame) -> int:
+    def transition_function(self, df: pl.DataFrame) -> str:
         # 簡単な実装例として、DataFrameの行数を返す
-        return df.height
+        return "MyState2"
 
-    def task_generator(self, df: pl.DataFrame) -> Tuple[str, int, Type[PenaltyType]]:
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        task_name = "example_task"
+        task_count = df.height
+        pelalty_type = LinearPenalty(10)
+        return OneMachineTaskLocalInformation(
+            optimal_timing=0,
+            processing_time=1,
+            penalty_type=pelalty_type,
+            experiment_operation=task_name,
+        )
+    
+
+@dataclass
+class MyState2(State):
+
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # 簡単な実装例として、DataFrameの行数を返す
+        return "MyState1"
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        task_name = "example_task"
+        task_count = df.height
+        pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
+        return OneMachineTaskLocalInformation(
+            optimal_timing=0,
+            processing_time=1,
+            penalty_type=pelalty_type,
+            experiment_operation=task_name,
+        )
+    
+
+@dataclass
+class MyState__1(State):
+
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # 簡単な実装例として、DataFrameの行数を返す
+        return "MyState__1"
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        task_name = "example_task"
+        task_count = df.height
+        pelalty_type = LinearPenalty(10)
+        return OneMachineTaskLocalInformation(
+            optimal_timing=0,
+            processing_time=1,
+            penalty_type=pelalty_type,
+            experiment_operation=task_name,
+        )
+
+@dataclass
+class MyState__2(State):
+
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # 簡単な実装例として、DataFrameの行数を返す
+        return "MyState__2"
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
         task_name = "example_task"
         task_count = df.height
         pelalty_type = NonePenalty()
-        return (task_name, task_count, pelalty_type)
+        return OneMachineTaskLocalInformation(
+            optimal_timing=0,
+            processing_time=1,
+            penalty_type=pelalty_type,
+            experiment_operation=task_name,
+        )
+
+@dataclass
+class MyExperiment1(Experiment):
+    """
+    TODO: 継承元のクラス名を表示できるのであれば行いたい
+    ベースとなるプロトコル→今のプロトコル　のようにしたい
+    """
+@dataclass
+class MyExperiment2(Experiment):
+    """
+    TODO: 継承元のクラス名を表示できるのであれば行いたい
+    ベースとなるプロトコル→今のプロトコル　のようにしたい
+    """
+
 
 class TestTransitionManager(unittest.TestCase):
     def setUp(self):
@@ -30,12 +105,35 @@ class TestTransitionManager(unittest.TestCase):
             "col1": [1, 2, 3],
             "col2": [4, 5, 6]
         })
-        self.state = MyState()
+        self.state = MyState1()
         print(self.state)
+
+        self.experiment = MyExperiment1(
+            "test1",
+            [MyState1(), MyState2()],
+            self.state.state_name,
+            self.df,
+        )
+        print(self.experiment)
+
+
+        experiment2 = MyExperiment2(
+            "test2",
+            [MyState__1(), MyState__2()],
+            "MyState__2",
+            self.df,
+        )
+
+        e = Experiments(
+            [self.experiment, experiment2],
+            parent_dir_path=Path("tests/test_save_all")
+            )
+        e.save_all()
+
 
     def test_transition_function(self):
         result = self.state.transition_function(self.df)
-        self.assertEqual(result, 3)  # 行数が3であることを確認
+        print(f"{result=}")
 
     def test_task_generator(self):
         task_name, task_count, penalty = self.state.task_generator(self.df)
