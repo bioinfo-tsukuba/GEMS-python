@@ -432,16 +432,18 @@ class State(ABC):
     When inheriting this class, you should implement the following methods:
     - transition_function
     - task_generator
-    
-    Also, you shoud define the following fields in the subclass, before instantiating the class:
-    - state_name: str
-    - state_index: int
     """
-    state_name: str = field(init=False)
-    state_index: int = field(init=False)
+
+    state_name: str = field(init=False, default=None)
+
+    def __post_init__(self):
+        self.state_name = self.__class__.__name__
 
     @abstractmethod
-    def transition_function(self, df: pl.DataFrame) -> int:
+    def transition_function(self, df: pl.DataFrame) -> str:
+        """
+        This function must return one of the state name in the 'states', state list of the parent experiment
+        """
         pass
 
     @abstractmethod
@@ -465,8 +467,9 @@ class Experiment:
     """
     experiment_name: str
     states: List[Type[State]]
-    current_state_index: int
+    current_state_name: str
     shared_variable_history: pl.DataFrame  # mutability is required
+    current_state_index: int = field(default=None)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
     current_task: OneMachineTask = field(default=None)
 
@@ -476,6 +479,30 @@ class Experiment:
         """
         if self.current_task is None:
             self.current_task = self.generate_task_of_the_state()
+
+        self.current_state_index = self.get_current_state_index_from_current_state_name()
+
+    def update_current_state_name_and_index(self, new_state_name: str):
+        self.current_state_index = self.get_current_state_index_from_input_state_name(new_state_name)
+        self.current_state_name = new_state_name
+
+
+    def get_current_state_index_from_current_state_name(self):
+        
+        current_state_index = self.get_current_state_index_from_input_state_name(self.current_state_name)
+        return current_state_index
+
+    def get_current_state_index_from_input_state_name(self, input_state_name: str):
+        current_state_index = -1
+        for index in range(len(self.states)):
+            if self.states[index].state_name == input_state_name:
+                current_state_index = index
+        
+        if current_state_index == -1:
+            RuntimeError(f"There is no state named {input_state_name}")
+        
+        return current_state_index
+        
 
     def show_experiment_name_and_state_names(self):
         print(f"Experiment name: {self.experiment_name}")
@@ -502,12 +529,12 @@ class Experiment:
         """
         # Determine the next state index
         try:
-            next_state_index = self.determine_next_state_index()
+            new_state_name = self.determine_next_state_name()
         except Exception as err:
             raise RuntimeError(f"Error determining the next state index: {err}")
 
         # Update the current state index
-        self.current_state_index = next_state_index
+        self.update_current_state_name_and_index(new_state_name)
         
         # Generate a task
         try:
@@ -540,18 +567,18 @@ class Experiment:
 
         return task
     
-    def determine_next_state_index(self) -> int:
+    def determine_next_state_name(self) -> str:
         """
         Determine the next state index.
         :return: Next state index.
         """
         # Determine the next state index
         try:
-            next_state_index: int = self.states[self.current_state_index].transition_function(self.shared_variable_history)
+            next_state_name: int = self.states[self.current_state_index].transition_function(self.shared_variable_history)
         except Exception as err:
             raise RuntimeError(f"Error state transition: {err}")
 
-        return next_state_index
+        return self.get_current_state_index_from_input_state_name(next_state_name)
  
 
 
@@ -735,7 +762,7 @@ class Experiments:
 def test_transition_manager():
     df = pl.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
     manager = TransitionManager(transition_function)
-    result = manager.determine_next_state_index(df)
+    result = manager.determine_next_state_name(df)
     print(f"Next state index: {result}")
 
 if __name__ == "__main__":
