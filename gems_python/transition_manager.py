@@ -537,6 +537,9 @@ class Experiment:
         if self.current_task is None:
             self.current_task = self.generate_task_of_the_state()
 
+        # if self.shared_variable_history != pl.DataFrame:
+        #     pl.read_csv(self.shared_variable_history)
+
     def update_current_state_name_and_index(self, new_state_name: str):
         self.current_state_index = self.get_current_state_index_from_input_state_name(new_state_name)
         self.current_state_name = new_state_name
@@ -698,18 +701,7 @@ class Experiments:
         for task in range(len(self.tasks)):
             if self.tasks[task].task_id != task_id:
                 new_tasks.append(copy.deepcopy(self.tasks[task]))
-        pass
 
-    """
-        /// Delete the tasks with task_id
-    pub(crate) fn delete_tasks_with_task_id(
-        &mut self, 
-        task_id: TaskId,
-    ){
-        // Delete the tasks with task_id
-        self.tasks.retain(|task| task.task_id != task_id);
-    }
-    """
 
     def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
             self,
@@ -760,73 +752,6 @@ class Experiments:
                 AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
 
         return OneMachineTask.get_earliest_scheduled_task(self.tasks)
-
-    """
-        /// Update the state and reschedule
-    /// update_type: 'a' for add, 'w' for replace
-    /// scheduling_method: 's' for simulated annealing, 'f' for FIFO
-    pub(crate) fn update_state_and_reschedule(
-        &mut self, 
-        task_id: TaskId,
-        new_result_of_experiment: TaskResult,
-        update_type: char,
-        scheduling_method: char,
-    ) -> Vec<common_param_type::ScheduledTask> {
-
-        let experiment_name = self.tasks[task_id].experiment_name.clone();
-        eprintln!("Update the state of experiment: {}", experiment_name);
-        let experiment_uuid = self.tasks[task_id].experiment_uuid.clone();
-        let experiment_index = self.experiments.iter().position(|experiment| experiment.experiment_uuid == experiment_uuid).unwrap();
-        let state_name_before = self.experiments[experiment_index].states[self.experiments[experiment_index].current_state_index].state_name.clone();
-
-        self.delete_tasks_with_task_id(task_id);
-        
-        // Update the shared variable history
-        println!("Update the shared variable history");
-        println!("Old\n {:?}", self.experiments[experiment_index].shared_variable_history);
-        println!("New\n {:?}", new_result_of_experiment);
-        match update_type {
-            'a' => {
-                // Add the new result of experiment to the shared variable history
-                self.experiments[experiment_index].shared_variable_history = concat_df_diagonal(&[
-                    self.experiments[experiment_index].shared_variable_history.clone(),
-                    new_result_of_experiment,
-                ]).unwrap();
-            },
-            'w' => {
-                // Replace the shared variable history with the new result of experiment
-                self.experiments[experiment_index].shared_variable_history = new_result_of_experiment;
-            },
-            _ => panic!("The update type is not supported."),
-        }
-
-        // Execute one step
-        let task = self.experiments[experiment_index].execute_one_step();
-
-        let state_name_after = self.experiments[experiment_index].states[self.experiments[experiment_index].current_state_index].state_name.clone();
-
-        eprintln!("State transition: {} => {} in experiment: {}, experiment_uuid: {}", state_name_before, state_name_after, experiment_name, experiment_uuid);
-
-        // Add the task to the task list
-        self.tasks.push(task);
-        self.assign_task_id();
-        self.vis();
-
-        // Reschedule
-        match scheduling_method {
-            's' => {
-                // Absolute scheduling
-                crate::task_scheduler::one_machine_schedule_solver::simulated_annealing_scheduler_absolute(self.tasks.clone())
-            },
-            'f' => {
-                // Relative scheduling
-                crate::task_scheduler::one_machine_schedule_solver::FIFO_scheduler_absolute(self.tasks.clone())
-            },
-            _ => panic!("The scheduling method is not supported."),
-            
-        }
-    }
-    """
 
 # テスト
 def test_transition_manager():
