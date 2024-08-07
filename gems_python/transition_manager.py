@@ -502,18 +502,19 @@ class Experiment:
     Attributes:
         experiment_name (str): The name of the experiment.
         states (List[State]): The states of the experiment.
-        current_state_index (int): The current state index of the experiment.
+        current_state_name (str): The name of the current state.
         shared_variable_history (pl.DataFrame): The shared variable history of the experiment.
-        experiment_uuid (str): The unique identifier of the experiment.
-        TODO: UPDATE FIELD EXPLANATION
+        current_task (OneMachineTask) (You can manually assign it or Automatically generated): The current task of the experiment.
+        current_state_index (int) (Automatically generated): The index of the current state.
+        experiment_uuid (str) (Automatically generated): The UUID of the experiment.
     """
     experiment_name: str
     states: List[Type[State]]
     current_state_name: str
-    shared_variable_history: pl.DataFrame  # mutability is required
+    shared_variable_history: pl.DataFrame
+    current_task: OneMachineTask = field(default=None)
     current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
-    current_task: OneMachineTask = field(default=None, init=False)
 
 
     def to_dict(self) -> dict:
@@ -728,6 +729,46 @@ class Experiments:
 
             for index in range(len(self.tasks)):
                 self.tasks[index].task_id = index
+
+    def add_experiment(self, experiment: Experiment) -> Union[None, ValueError]:
+
+        # Check the duplication of the experiment name and uuid
+        for e in self.experiments:
+            if e.experiment_name == experiment.experiment_name and e.experiment_uuid == experiment.experiment_uuid:
+                raise ValueError(f"Experiment name and uuid must be unique: {experiment.experiment_name}, {experiment.experiment_uuid}")
+            
+        self.experiments.append(experiment)
+        self.tasks.append(copy.deepcopy(experiment.current_task))
+        self.tasks[-1].task_id = len(self.tasks) - 1
+
+
+    def delete_experiment_with_experiment_uuid(self, experiment_uuid: str) -> Union[None, ValueError]:
+        """
+        Delete the experiment with the input experiment_uuid.
+        """
+        # Check the experiment exists
+        is_exist = False
+        for experiment in self.experiments:
+            if experiment.experiment_uuid == experiment_uuid:
+                is_exist = True
+                break
+
+        if not is_exist:
+            raise ValueError(f"Experiment with uuid {experiment_uuid} does not exist")
+
+        new_experiments = list()
+        for experiment in self.experiments:
+            if experiment.experiment_uuid != experiment_uuid:
+                new_experiments.append(copy.deepcopy(experiment))
+        
+        self.experiments = new_experiments
+
+    def list(self):
+        """
+        List the experiment names and uuids.
+        """
+        for experiment in self.experiments:
+            print(f"Experiment name: {experiment.experiment_name}, Experiment uuid: {experiment.experiment_uuid}")
 
     def save_all(self, save_dir: Path = None, under_parent_dir: bool = True):
         if under_parent_dir:
