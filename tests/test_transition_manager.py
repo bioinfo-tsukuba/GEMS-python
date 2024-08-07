@@ -7,11 +7,11 @@ import inspect
 from gems_python.transition_manager import Experiment, Experiments, LinearPenalty, NonePenalty, OneMachineTask, OneMachineTaskLocalInformation, PenaltyType, State, CyclicalRestPenaltyWithLinear, LinearWithRange
 
 @dataclass
-class MyState1(State):
+class State_1(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
         # 簡単な実装例として、DataFrameの行数を返す
-        return "MyState2"
+        return "State_2"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
@@ -27,11 +27,11 @@ class MyState1(State):
     
 
 @dataclass
-class MyState2(State):
+class State_2(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
         # 簡単な実装例として、DataFrameの行数を返す
-        return "MyState1"
+        return "State_3"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
@@ -47,11 +47,54 @@ class MyState2(State):
     
 
 @dataclass
-class MyState__1(State):
+class State_3(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
         # 簡単な実装例として、DataFrameの行数を返す
-        return "MyState__1"
+        return "State_1"
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        task_name = "example_task"
+        task_count = df.height
+        pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
+        return OneMachineTaskLocalInformation(
+            optimal_timing=0,
+            processing_time=1,
+            penalty_type=pelalty_type,
+            experiment_operation=task_name,
+        )
+
+
+@dataclass
+class State_4(State):
+
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # 簡単な実装例として、DataFrameの行数を返す
+        if True:
+            return "State_1"
+        else:
+            return "State_3"
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        task_name = "example_task"
+        task_count = df.height
+        pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
+        return OneMachineTaskLocalInformation(
+            optimal_timing=0,
+            processing_time=1,
+            penalty_type=pelalty_type,
+            experiment_operation=task_name,
+        )
+    
+
+@dataclass
+class State___1(State):
+
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # 簡単な実装例として、DataFrameの行数を返す
+        return "State___1"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
@@ -66,11 +109,11 @@ class MyState__1(State):
         )
 
 @dataclass
-class MyState__2(State):
+class State___2(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
         # 簡単な実装例として、DataFrameの行数を返す
-        return "MyState__2"
+        return "State___2"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
@@ -88,13 +131,13 @@ class MyState__2(State):
 class MyExperiment1(Experiment):
     """
     TODO: 継承元のクラス名を表示できるのであれば行いたい
-    ベースとなるプロトコル→今のプロトコル　のようにしたい
+    ベースとなるプロトコル→今のプロトコルのようにしたい
     """
 @dataclass
 class MyExperiment2(Experiment):
     """
     TODO: 継承元のクラス名を表示できるのであれば行いたい
-    ベースとなるプロトコル→今のプロトコル　のようにしたい
+    ベースとなるプロトコル→今のプロトコルのようにしたい
     """
 
 
@@ -105,12 +148,12 @@ class TestTransitionManager(unittest.TestCase):
             "col1": [1, 2, 3],
             "col2": [4, 5, 6]
         })
-        self.state = MyState1()
+        self.state = State_1()
         print(self.state)
 
         self.experiment = MyExperiment1(
             "test1",
-            [MyState1(), MyState2()],
+            [State_1(), State_2(), State_3(), State_4()],
             self.state.state_name,
             self.df,
         )
@@ -119,8 +162,8 @@ class TestTransitionManager(unittest.TestCase):
 
         experiment2 = MyExperiment2(
             "test2",
-            [MyState__1(), MyState__2()],
-            "MyState__2",
+            [State___1(), State___2()],
+            "State___2",
             self.df,
         )
 
@@ -208,6 +251,98 @@ class TestScheduler(unittest.TestCase):
         save_path = save_path / f"{func_name}.png"
         # OneMachineTask.vis()
         OneMachineTask.vis_with_diff(scheduled_tasks, save_path)
+
+
+
+class SeedingState(State):
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # Transition to 'CulturingState' after seeding
+        condition_A = True
+        if condition_A:
+            return 'CulturingState'
+        else:
+            return 'End'
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # Define the seeding task
+        return OneMachineTaskLocalInformation(
+            optimal_timing=0,
+            processing_time=2,
+            penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
+            experiment_operation='Seeding Cells'
+        )
+
+class CulturingState(State):
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # Transition to 'HarvestingState' after culturing
+        condition_A = True
+        condition_B = True
+        if condition_B:
+            return 'HarvestingState'
+        elif condition_A:
+            return 'CulturingState'
+        else:
+            return 'End'
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # Define the culturing task
+        return OneMachineTaskLocalInformation(
+            optimal_timing=3,
+            processing_time=5,
+            penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
+            experiment_operation='Culturing Cells'
+        )
+
+class HarvestingState(State):
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # End of the experiment, no transition
+        return 'End'
+
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # Define the harvesting task
+        return OneMachineTaskLocalInformation(
+            optimal_timing=9,
+            processing_time=1,
+            penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
+            experiment_operation='Harvesting Cells'
+        )
+
+@dataclass
+class ExperimentStructureExample(Experiment):
+    """
+    TODO: 継承元のクラス名を表示できるのであれば行いたい
+    ベースとなるプロトコル→今のプロトコルのようにしたい
+    """
+    def __init__(self):
+        # Define the experiment using the states
+        seeding_state = SeedingState()
+        culturing_state = CulturingState()
+        harvesting_state = HarvestingState()
+
+        # Create a shared variable history DataFrame (empty for this example)
+        shared_variable_history = pl.DataFrame([])
+
+        # Define the initial state and experiment
+        super().__init__(
+            experiment_name="Cell Culture Protocol",
+            states=[seeding_state, culturing_state, harvesting_state],
+            current_state_name=seeding_state.state_name,
+            shared_variable_history=shared_variable_history
+        )
+
+class TestExperimentStructure(unittest.TestCase):
+    def setUp(self):
+        self.experiment = ExperimentStructureExample()
+
+    def test_experiment_structure(self):
+        # Test the experiment structure
+        self.assertEqual(self.experiment.current_state_name, 'SeedingState')
+        self.assertEqual(self.experiment.states[0].state_name, 'SeedingState')
+        self.assertEqual(self.experiment.states[1].state_name, 'CulturingState')
+        self.assertEqual(self.experiment.states[2].state_name, 'HarvestingState')
+
+    def test_experiment_structure_graph(self):
+        self.experiment.show_experiment_directed_graph()
 
 if __name__ == '__main__':
     unittest.main()
