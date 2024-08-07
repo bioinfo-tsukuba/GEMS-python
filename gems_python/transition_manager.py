@@ -1,3 +1,7 @@
+import textwrap
+import networkx as nx
+import ast
+import inspect
 from abc import ABC, abstractmethod
 import copy
 from dataclasses import asdict, dataclass, field, fields
@@ -442,6 +446,40 @@ class State(ABC):
     def __post_init__(self):
         self.state_name = self.__class__.__name__
 
+    def extract_all_state_transition_candidates(self):
+        func = self.transition_function
+        """
+        Extracts the return values from the function.
+        :param func: Function to extract the return values from.
+        :return: List of return values.
+        """
+        class ReturnVisitor(ast.NodeVisitor):
+            def __init__(self):
+                self.returns = []
+
+            def visit_Return(self, node):
+                if isinstance(node.value, ast.Constant):
+                    if isinstance(node.value.value, str):
+                        self.returns.append(node.value.value)
+                elif isinstance(node.value, ast.Name):
+                    self.returns.append(f"val:{node.value.id}")
+                self.generic_visit(node)
+
+        # Get the source code of the function
+        source = inspect.getsource(func)
+        
+        # Adjust the indentation
+        source = textwrap.dedent(source)
+        
+        tree = ast.parse(source)
+        visitor = ReturnVisitor()
+        visitor.visit(tree)
+        return visitor.returns
+        tree = ast.parse(source)
+        visitor = ReturnVisitor()
+        visitor.visit(tree)
+        return visitor.returns
+
     @abstractmethod
     def transition_function(self, df: pl.DataFrame) -> str:
         """
@@ -516,6 +554,30 @@ class Experiment:
         """
         data = json.loads(json_str)
         return cls.from_dict(data)
+    
+    def show_experiment_directed_graph(self):
+        """
+        Show the directed graph of the experiment.
+        """
+        G = nx.DiGraph()
+        all_node = set()
+        for state in self.states:
+            all_node.add(state.state_name)
+            next_state_names = state.extract_all_state_transition_candidates()
+            for next_state_name in next_state_names:
+                all_node.add(next_state_name)
+
+        for node in all_node:
+            G.add_node(node)
+        
+        for state in self.states:
+            next_state_names = state.extract_all_state_transition_candidates()
+            for next_state_name in next_state_names:
+                G.add_edge(state.state_name, next_state_name)
+
+        nx.draw(G, with_labels=True, node_size=1000, node_color="skyblue", font_size=10, font_weight="bold", edge_color="gray", width=1.0)
+        plt.show()
+
     
     def save_all(self, save_dir: Path = None):
         """
