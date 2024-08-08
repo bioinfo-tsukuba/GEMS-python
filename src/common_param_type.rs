@@ -20,11 +20,6 @@ pub type StateName = String;
 pub type ExperimentIndex = usize;
 pub type ExperimentName = String;
 
-pub type OptimalTiming = i64;
-pub type ScheduleTiming = OptimalTiming;
-pub type PenaltyParameter = OptimalTiming;
-pub type ProcessingTime = OptimalTiming;
-
 /// TaskResult is the data structure for data frame.
 /// HashMap< Column name, data>
 /// The data should have the same length
@@ -43,8 +38,8 @@ pub(crate) enum NewResultOfExperimentInput{
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Task{
-    pub optimal_timing: OptimalTiming,
-    pub processing_time: ProcessingTime,
+    pub optimal_timing: i64,
+    pub processing_time: i64,
     pub penalty_type: PenaltyType,
     pub experiment_operation: ExperimentOperation,
     pub experiment_name: ExperimentName,
@@ -55,13 +50,13 @@ pub struct Task{
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct  ScheduledTask {
     /// The unit is minute
-    pub optimal_timing: OptimalTiming,
-    pub processing_time: ProcessingTime,
+    pub optimal_timing: i64,
+    pub processing_time: i64,
     pub penalty_type: PenaltyType,
     pub experiment_operation: ExperimentOperation,
     pub experiment_name: ExperimentName,
     pub experiment_uuid: String,
-    pub schedule_timing: ScheduleTiming,
+    pub schedule_timing: i64,
     pub task_id: usize,
 }
 
@@ -178,13 +173,13 @@ impl ScheduledTask{
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct  ScheduledTaskSerde {
-    pub optimal_timing: OptimalTiming,
-    pub processing_time: ProcessingTime,
+    pub optimal_timing: i64,
+    pub processing_time: i64,
     pub penalty_type: String,
     pub experiment_operation: ExperimentOperation,
     pub experiment_name: ExperimentName,
     pub experiment_uuid: String,
-    pub schedule_timing: ScheduleTiming,
+    pub schedule_timing: i64,
     pub task_id: usize,
 }
 
@@ -236,19 +231,19 @@ pub(crate) fn read_scheduled_task(path: &Path) -> Result<Vec<ScheduledTask>, Box
 pub enum PenaltyType {
     /// 0: None
     None,
-    /// 1: Linear, let an earliness or a delay be "diff" (ScheduleTiming - OptimalTiming), then the penalty is abs(diff * coefficient)
-    Linear{coefficient:PenaltyParameter},
+    /// 1: Linear, let an earliness or a delay be "diff" (i64 - i64), then the penalty is abs(diff * coefficient)
+    Linear{coefficient:i64},
 
     /// 2: LinearWithRange, let an earliness or a delay be "diff", 
     /// then the penalty of LinearWithRange(lower, lower_coefficient, upper, upper_coefficient) is
     /// if diff < lower, then (lower-diff) * lower_coefficient
     /// if lower <= diff <= upper, then 0
     /// if upper < diff, then (diff-upper) * upper_coefficient
-    LinearWithRange{lower:PenaltyParameter, lower_coefficient:PenaltyParameter, upper:PenaltyParameter, upper_coefficient:PenaltyParameter},
+    LinearWithRange{lower:i64, lower_coefficient:i64, upper:i64, upper_coefficient:i64},
 
     /// 3: CyclicalRestPenalty, this penalty is used for the rest time, like holidays.
     /// The penalty is calculated by the following steps:
-    /// 1. Calculate the diff = ScheduleTiming - start_minute, which is the time from the start_minute.
+    /// 1. Calculate the diff = i64 - start_minute, which is the time from the start_minute.
     /// 2. Calculate the diff = diff % cycle_minute, which is the time from the start_minute in the cycle.
     /// 3. If diff is in the ranges, then the penalty is 0, otherwise the penalty is PENALTY_MAXIMUM.
     /// The ranges are defined by the vector of (start, end) in the ranges.
@@ -256,7 +251,7 @@ pub enum PenaltyType {
 
     /// 4: CyclicalRestPenaltyWithLinear, this penalty is used for the rest time, like holidays.
     /// The penalty is calculated by the following steps:
-    /// 1. Calculate the diff = ScheduleTiming - start_minute, which is the time from the start_minute.
+    /// 1. Calculate the diff = i64 - start_minute, which is the time from the start_minute.
     /// 2. Calculate the diff = diff % cycle_minute, which is the time from the start_minute in the cycle.
     /// 3. If diff is in the ranges, then the penalty is PENALTY_MAXIMUM, otherwise the penalty is abs(diff * coefficient).
     /// The ranges are defined by the vector of (start, end) in the ranges.
@@ -272,8 +267,8 @@ impl Default for PenaltyType {
 
 impl PenaltyType {
     /// Get the penalty
-    /// diff: ScheduleTiming - OptimalTiming
-    pub fn get_penalty(&self, scheduled_timing: ScheduleTiming, optimal_timing: OptimalTiming) -> i64 {
+    /// diff: i64 - i64
+    pub fn get_penalty(&self, scheduled_timing: i64, optimal_timing: i64) -> i64 {
         let diff = scheduled_timing - optimal_timing;
         match self {
             PenaltyType::None => 0,

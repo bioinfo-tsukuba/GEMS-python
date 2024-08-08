@@ -576,7 +576,14 @@ class Experiment:
             for next_state_name in next_state_names:
                 G.add_edge(state.state_name, next_state_name)
 
-        nx.draw(G, with_labels=True, node_size=1000, node_color="skyblue", font_size=10, font_weight="bold", edge_color="gray", width=1.0)
+        highlight_nodes = [self.current_state_name]
+
+        # Draw the graph
+        pos = nx.spring_layout(G, seed=100)
+        node_color = ["skyblue" if node not in highlight_nodes else "orange" for node in G.nodes()]
+        node_size = [1000 if node not in highlight_nodes else 1500 for node in G.nodes()]
+
+        nx.draw(G, pos, with_labels=True, node_size=node_size, node_color=node_color, font_size=10, font_weight="bold", edge_color="gray", width=1.0)
         plt.show()
 
     
@@ -636,8 +643,6 @@ class Experiment:
 
     def get_current_state_name(self) -> str:
         return self.current_state_name
-    
-
 
     def execute_one_step(self) -> OneMachineTask:
         """
@@ -664,7 +669,6 @@ class Experiment:
 
         return task
     
-
     def generate_task_of_the_state(self) -> OneMachineTask:
         """
         Generate a task of the state.

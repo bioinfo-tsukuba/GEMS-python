@@ -3,12 +3,10 @@ use std::error::Error;
 // polars
 use polars::prelude::*;
 
-use crate::common_param_type::*;
-
 
 // Define a type for TransitionFunction
-/// TransitionFunction is a function that takes a DataFrame and returns a Result<StateIndex, Box<dyn Error>>
-pub(crate) type TransitionFunction = dyn Fn(&mut DataFrame) -> Result<StateIndex, Box<dyn Error>>;
+/// TransitionFunction is a function that takes a DataFrame and returns a Result<usize, Box<dyn Error>>
+pub(crate) type TransitionFunction = dyn Fn(&mut DataFrame) -> Result<usize, Box<dyn Error>>;
 
 // Define a type for TransitionManager
 pub(crate) struct TransitionManager {
@@ -25,7 +23,7 @@ impl TransitionManager {
     }
     
     /// Determine the next state type
-    pub(crate) fn determine_next_state_index(&self, df: &mut DataFrame) -> Result<StateIndex, Box<dyn Error>> {
+    pub(crate) fn determine_next_state_index(&self, df: &mut DataFrame) -> Result<usize, Box<dyn Error>> {
         (self.transition_function)(df)
     }
 }

@@ -344,5 +344,8 @@ class TestExperimentStructure(unittest.TestCase):
     def test_experiment_structure_graph(self):
         self.experiment.show_experiment_directed_graph()
 
+    def test_experiment_structure_task_generation(self):
+        self.experiment.show_experiment_name_and_state_names()
+
 if __name__ == '__main__':
     unittest.main()
