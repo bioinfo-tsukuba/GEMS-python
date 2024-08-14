@@ -1,9 +1,62 @@
 from dataclasses import dataclass
+import numpy as np
 import polars as pl
 from gems_python.onemachine_problem.penalty import *
 from gems_python.onemachine_problem.transition_manager import Experiment, OneMachineTaskLocalInformation, State
 from dataclasses import dataclass
 import polars as pl
+from scipy.optimize import curve_fit
+
+# /// The processing time of each state, the unit is minute
+# pub(crate) static HEK_CULTURE_PROCESSING_TIME:[common_param_type::ProcessingTime; 4] = [
+#     0, // EXPIRE
+#     60, // PASSAGE
+#     15, // GET_IMAGE
+#     40, // SAMPLING
+# ];
+
+# TODO: 増殖曲線の予測（Passageによるリセットも考慮に入れたもの）を実装する
+# def logistic(t, r, N0, K=1):
+#     return K / (1 + (K/N0 - 1) * np.exp(-r * t))
+
+# def def_piecewise_logistic(pieces, K=1):
+#     pieces = [0] + pieces
+
+#     def pf(t, r, *n0_list):
+#         assert len(n0_list) == len(pieces)
+#         n0 = np.zeros_like(t)
+#         t0 = np.zeros_like(t)
+#         for i, p in enumerate(pieces):
+#             n0[p <= t] = n0_list[i]
+#             t0[p <= t] = p
+#         return logistic(t-t0, r, n0, K)
+#     return pf
+
+# def fit_param(self):
+#     if len(self.density_log) <= 3:
+#         return False
+#     passage_time = self.list_passage_time()
+#     piecewise_logistic = def_piecewise_logistic(passage_time, self.K)
+
+#     x = self.time2spentdays(self.density_log.index)
+#     y = self.density_log.values
+#     p0 = [1] + [0.1] * (len(passage_time) + 1)
+#     popt, _ = curve_fit(piecewise_logistic, x, y, p0=p0)
+#     self.fitted_r = popt[0]
+#     self.fitted_s = popt[1:]
+#     return True
+
+PROCESSING_TIME = {
+    "ExpireState": 0,
+    "PassageState": 60,
+    "GetImageState": 15,
+    "SamplingState": 40,
+    "GetImageJustBeforePassageState": 15,
+    "GetImageJustBeforeSamplingState": 15,
+}
+
+OPERATION_INTERVAL = (12 * 60)
+
 
 @dataclass
 class ExpireState(State):
@@ -15,9 +68,9 @@ class ExpireState(State):
         current_time = last_row["time"][0]
         return OneMachineTaskLocalInformation(
             optimal_timing=current_time,  # 現在の時間
-            processing_time=5,  # 定義済みの処理時間（例: 5分）
+            processing_time=PROCESSING_TIME["ExpireState"], 
             penalty_type=LinearWithRange(lower=0, lower_coefficient=0, upper=0, upper_coefficient=0),
-            experiment_operation="End culture"
+            experiment_operation="Getimage"
         )
 
 
@@ -31,8 +84,8 @@ class PassageState(State):
         current_time = last_row["time"][0]
         return OneMachineTaskLocalInformation(
             optimal_timing=current_time,  # 現在の時間
-            processing_time=15,  # 定義済みの処理時間（例: 15分）
-            penalty_type=LinearWithRange(lower=-10, lower_coefficient=100, upper=10, upper_coefficient=100),
+            processing_time=PROCESSING_TIME["PassageState"],
+            penalty_type=LinearPenalty(penalty_coefficient=100),
             experiment_operation="Passage"
         )
 
@@ -44,12 +97,12 @@ class GetImageState(State):
         time_since_last_passage = int(df[-1]['time']) - int(df[-1]['last_passage_time'])
 
         if passage_count <= 1:
-            if time_since_last_passage >= 12 * 60:
+            if time_since_last_passage >= OPERATION_INTERVAL:
                 return "GetImageJustBeforePassageState"
             else:
                 return "GetImageState"
         else:
-            if time_since_last_passage >= 12 * 60:
+            if time_since_last_passage >= OPERATION_INTERVAL:
                 return "GetImageJustBeforeSamplingState"
             else:
                 return "GetImageState"
@@ -57,15 +110,15 @@ class GetImageState(State):
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         passage_count = int(df[-1]['passage_count'])
         if passage_count <= 1:
-            optimal_timing = int(df[-1]['time']) + 12 * 60
+            optimal_timing = int(df[-1]['time']) + OPERATION_INTERVAL
         else:
-            optimal_timing = int(df[-1]['time']) + 12 * 60
+            optimal_timing = int(df[-1]['time']) + OPERATION_INTERVAL
 
         return OneMachineTaskLocalInformation(
             optimal_timing=optimal_timing,
             processing_time=10,  # 定義済みの処理時間（例: 10分）
-            penalty_type=LinearWithRange(lower=-60, lower_coefficient=1, upper=60, upper_coefficient=1),
-            experiment_operation="Get image"
+            penalty_type=LinearPenalty(penalty_coefficient=1),
+            experiment_operation="Getimage"
         )
 
 
@@ -77,8 +130,8 @@ class SamplingState(State):
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         return OneMachineTaskLocalInformation(
             optimal_timing=int(df[-1]['time']),
-            processing_time=20,  # 定義済みの処理時間（例: 20分）
-            penalty_type=LinearWithRange(lower=-10, lower_coefficient=10, upper=10, upper_coefficient=10),
+            processing_time=PROCESSING_TIME["SamplingState"],
+            penalty_type=LinearPenalty(penalty_coefficient=10),
             experiment_operation="Sampling"
         )
 
@@ -92,9 +145,9 @@ class GetImageJustBeforePassageState(State):
         optimal_timing = int(df[-1]['passage_target_time']) - 10
         return OneMachineTaskLocalInformation(
             optimal_timing=optimal_timing,
-            processing_time=10,  # 定義済みの処理時間（例: 10分）
-            penalty_type=LinearWithRange(lower=-10, lower_coefficient=100, upper=0, upper_coefficient=100),
-            experiment_operation="Get image just before passage"
+            processing_time=PROCESSING_TIME["GetImageJustBeforePassageState"],
+            penalty_type=LinearPenalty(penalty_coefficient=100),
+            experiment_operation="Getimage"
         )
 
 
@@ -107,9 +160,9 @@ class GetImageJustBeforeSamplingState(State):
         optimal_timing = int(df[-1]['sampling_target_time']) - 10
         return OneMachineTaskLocalInformation(
             optimal_timing=optimal_timing,
-            processing_time=10,  # 定義済みの処理時間（例: 10分）
-            penalty_type=LinearWithRange(lower=-10, lower_coefficient=10, upper=0, upper_coefficient=10),
-            experiment_operation="Get image just before sampling"
+            processing_time=PROCESSING_TIME["GetImageJustBeforeSamplingState"],
+            penalty_type=LinearPenalty(penalty_coefficient=100),
+            experiment_operation="Getimage"
         )
 
 
@@ -140,6 +193,6 @@ class HekCellCulture(Experiment):
                 GetImageJustBeforePassageState(),
                 GetImageJustBeforeSamplingState()
                 ],
-            current_state_name="ExpireState",
+            current_state_name="PassageState",
             shared_variable_history=shared_variable_history
         )

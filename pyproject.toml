@@ -12,6 +12,7 @@ simanneal = "^0.5.0"
 matplotlib = "^3.9.1"
 watchdog = "^4.0.1"
 networkx = "^3.3"
+scipy = "^1.14.0"
 
 
 [build-system]
