@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from gems_python.transition_manager import LinearPenalty
+from gems_python.onemachine_problem.transition_manager import LinearPenalty
 
 class TestPenalty(unittest.TestCase):
     def test_linear_penalty(self):

@@ -1,10 +1,16 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Tuple, Type
 import unittest
 import polars as pl
 import inspect
-from gems_python.transition_manager import Experiment, Experiments, LinearPenalty, NonePenalty, OneMachineTask, OneMachineTaskLocalInformation, PenaltyType, State, CyclicalRestPenaltyWithLinear, LinearWithRange
+from gems_python.onemachine_problem.penalty.base import PenaltyType
+from gems_python.onemachine_problem.penalty.cyclical_rest_penalty_with_linear import CyclicalRestPenaltyWithLinear
+from gems_python.onemachine_problem.penalty.linear_penalty import LinearPenalty
+from gems_python.onemachine_problem.penalty.linear_with_range import LinearWithRange
+from gems_python.onemachine_problem.penalty.none_penalty import NonePenalty
+from gems_python.onemachine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation
+from gems_python.onemachine_problem.transition_manager import Experiment, Experiments, State
+from tests.hek_cell_culture import HekCellCulture
 
 @dataclass
 class State_1(State):
@@ -332,14 +338,12 @@ class ExperimentStructureExample(Experiment):
 
 class TestExperimentStructure(unittest.TestCase):
     def setUp(self):
-        self.experiment = ExperimentStructureExample()
+        self.experiment = HekCellCulture()
 
     def test_experiment_structure(self):
         # Test the experiment structure
-        self.assertEqual(self.experiment.current_state_name, 'SeedingState')
-        self.assertEqual(self.experiment.states[0].state_name, 'SeedingState')
-        self.assertEqual(self.experiment.states[1].state_name, 'CulturingState')
-        self.assertEqual(self.experiment.states[2].state_name, 'HarvestingState')
+        self.assertEqual(self.experiment.experiment_name, "HekCellCulture")
+        self.assertEqual(len(self.experiment.states), 6)
 
     def test_experiment_structure_graph(self):
         self.experiment.show_experiment_directed_graph()
