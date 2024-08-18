@@ -338,7 +338,7 @@ class ExperimentStructureExample(Experiment):
 
 class TestExperimentStructure(unittest.TestCase):
     def setUp(self):
-        self.experiment = HekCellCulture()
+        self.experiment = HekCellCulture(current_state_name="GetImageJustBeforeSamplingState")
 
     def test_experiment_structure(self):
         # Test the experiment structure
@@ -350,6 +350,28 @@ class TestExperimentStructure(unittest.TestCase):
 
     def test_experiment_structure_task_generation(self):
         self.experiment.show_experiment_name_and_state_names()
+
+    def test_task_generator_all_states(self):
+        state_names = self.experiment.get_all_state_names()
+        for state_name in state_names:
+            print(state_name)
+
+        for state_name in state_names:
+            ex = HekCellCulture(current_state_name=state_name)
+            task = ex.generate_task_of_the_state()
+            print(f"state: {state_name} -> task: {task.experiment_operation}")
+            # print(f"state: {state_name} -> task: {task}")
+
+    def test_transition_function_all_states(self):
+        state_names = self.experiment.get_all_state_names()
+        for state_name in state_names:
+            print(state_name)
+
+        for state_name in state_names:
+            ex = HekCellCulture(current_state_name=state_name)
+            next_state = ex.determine_next_state_name()
+            print(f"current_state: {state_name} -> next_state: {next_state}")
+
 
 if __name__ == '__main__':
     unittest.main()

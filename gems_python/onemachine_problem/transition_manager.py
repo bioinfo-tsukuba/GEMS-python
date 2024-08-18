@@ -235,6 +235,9 @@ class Experiment:
 
     def get_current_state_name(self) -> str:
         return self.current_state_name
+    
+    def get_all_state_names(self) -> List[str]:
+        return [state.state_name for state in self.states]
 
     def execute_one_step(self) -> OneMachineTask:
         """
@@ -246,7 +249,7 @@ class Experiment:
         """
         # Determine the next state index
         try:
-            new_state_name = self.determine_next_state_name()
+            new_state_name: str = self.determine_next_state_name()
         except Exception as err:
             raise RuntimeError(f"Error determining the next state index: {err}")
 
@@ -271,7 +274,7 @@ class Experiment:
         try:
             task_local_information = self.states[state_index].task_generator(self.shared_variable_history.clone())
             task = OneMachineTask(
-                optimal_timing=task_local_information.optimal_timing,
+                optimal_time=task_local_information.optimal_time,
                 processing_time=task_local_information.processing_time,
                 penalty_type=task_local_information.penalty_type,
                 experiment_operation=task_local_information.experiment_operation,
@@ -290,11 +293,11 @@ class Experiment:
         """
         # Determine the next state index
         try:
-            next_state_name: int = self.states[self.current_state_index].transition_function(self.shared_variable_history)
+            next_state_name: str = self.states[self.current_state_index].transition_function(self.shared_variable_history)
         except Exception as err:
             raise RuntimeError(f"Error state transition: {err}")
 
-        return self.get_current_state_index_from_input_state_name(next_state_name)
+        return next_state_name
  
 
 

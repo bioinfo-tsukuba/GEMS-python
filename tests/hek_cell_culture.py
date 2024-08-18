@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import polars as pl
 from scipy.optimize import curve_fit
 
+from tests.curve import calculate_optimal_time_from_df
+
 # /// The processing time of each state, the unit is minute
 # pub(crate) static HEK_CULTURE_PROCESSING_TIME:[common_param_type::ProcessingTime; 4] = [
 #     0, // EXPIRE
@@ -56,6 +58,8 @@ PROCESSING_TIME = {
 }
 
 OPERATION_INTERVAL = (12 * 60)
+PASSAGE_DENSITY = 0.7
+SAMPLING_DENSITY = 0.4
 
 
 @dataclass
@@ -64,10 +68,10 @@ class ExpireState(State):
         return "ExpireState"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        last_row = df.tail(1)
-        current_time = last_row["time"][0]
+        current_time = df["time"].max()
+        optimal_time = int(current_time)
         return OneMachineTaskLocalInformation(
-            optimal_timing=current_time,  # 現在の時間
+            optimal_time=optimal_time,
             processing_time=PROCESSING_TIME["ExpireState"], 
             penalty_type=LinearWithRange(lower=0, lower_coefficient=0, upper=0, upper_coefficient=0),
             experiment_operation="Getimage"
@@ -80,10 +84,9 @@ class PassageState(State):
         return "GetImageState"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        last_row = df.tail(1)
-        current_time = last_row["time"][0]
+        optimal_time: float = calculate_optimal_time_from_df(df, target_density=PASSAGE_DENSITY)
         return OneMachineTaskLocalInformation(
-            optimal_timing=current_time,  # 現在の時間
+            optimal_time=int(optimal_time),  # 現在の時間
             processing_time=PROCESSING_TIME["PassageState"],
             penalty_type=LinearPenalty(penalty_coefficient=100),
             experiment_operation="Passage"
@@ -93,29 +96,27 @@ class PassageState(State):
 @dataclass
 class GetImageState(State):
     def transition_function(self, df: pl.DataFrame) -> str:
-        passage_count = int(df[-1]['passage_count'])
-        time_since_last_passage = int(df[-1]['time']) - int(df[-1]['last_passage_time'])
+        passage_count = len(df.filter(pl.col("operation") == "Passage"))
 
         if passage_count <= 1:
-            if time_since_last_passage >= OPERATION_INTERVAL:
+            optimal_time = calculate_optimal_time_from_df(df, target_density=SAMPLING_DENSITY)
+
+            if optimal_time >= OPERATION_INTERVAL:
                 return "GetImageJustBeforePassageState"
             else:
                 return "GetImageState"
         else:
-            if time_since_last_passage >= OPERATION_INTERVAL:
+            optimal_time = calculate_optimal_time_from_df(df, target_density=SAMPLING_DENSITY)
+            if optimal_time >= OPERATION_INTERVAL:
                 return "GetImageJustBeforeSamplingState"
             else:
                 return "GetImageState"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        passage_count = int(df[-1]['passage_count'])
-        if passage_count <= 1:
-            optimal_timing = int(df[-1]['time']) + OPERATION_INTERVAL
-        else:
-            optimal_timing = int(df[-1]['time']) + OPERATION_INTERVAL
-
+        current_time = df["time"].max()
+        optimal_time = int(current_time) + OPERATION_INTERVAL
         return OneMachineTaskLocalInformation(
-            optimal_timing=optimal_timing,
+            optimal_time=optimal_time,
             processing_time=10,  # 定義済みの処理時間（例: 10分）
             penalty_type=LinearPenalty(penalty_coefficient=1),
             experiment_operation="Getimage"
@@ -128,8 +129,10 @@ class SamplingState(State):
         return "ExpireState"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        current_time = df["time"].max()
+        optimal_time = int(current_time)
         return OneMachineTaskLocalInformation(
-            optimal_timing=int(df[-1]['time']),
+            optimal_time=optimal_time,
             processing_time=PROCESSING_TIME["SamplingState"],
             penalty_type=LinearPenalty(penalty_coefficient=10),
             experiment_operation="Sampling"
@@ -142,9 +145,10 @@ class GetImageJustBeforePassageState(State):
         return "PassageState"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        optimal_timing = int(df[-1]['passage_target_time']) - 10
+        optimal_time = calculate_optimal_time_from_df(df, target_density=SAMPLING_DENSITY)
+        optimal_time = optimal_time - PROCESSING_TIME["GetImageJustBeforePassageState"]
         return OneMachineTaskLocalInformation(
-            optimal_timing=optimal_timing,
+            optimal_time=optimal_time,
             processing_time=PROCESSING_TIME["GetImageJustBeforePassageState"],
             penalty_type=LinearPenalty(penalty_coefficient=100),
             experiment_operation="Getimage"
@@ -157,9 +161,10 @@ class GetImageJustBeforeSamplingState(State):
         return "SamplingState"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        optimal_timing = int(df[-1]['sampling_target_time']) - 10
+        optimal_time = calculate_optimal_time_from_df(df, target_density=SAMPLING_DENSITY)
+        optimal_time = optimal_time - PROCESSING_TIME["GetImageJustBeforeSamplingState"]
         return OneMachineTaskLocalInformation(
-            optimal_timing=optimal_timing,
+            optimal_time=optimal_time,
             processing_time=PROCESSING_TIME["GetImageJustBeforeSamplingState"],
             penalty_type=LinearPenalty(penalty_coefficient=100),
             experiment_operation="Getimage"
@@ -168,19 +173,22 @@ class GetImageJustBeforeSamplingState(State):
 
 @dataclass
 class HekCellCulture(Experiment):
-    def __init__(self):
+    def __init__(self, current_state_name, shared_variable_history=None):
         # Define the experiment using the states
 
         # Create a shared variable history DataFrame (empty for this example)
-        shared_variable_history = pl.DataFrame(
-            {
-                "time": [0],
-                "passage_count": [0],
-                "last_passage_time": [0],
-                "passage_target_time": [0],
-                "sampling_target_time": [0]
-            }
-        )
+        if shared_variable_history is None:
+            # │ 34568 ┆ null     ┆ Passage   │
+            # │ 36008 ┆ 0.411028 ┆ GetImage  │
+            # │ 37448 ┆ 0.534656 ┆ GetImage  │
+            # │ 38888 ┆ 0.632666 ┆ GetImage
+            shared_variable_history = pl.DataFrame(
+                {
+                    "time": [0, 1440, 2880, 4320],
+                    "density": [None, 0.411028, 0.534656, 0.632666],
+                    "operation": ["Passage", "GetImage", "GetImage", "GetImage"]
+                }
+            )
 
         # Define the initial state and experiment
         super().__init__(
@@ -193,6 +201,6 @@ class HekCellCulture(Experiment):
                 GetImageJustBeforePassageState(),
                 GetImageJustBeforeSamplingState()
                 ],
-            current_state_name="PassageState",
+            current_state_name=current_state_name,
             shared_variable_history=shared_variable_history
         )

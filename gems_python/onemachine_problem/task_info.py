@@ -12,7 +12,7 @@ class OneMachineTaskLocalInformation:
     OneMachineTaskLocalInformation class.
     This class is used as a data class for the task.
     """
-    optimal_timing: int
+    optimal_time: int
     processing_time: int
     penalty_type: Type[PenaltyType]
     experiment_operation: str
@@ -27,7 +27,7 @@ class OneMachineTask:
     OneMachineTask class.
     This class is used as a data class for the task.
     """
-    optimal_timing: int
+    optimal_time: int
     processing_time: int
     penalty_type: Type[PenaltyType]
     experiment_operation: str
@@ -107,7 +107,7 @@ class OneMachineTask:
                 total_penalty = 0
                 for task in self.state:
                     total_penalty += task.penalty_type.calculate_penalty(
-                        task.scheduled_timing, task.optimal_timing
+                        task.scheduled_timing, task.optimal_time
                     )
 
                 # Overlapping penalty
@@ -122,9 +122,9 @@ class OneMachineTask:
 
         # Initialize the tasks with some initial schedule (e.g., their optimal timings)
         time = 0
-        tasks = sorted(tasks, key=lambda x: x.optimal_timing + x.processing_time)
+        tasks = sorted(tasks, key=lambda x: x.optimal_time + x.processing_time)
         for task in tasks:
-            task.scheduled_timing = max(time, task.optimal_timing)
+            task.scheduled_timing = max(time, task.optimal_time)
             time = task.scheduled_timing + task.processing_time
 
         # Create an instance of the annealer with the initial state
@@ -174,9 +174,9 @@ class OneMachineTask:
 
         # time軸の最大値と最小値を設定
         max_time = max(task.scheduled_timing + task.processing_time for task in tasks)
-        max_time = max(max(task.optimal_timing + task.processing_time for task in tasks), max_time) + 5
+        max_time = max(max(task.optimal_time + task.processing_time for task in tasks), max_time) + 5
         min_time = min(task.scheduled_timing for task in tasks)
-        min_time = min(min(task.optimal_timing for task in tasks), min_time) - 5
+        min_time = min(min(task.optimal_time for task in tasks), min_time) - 5
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
@@ -211,10 +211,10 @@ class OneMachineTask:
         for task in tasks:
             start_time = task.scheduled_timing
             end_time = start_time + task.processing_time
-            optimal_start = task.optimal_timing
+            optimal_start = task.optimal_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, edgecolor='black', alpha=0.7)
 
-            # optimal_timingとscheduled_timingの差を表す線を追加
+            # optimal_timeとscheduled_timingの差を表す線を追加
             if start_time != optimal_start:
                 ax.plot([optimal_start, start_time], [task.experiment_operation, task.experiment_operation], 'r--', linewidth=2)
 
@@ -224,9 +224,9 @@ class OneMachineTask:
 
         # time軸の最大値と最小値を設定
         max_time = max(task.scheduled_timing + task.processing_time for task in tasks)
-        max_time = max(max(task.optimal_timing + task.processing_time for task in tasks), max_time) + 5
+        max_time = max(max(task.optimal_time + task.processing_time for task in tasks), max_time) + 5
         min_time = min(task.scheduled_timing for task in tasks)
-        min_time = min(min(task.optimal_timing for task in tasks), min_time) - 5
+        min_time = min(min(task.optimal_time for task in tasks), min_time) - 5
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
