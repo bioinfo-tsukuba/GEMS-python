@@ -5,8 +5,41 @@ import matplotlib.pyplot as plt
 from typing import Tuple, List
 
 
-def logistic(t: np.ndarray, r: float, N0: float, K: float = 1.0) -> np.ndarray:
-    return K / (1 + (K/N0 - 1) * np.exp(-r * t))
+def logistic(t: np.ndarray, r: float, n0: float, K: float = 1.0) -> np.ndarray:
+    return K / (1 + (K/n0 - 1) * np.exp(-r * t))
+
+def calc_optimal_time(target_density: float, r: float, n0: float, K: float = 1.0) -> float:
+    if (target_density <= 0) | (1 <= target_density):
+        raise ValueError('target_density should be between 0 and 1')
+    nt = target_density
+    passage_time_delta = np.log(((K - n0) * nt) / ((K - nt) * n0)) / r
+    return passage_time_delta
+
+def calculate_optimal_time_from_df(df: pl.DataFrame, target_density: float,
+                                K: float = 1.0, time_column: str = "time", density_column: str = "density", operation_column: str = "operation", passage_group_column: str = "passage_group") -> float:
+    # time, density, operation があることを確認
+    assert time_column in df.columns, f"Column {time_column} as time column is not found."
+    assert density_column in df.columns, f"Column {density_column} as density column is not found."
+    assert operation_column in df.columns, f"Column {operation_column} as operation column is not found."
+
+    # If the number of rows(density != null) is less than 3, return inf
+    if len(df.filter(pl.col(density_column).is_not_null())) < 3:
+        return float("inf")
+
+    k, r, n0_fitted, df = fit_param_with_weight(df)
+    n0 = n0_fitted[-1]
+
+    # 最終Passage groupを取得
+    last_passage_group = df[passage_group_column].max()
+    df = df.filter(pl.col(passage_group_column) == last_passage_group)
+
+    # 基準時間を取得
+    base_time = df[time_column].min()
+
+    # 密度が目標値になるまでの時間を計算
+    rest_time = calc_optimal_time(target_density, r, n0, K)
+
+    return base_time + rest_time
 
 def group_by_passage(df: pl.DataFrame, time_column: str = "time", operation_column: str = "operation") -> pl.DataFrame:
     """
@@ -160,8 +193,6 @@ def fit_param_with_weight(df: pl.DataFrame, time_column: str = "time", density_c
     groups = df["passage_group"].to_numpy()
     weights = pow(1/2, groups)
 
-    print(f"weights: {weights}")
-
     # 全体のフィッティング (k, r の推定)
     def combined_model(t: np.ndarray, k: float, r: float, *n0_values: float) -> np.ndarray:
         result = np.empty_like(t)
@@ -283,10 +314,14 @@ if __name__ == "__main__":
 
     # 例として3回のPassageを持つデータを生成
     # 例: Passageが3回行われ、全体の時間が20、k=1.0, r=0.1の場合
-    r_original = 0.00020
+    r_original = 0.0007
+    passage_criteria: float = 0.7
 
-    for num_passages in range(1, 100):
-        example_df = generate_input_example(num_passages=num_passages, k=1.0, r=r_original)
+    for num_passages in range(1, 10):
+        example_df = generate_input_example(num_passages=num_passages, k=1.0, r=r_original, passage_criteria=passage_criteria)
+
+        optimal_time = calculate_optimal_time_from_df(example_df, target_density=passage_criteria)
+        print(f"Optimal Time: {optimal_time}")
 
         # パラメータの推定
         k, r, n0_fitted, df = fit_param_with_weight(example_df)
@@ -297,3 +332,6 @@ if __name__ == "__main__":
 
         # フィッティング結果の可視化
         plot_fit(df, k, r, n0_fitted)
+
+    print(example_df)
+        
