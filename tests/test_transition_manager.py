@@ -10,7 +10,8 @@ from gems_python.onemachine_problem.penalty.linear_with_range import LinearWithR
 from gems_python.onemachine_problem.penalty.none_penalty import NonePenalty
 from gems_python.onemachine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation
 from gems_python.onemachine_problem.transition_manager import Experiment, Experiments, State
-from tests.hek_cell_culture import HekCellCulture
+from tests.experiment_samples.hek_cell_culture import HekCellCulture
+from tests.experiment_samples.ips.experimental_settings import IPSExperiment
 
 @dataclass
 class State_1(State):
@@ -369,6 +370,44 @@ class TestExperimentStructure(unittest.TestCase):
 
         for state_name in state_names:
             ex = HekCellCulture(current_state_name=state_name)
+            next_state = ex.determine_next_state_name()
+            print(f"current_state: {state_name} -> next_state: {next_state}")
+
+
+
+class TestExperimentStructureIPS(unittest.TestCase):
+    def setUp(self):
+        self.experiment = IPSExperiment(current_state_name="GetImage2State")
+
+    def test_experiment_structure(self):
+        # Test the experiment structure
+        self.assertEqual(self.experiment.experiment_name, "IPSExperiment")
+        self.assertEqual(len(self.experiment.states), 7)
+
+    def test_experiment_structure_graph(self):
+        self.experiment.show_experiment_directed_graph()
+
+    def test_experiment_structure_task_generation(self):
+        self.experiment.show_experiment_name_and_state_names()
+
+    def test_task_generator_all_states(self):
+        state_names = self.experiment.get_all_state_names()
+        for state_name in state_names:
+            print(state_name)
+
+        for state_name in state_names:
+            ex = IPSExperiment(current_state_name=state_name)
+            task = ex.generate_task_of_the_state()
+            print(f"state: {state_name} -> task: {task.experiment_operation}")
+            # print(f"state: {state_name} -> task: {task}")
+
+    def test_transition_function_all_states(self):
+        state_names = self.experiment.get_all_state_names()
+        for state_name in state_names:
+            print(state_name)
+
+        for state_name in state_names:
+            ex = IPSExperiment(current_state_name=state_name)
             next_state = ex.determine_next_state_name()
             print(f"current_state: {state_name} -> next_state: {next_state}")
 
