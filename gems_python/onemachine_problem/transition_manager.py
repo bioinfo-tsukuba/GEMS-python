@@ -146,29 +146,43 @@ class Experiment:
         data = json.loads(json_str)
         return cls.from_dict(data)
     
-    def show_experiment_directed_graph(self):
+    def show_experiment_directed_graph(self, hide_nodes: List[str] = ["ExpireState"]):
         """
         Show the directed graph of the experiment.
         """
         G = nx.DiGraph()
         all_node = self.all_node
 
+        # Filter hide_nodes to include only those that are in all_node
+        if hide_nodes is not None:
+            hide_nodes = [node for node in hide_nodes if node in all_node]
+
         for node in all_node:
-            G.add_node(node)
+            if hide_nodes is None or node not in hide_nodes:
+                G.add_node(node)
         
         for state in self.states:
             next_state_names = state.extract_all_state_transition_candidates()
             for next_state_name in next_state_names:
-                G.add_edge(state.state_name, next_state_name)
+                if (hide_nodes is None or 
+                    (state.state_name not in hide_nodes and next_state_name not in hide_nodes)):
+                    G.add_edge(state.state_name, next_state_name)
 
         highlight_nodes = [self.current_state_name]
 
         # Draw the graph
-        pos = nx.spring_layout(G, seed=100)
+        plt.figure(figsize=(8, 10))  # 画像サイズを指定
+        pos = nx.spring_layout(G, seed=100, k=0.5)
         node_color = ["skyblue" if node not in highlight_nodes else "orange" for node in G.nodes()]
         node_size = [1000 if node not in highlight_nodes else 1500 for node in G.nodes()]
 
         nx.draw(G, pos, with_labels=True, node_size=node_size, node_color=node_color, font_size=10, font_weight="bold", edge_color="gray", width=1.0)
+
+        # Add message for hidden nodes
+        if hide_nodes and len(hide_nodes) > 0:
+            plt.text(0.05, 0.95, f'Nodes {hide_nodes} are hidden', transform=plt.gca().transAxes, 
+                    fontsize=8, verticalalignment='top', bbox=dict(facecolor='red', alpha=0.5))
+
         plt.show()
 
     
