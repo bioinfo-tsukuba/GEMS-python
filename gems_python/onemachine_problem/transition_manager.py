@@ -1,5 +1,6 @@
 import textwrap
 from matplotlib import pyplot as plt
+from matplotlib.patches import Arc, Arrow
 import networkx as nx
 import ast
 import inspect
@@ -9,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 import json
 from typing import List, Type, Union
 import uuid
+import numpy as np
 import polars as pl
 from pathlib import Path
 import os
@@ -145,6 +147,84 @@ class Experiment:
         """
         data = json.loads(json_str)
         return cls.from_dict(data)
+
+    def show_experiment_with_tooltips(self, save_path: Path = "./experiment_with_tooltips.png", hide_nodes: List[str] = ["ExpireState"]):
+        """
+        Show the directed graph of the experiment with tooltips for each state.
+
+        Each state will have a tooltip that shows the content of its transition_function and task_generator.
+        """
+
+        plt.figure(figsize=(20, 20))
+        
+        # Filter out hidden nodes
+        visible_states = [state for state in self.states if state.state_name not in hide_nodes]
+
+        node_position_radius = 0.2
+        tooltip_position_radius = 0.4 + 0.05*len(visible_states)/6
+        angle_offset = np.pi / 6
+        
+        # Define node positions manually or via some simple layout logic
+        node_positions = {}
+        num_states = len(visible_states)
+        for i, state in enumerate(visible_states):
+            angle = 2 * np.pi * i / num_states
+            x = 0.5 + node_position_radius * np.cos(angle + angle_offset)
+            y = 0.5 + node_position_radius * np.sin(angle + angle_offset)
+            node_positions[state.state_name] = (x, y)
+
+        # Draw edges (transitions)
+        for state in visible_states:
+            next_state_names = state.extract_all_state_transition_candidates()
+            for next_state_name in next_state_names:
+                if next_state_name not in hide_nodes:
+                    src_pos = node_positions[state.state_name]
+                    dst_pos = node_positions[next_state_name]
+                    if state.state_name == next_state_name:  # Self-loop
+                        arc = Arc([src_pos[0], src_pos[1]], width=0.1, height=0.05, angle=0, theta1=0, theta2=180, color='gray', linewidth = 5)
+                        plt.gca().add_patch(arc)
+                    else:
+                        arrow = Arrow(src_pos[0], src_pos[1], dst_pos[0] - src_pos[0], dst_pos[1] - src_pos[1], width=0.05, color='gray')
+                        plt.gca().add_patch(arrow)
+            
+        # Draw nodes (states) with tooltips
+        for state in visible_states:
+            pos = node_positions[state.state_name]
+            node_color = 'orange' if state.state_name == self.current_state_name else 'skyblue'
+            plt.text(pos[0], pos[1], state.state_name, ha='center', va='center', fontsize=10, bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor=node_color))
+            
+            # Tooltip content
+            tooltip_text = f"transition_function:\n{inspect.getsource(state.transition_function)}\ntask_generator:\n{inspect.getsource(state.task_generator)}"
+            
+            # Calculate tooltip position proportionally to node_position_radius
+            tooltip_x = 0.35 + tooltip_position_radius * np.cos(np.arctan2(pos[1] - 0.5, pos[0] - 0.5) + angle_offset)
+            tooltip_y = 0.5 + tooltip_position_radius * np.sin(np.arctan2(pos[1] - 0.5, pos[0] - 0.5) + angle_offset)
+
+            # Add annotation for the tooltip
+            plt.annotate(
+                tooltip_text,
+                xy=pos,  # The point being annotated
+                xytext=(tooltip_x, tooltip_y),  # The position of the text
+                textcoords='data',
+                bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightyellow"),
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0.2"),
+                fontsize=8,
+                ha='left',  # Left align the text
+                va='center'  # Align vertically to the top
+            )
+
+        # Add message for hidden nodes
+        if hide_nodes and len(hide_nodes) > 0:
+            plt.text(0.05, 0.95, f'Nodes {hide_nodes} are hidden', transform=plt.gca().transAxes, 
+                    fontsize=8, verticalalignment='top', bbox=dict(facecolor='red', alpha=0.5))
+
+        plt.xlim(0, 1)
+        plt.ylim(0, 1)
+        plt.axis('off')  # Hide the axes
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
     
     def show_experiment_directed_graph(self, hide_nodes: List[str] = ["ExpireState"]):
         """
