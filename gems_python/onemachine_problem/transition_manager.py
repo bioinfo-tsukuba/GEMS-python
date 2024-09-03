@@ -521,7 +521,8 @@ class Experiments:
             task_id: int,
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
-            scheduling_method = 's'
+            scheduling_method = 's',
+            optimal_time_reference_time: int = 0
             ) -> OneMachineTask:
         """
         TODO: explanation
@@ -557,7 +558,7 @@ class Experiments:
         self.tasks.append(new_task)
         self.assign_task_ids()
         
-        self.execute_scheduling(scheduling_method)
+        self.execute_scheduling(scheduling_method, optimal_time_reference_time)
 
         return OneMachineTask.get_earliest_scheduled_task(self.tasks)
     
