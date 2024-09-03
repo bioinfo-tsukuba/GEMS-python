@@ -503,6 +503,12 @@ class Experiments:
             scheduling_method: str = 's',
             optimal_time_reference_time: int = 0
             ):
+        """
+        Execute the scheduling of the tasks.
+        :param scheduling_method: The method of scheduling. 's' for simulated annealing.
+        :param optimal_time_reference_time: The reference time for the optimal time.
+        """
+
         self.assign_task_ids()
         # Reschedule
         tasks = self.tasks.copy()
