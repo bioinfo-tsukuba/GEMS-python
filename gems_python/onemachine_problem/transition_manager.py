@@ -500,13 +500,19 @@ class Experiments:
 
     def execute_scheduling(
             self,
-            scheduling_method: str = 's'
+            scheduling_method: str = 's',
+            optimal_time_reference_time: int = 0
             ):
         self.assign_task_ids()
         # Reschedule
+        tasks = self.tasks.copy()
+
+        for task in tasks:
+            task.scheduled_time = task.optimal_time - optimal_time_reference_time
+
         match scheduling_method:
             case 's':
-                self.tasks = OneMachineTask.simulated_annealing_schedule(self.tasks)
+                self.tasks = OneMachineTask.simulated_annealing_schedule(tasks)
             case _:
                 AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
 

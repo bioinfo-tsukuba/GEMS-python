@@ -77,9 +77,8 @@ class OneMachineTask:
         Simulated annealing scheduler.
         :param tasks: List of tasks to schedule.
         :return: Scheduled tasks.
-
-        The optimal time of the tasks is used as the initial schedule.
-        Note: The scheduled
+        Note: The scheduled time >= 0. So it assumes that the tasks has relative optimal time.
+        
         """
         print("SA_schedule:")
         class TaskAnnealer(Annealer):
