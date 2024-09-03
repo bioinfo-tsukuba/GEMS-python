@@ -10,6 +10,6 @@ class LinearPenalty(PenaltyType):
     """
     penalty_coefficient: int
 
-    def calculate_penalty(self, scheduled_timing: int, optimal_timing: int) -> int:
-        diff = scheduled_timing - optimal_timing
+    def calculate_penalty(self, scheduled_timing: int, optimal_time: int) -> int:
+        diff = scheduled_timing - optimal_time
         return abs(diff * self.penalty_coefficient)

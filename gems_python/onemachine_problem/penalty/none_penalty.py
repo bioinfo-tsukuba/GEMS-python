@@ -9,5 +9,5 @@ class NonePenalty(PenaltyType):
     ペナルティなしのタイプ。常にペナルティは0です。
     """
 
-    def calculate_penalty(self, scheduled_timing: int, optimal_timing: int) -> int:
+    def calculate_penalty(self, scheduled_timing: int, optimal_time: int) -> int:
         return 0

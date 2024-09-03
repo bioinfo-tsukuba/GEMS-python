@@ -32,6 +32,8 @@ PROCESSING_TIME = {
     "PLATE_COATING": 20,
 }
 
+def get_current_time(df: pl.DataFrame) -> float:
+    return df["time"].max()
 
 
 OPERATION_INTERVAL = (24 * 60)

@@ -1,4 +1,4 @@
 [
-  "{\"optimal_timing\": 0, \"processing_time\": 1, \"penalty_type\": \"{\\\"penalty_coefficient\\\": 10, \\\"penalty_type\\\": \\\"LinearPenalty\\\"}\", \"experiment_operation\": \"example_task\", \"experiment_name\": \"test1\", \"experiment_uuid\": \"3bd772c7-a215-459a-a532-90211b105f6b\", \"task_id\": 0, \"scheduled_timing\": null}",
-  "{\"optimal_timing\": 0, \"processing_time\": 1, \"penalty_type\": \"{\\\"penalty_type\\\": \\\"NonePenalty\\\"}\", \"experiment_operation\": \"example_task\", \"experiment_name\": \"test2\", \"experiment_uuid\": \"38610bb5-a83e-4f55-b6de-a982a3aaeb11\", \"task_id\": 1, \"scheduled_timing\": null}"
+  "{\"optimal_time\": 0, \"processing_time\": 1, \"penalty_type\": \"{\\\"penalty_coefficient\\\": 10, \\\"penalty_type\\\": \\\"LinearPenalty\\\"}\", \"experiment_operation\": \"example_task\", \"experiment_name\": \"test1\", \"experiment_uuid\": \"3bd772c7-a215-459a-a532-90211b105f6b\", \"task_id\": 0, \"scheduled_timing\": null}",
+  "{\"optimal_time\": 0, \"processing_time\": 1, \"penalty_type\": \"{\\\"penalty_type\\\": \\\"NonePenalty\\\"}\", \"experiment_operation\": \"example_task\", \"experiment_name\": \"test2\", \"experiment_uuid\": \"38610bb5-a83e-4f55-b6de-a982a3aaeb11\", \"task_id\": 1, \"scheduled_timing\": null}"
 ]

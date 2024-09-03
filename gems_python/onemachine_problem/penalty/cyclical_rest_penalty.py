@@ -23,7 +23,7 @@ class CyclicalRestPenalty(PenaltyType):
     cycle_duration: int
     rest_time_ranges: List[Tuple[int, int]]
 
-    def calculate_penalty(self, scheduled_timing: int, optimal_timing: int) -> int:
+    def calculate_penalty(self, scheduled_timing: int, optimal_time: int) -> int:
         diff = scheduled_timing - self.cycle_start_time
         if diff < 0:
             # Scheduled time is before the cycle start

@@ -550,13 +550,8 @@ class Experiments:
         
         self.tasks.append(new_task)
         self.assign_task_ids()
-
-        # Reschedule
-        match scheduling_method:
-            case 's':
-                self.tasks = OneMachineTask.simulated_annealing_schedule(self.tasks)
-            case _:
-                AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
+        
+        self.execute_scheduling(scheduling_method)
 
         return OneMachineTask.get_earliest_scheduled_task(self.tasks)
     

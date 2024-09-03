@@ -26,7 +26,7 @@ class State_1(State):
         task_count = df.height
         pelalty_type = LinearPenalty(10)
         return OneMachineTaskLocalInformation(
-            optimal_timing=0,
+            optimal_time=0,
             processing_time=1,
             penalty_type=pelalty_type,
             experiment_operation=task_name,
@@ -46,7 +46,7 @@ class State_2(State):
         task_count = df.height
         pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
         return OneMachineTaskLocalInformation(
-            optimal_timing=0,
+            optimal_time=0,
             processing_time=1,
             penalty_type=pelalty_type,
             experiment_operation=task_name,
@@ -66,7 +66,7 @@ class State_3(State):
         task_count = df.height
         pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
         return OneMachineTaskLocalInformation(
-            optimal_timing=0,
+            optimal_time=0,
             processing_time=1,
             penalty_type=pelalty_type,
             experiment_operation=task_name,
@@ -89,7 +89,7 @@ class State_4(State):
         task_count = df.height
         pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
         return OneMachineTaskLocalInformation(
-            optimal_timing=0,
+            optimal_time=0,
             processing_time=1,
             penalty_type=pelalty_type,
             experiment_operation=task_name,
@@ -109,7 +109,7 @@ class State___1(State):
         task_count = df.height
         pelalty_type = LinearPenalty(10)
         return OneMachineTaskLocalInformation(
-            optimal_timing=0,
+            optimal_time=0,
             processing_time=1,
             penalty_type=pelalty_type,
             experiment_operation=task_name,
@@ -128,7 +128,7 @@ class State___2(State):
         task_count = df.height
         pelalty_type = NonePenalty()
         return OneMachineTaskLocalInformation(
-            optimal_timing=0,
+            optimal_time=0,
             processing_time=1,
             penalty_type=pelalty_type,
             experiment_operation=task_name,
@@ -199,15 +199,15 @@ class TestTransitionManager(unittest.TestCase):
 class TestScheduler(unittest.TestCase):
     def test_simulated_annealing_schedule_multiple_tasks(self):
         tasks = [
-            OneMachineTask(optimal_timing=1, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
-            OneMachineTask(optimal_timing=3, processing_time=3, penalty_type=LinearPenalty(penalty_coefficient=5), experiment_operation="op2", experiment_name="exp2", experiment_uuid="uuid2", task_id=2),
-            OneMachineTask(optimal_timing=5, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
-            OneMachineTask(optimal_timing=5, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op4", experiment_name="exp3", experiment_uuid="uuid4", task_id=4),
-            OneMachineTask(optimal_timing=90, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op5", experiment_name="exp3", experiment_uuid="uuid5", task_id=5),
-            OneMachineTask(optimal_timing=50, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op6", experiment_name="exp3", experiment_uuid="uuid6", task_id=6),
-            OneMachineTask(optimal_timing=30, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op7", experiment_name="exp3", experiment_uuid="uuid7", task_id=7),
-            OneMachineTask(optimal_timing=20, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op8", experiment_name="exp3", experiment_uuid="uuid8", task_id=8),
-            OneMachineTask(optimal_timing=60, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op9", experiment_name="exp3", experiment_uuid="uuid9", task_id=9),
+            OneMachineTask(optimal_time=1, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
+            OneMachineTask(optimal_time=3, processing_time=3, penalty_type=LinearPenalty(penalty_coefficient=5), experiment_operation="op2", experiment_name="exp2", experiment_uuid="uuid2", task_id=2),
+            OneMachineTask(optimal_time=5, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
+            OneMachineTask(optimal_time=5, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op4", experiment_name="exp3", experiment_uuid="uuid4", task_id=4),
+            OneMachineTask(optimal_time=90, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op5", experiment_name="exp3", experiment_uuid="uuid5", task_id=5),
+            OneMachineTask(optimal_time=50, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op6", experiment_name="exp3", experiment_uuid="uuid6", task_id=6),
+            OneMachineTask(optimal_time=30, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op7", experiment_name="exp3", experiment_uuid="uuid7", task_id=7),
+            OneMachineTask(optimal_time=20, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op8", experiment_name="exp3", experiment_uuid="uuid8", task_id=8),
+            OneMachineTask(optimal_time=60, processing_time=8, penalty_type=LinearPenalty(penalty_coefficient=8), experiment_operation="op9", experiment_name="exp3", experiment_uuid="uuid9", task_id=9),
         ]
 
         scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks)
@@ -224,9 +224,9 @@ class TestScheduler(unittest.TestCase):
     
     def test_simulated_annealing_schedule_multiple_tasks_multiple_type(self):
         tasks = [
-            OneMachineTask(optimal_timing=1, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
-            OneMachineTask(optimal_timing=3, processing_time=3, penalty_type=CyclicalRestPenaltyWithLinear(cycle_start_time=0, cycle_duration=10, rest_time_ranges=[(0, 5), (10, 15)], penalty_coefficient=10), experiment_operation="op2", experiment_name="exp2", experiment_uuid="uuid2", task_id=2),
-            OneMachineTask(optimal_timing=5, processing_time=8, penalty_type=LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
+            OneMachineTask(optimal_time=1, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
+            OneMachineTask(optimal_time=3, processing_time=3, penalty_type=CyclicalRestPenaltyWithLinear(cycle_start_time=0, cycle_duration=10, rest_time_ranges=[(0, 5), (10, 15)], penalty_coefficient=10), experiment_operation="op2", experiment_name="exp2", experiment_uuid="uuid2", task_id=2),
+            OneMachineTask(optimal_time=5, processing_time=8, penalty_type=LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
         ]
 
         scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks)
@@ -243,16 +243,32 @@ class TestScheduler(unittest.TestCase):
 
     def test_simulated_annealing_schedule_mono_task(self):
         tasks = [
-            OneMachineTask(optimal_timing=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
+            OneMachineTask(optimal_time=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
         ]
 
         scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks.copy())
 
         desired_tasks = [
-            OneMachineTask(optimal_timing=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1, scheduled_timing = 5)
+            OneMachineTask(optimal_time=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1, scheduled_timing = 5)
         ]
 
         assert(desired_tasks[0].scheduled_timing==scheduled_tasks[0].scheduled_timing)
+        save_path = Path("tests")
+        func_name = inspect.currentframe().f_code.co_name
+        save_path = save_path / f"{func_name}.png"
+        # OneMachineTask.vis()
+        OneMachineTask.vis_with_diff(scheduled_tasks, save_path)
+
+
+
+# python -m unittest tests.test_transition_manager.TestScheduler.test_simulated_annealing_schedule_mono_task_minus
+    def test_simulated_annealing_schedule_mono_task_minus(self):
+        tasks = [
+            OneMachineTask(optimal_time=-150, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
+        ]
+
+        scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks.copy())
+
         save_path = Path("tests")
         func_name = inspect.currentframe().f_code.co_name
         save_path = save_path / f"{func_name}.png"
@@ -273,7 +289,7 @@ class SeedingState(State):
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # Define the seeding task
         return OneMachineTaskLocalInformation(
-            optimal_timing=0,
+            optimal_time=0,
             processing_time=2,
             penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
             experiment_operation='Seeding Cells'
@@ -294,7 +310,7 @@ class CulturingState(State):
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # Define the culturing task
         return OneMachineTaskLocalInformation(
-            optimal_timing=3,
+            optimal_time=3,
             processing_time=5,
             penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
             experiment_operation='Culturing Cells'
@@ -308,7 +324,7 @@ class HarvestingState(State):
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         # Define the harvesting task
         return OneMachineTaskLocalInformation(
-            optimal_timing=9,
+            optimal_time=9,
             processing_time=1,
             penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
             experiment_operation='Harvesting Cells'
