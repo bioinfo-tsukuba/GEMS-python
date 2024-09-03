@@ -34,7 +34,7 @@ class OneMachineTask:
     experiment_name: str
     experiment_uuid: str
     task_id: int = field(default=None)
-    scheduled_timing: int = field(default=None)
+    scheduled_time: int = field(default=None)
 
     def to_dict(self) -> dict:
         """
@@ -77,6 +77,9 @@ class OneMachineTask:
         Simulated annealing scheduler.
         :param tasks: List of tasks to schedule.
         :return: Scheduled tasks.
+
+        The optimal time of the tasks is used as the initial schedule.
+        Note: The scheduled
         """
         print("SA_schedule:")
         class TaskAnnealer(Annealer):
@@ -94,28 +97,28 @@ class OneMachineTask:
                 temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
                 for i in range(min(temp, len(self.state))):
                   a = random.randint(0, len(self.state) - 1)
-                  self.state[a].scheduled_timing += random.randint(-int(temp), int(temp))
-                  self.state[a].scheduled_timing = max(0, self.state[a].scheduled_timing)
+                  self.state[a].scheduled_time += random.randint(-int(temp), int(temp))
+                  self.state[a].scheduled_time = max(0, self.state[a].scheduled_time)
 
                 if random.random() < 0.5:
                     a = random.randint(0, len(self.state) - 1)
                     b = random.randint(0, len(self.state) - 1)
-                    self.state[a].scheduled_timing, self.state[b].scheduled_timing = self.state[b].scheduled_timing, self.state[a].scheduled_timing
+                    self.state[a].scheduled_time, self.state[b].scheduled_time = self.state[b].scheduled_time, self.state[a].scheduled_time
 
             def energy(self):
                 """Calculates the total penalty for the current state."""
                 total_penalty = 0
                 for task in self.state:
                     total_penalty += task.penalty_type.calculate_penalty(
-                        task.scheduled_timing, task.optimal_time
+                        task.scheduled_time, task.optimal_time
                     )
 
                 # Overlapping penalty
-                sorted_tasks = sorted(self.state, key=lambda x: x.scheduled_timing)
+                sorted_tasks = sorted(self.state, key=lambda x: x.scheduled_time)
                 for i in range(len(sorted_tasks) - 1):
                     task1 = sorted_tasks[i]
                     task2 = sorted_tasks[i + 1]
-                    overlap = task1.scheduled_timing + task1.processing_time - task2.scheduled_timing
+                    overlap = task1.scheduled_time + task1.processing_time - task2.scheduled_time
                     if overlap > 0:
                         total_penalty += overlap * 100000
                 return total_penalty
@@ -124,8 +127,8 @@ class OneMachineTask:
         time = 0
         tasks = sorted(tasks, key=lambda x: x.optimal_time + x.processing_time)
         for task in tasks:
-            task.scheduled_timing = max(time, task.optimal_time)
-            time = task.scheduled_timing + task.processing_time
+            task.scheduled_time = max(time, task.optimal_time)
+            time = task.scheduled_time + task.processing_time
 
         # Create an instance of the annealer with the initial state
         annealer = TaskAnnealer(tasks)
@@ -142,12 +145,12 @@ class OneMachineTask:
     @classmethod
     def get_earliest_scheduled_task(cls, tasks: List['OneMachineTask']) -> 'OneMachineTask':
         earliest_scheduled_task_index = 0
-        earliest_scheduled_task_scheduled_timing = tasks[0].scheduled_timing
+        earliest_scheduled_task_scheduled_time = tasks[0].scheduled_time
 
         for i in range(len(tasks)):
-            if earliest_scheduled_task_scheduled_timing < tasks[i].scheduled_timing:
+            if earliest_scheduled_task_scheduled_time < tasks[i].scheduled_time:
                 earliest_scheduled_task_index = i
-                earliest_scheduled_task_scheduled_timing = tasks[i].scheduled_timing
+                earliest_scheduled_task_scheduled_time = tasks[i].scheduled_time
 
         return copy.deepcopy(tasks[earliest_scheduled_task_index])
 
@@ -160,11 +163,11 @@ class OneMachineTask:
             - save_path: Path to save the visualization. If None, the visualization is shown.
         """
         fig, ax = plt.subplots()
-        tasks = sorted(tasks, key=lambda x: x.scheduled_timing)
+        tasks = sorted(tasks, key=lambda x: x.scheduled_time)
 
         # ガントチャートのデータを準備
         for task in tasks:
-            start_time = task.scheduled_timing
+            start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, edgecolor='black')
 
@@ -173,16 +176,16 @@ class OneMachineTask:
         ax.set_ylabel('Task')
 
         # time軸の最大値と最小値を設定
-        max_time = max(task.scheduled_timing + task.processing_time for task in tasks)
+        max_time = max(task.scheduled_time + task.processing_time for task in tasks)
         max_time = max(max(task.optimal_time + task.processing_time for task in tasks), max_time) + 5
-        min_time = min(task.scheduled_timing for task in tasks)
+        min_time = min(task.scheduled_time for task in tasks)
         min_time = min(min(task.optimal_time for task in tasks), min_time) - 5
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
         colors = plt.cm.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
-            start_time = task.scheduled_timing
+            start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, color=colors(i), edgecolor='black')
 
@@ -205,16 +208,16 @@ class OneMachineTask:
             - save_path: Path to save the visualization. If None, the visualization is shown.
         """
         fig, ax = plt.subplots()
-        tasks = sorted(tasks, key=lambda x: x.scheduled_timing)
+        tasks = sorted(tasks, key=lambda x: x.scheduled_time)
 
         # ガントチャートのデータを準備
         for task in tasks:
-            start_time = task.scheduled_timing
+            start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             optimal_start = task.optimal_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, edgecolor='black', alpha=0.7)
 
-            # optimal_timeとscheduled_timingの差を表す線を追加
+            # optimal_timeとscheduled_timeの差を表す線を追加
             if start_time != optimal_start:
                 ax.plot([optimal_start, start_time], [task.experiment_operation, task.experiment_operation], 'r--', linewidth=2)
 
@@ -223,16 +226,16 @@ class OneMachineTask:
         ax.set_ylabel('Task')
 
         # time軸の最大値と最小値を設定
-        max_time = max(task.scheduled_timing + task.processing_time for task in tasks)
+        max_time = max(task.scheduled_time + task.processing_time for task in tasks)
         max_time = max(max(task.optimal_time + task.processing_time for task in tasks), max_time) + 5
-        min_time = min(task.scheduled_timing for task in tasks)
+        min_time = min(task.scheduled_time for task in tasks)
         min_time = min(min(task.optimal_time for task in tasks), min_time) - 5
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
         colors = plt.cm.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
-            start_time = task.scheduled_timing
+            start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, color=colors(i), edgecolor='black')
 

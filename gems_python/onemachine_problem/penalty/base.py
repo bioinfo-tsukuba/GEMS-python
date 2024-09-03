@@ -9,10 +9,10 @@ class PenaltyType(ABC):
     """
 
     @abstractmethod
-    def calculate_penalty(self, scheduled_timing: int, optimal_time: int) -> int:
+    def calculate_penalty(self, scheduled_time: int, optimal_time: int) -> int:
         """
         ペナルティを計算する抽象メソッド
-        :param scheduled_timing: スケジュールされたタイミング
+        :param scheduled_time: スケジュールされたタイミング
         :param optimal_time: 最適なタイミング
         :return: 計算されたペナルティ
         """

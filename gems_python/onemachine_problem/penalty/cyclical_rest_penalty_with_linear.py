@@ -19,8 +19,8 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
     rest_time_ranges: List[Tuple[int, int]]
     penalty_coefficient: int
 
-    def calculate_penalty(self, scheduled_timing: int, optimal_time: int) -> int:
-        diff = scheduled_timing - self.cycle_start_time
+    def calculate_penalty(self, scheduled_time: int, optimal_time: int) -> int:
+        diff = scheduled_time - self.cycle_start_time
         if diff < 0:
             # Scheduled time is before the cycle start
             return 0
@@ -29,4 +29,4 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
             if start <= diff <= end:
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
-        return abs(scheduled_timing - optimal_time) * self.penalty_coefficient
+        return abs(scheduled_time - optimal_time) * self.penalty_coefficient

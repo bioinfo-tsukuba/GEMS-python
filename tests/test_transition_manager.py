@@ -249,10 +249,10 @@ class TestScheduler(unittest.TestCase):
         scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks.copy())
 
         desired_tasks = [
-            OneMachineTask(optimal_time=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1, scheduled_timing = 5)
+            OneMachineTask(optimal_time=5, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1, scheduled_time = 5)
         ]
 
-        assert(desired_tasks[0].scheduled_timing==scheduled_tasks[0].scheduled_timing)
+        assert(desired_tasks[0].scheduled_time==scheduled_tasks[0].scheduled_time)
         save_path = Path("tests")
         func_name = inspect.currentframe().f_code.co_name
         save_path = save_path / f"{func_name}.png"
