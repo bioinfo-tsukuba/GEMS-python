@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 import numpy as np
 import polars as pl
 from gems_python.onemachine_problem.penalty import *
@@ -32,13 +33,17 @@ PROCESSING_TIME = {
     "PLATE_COATING": 20,
 }
 
-def get_current_time(df: pl.DataFrame) -> float:
-    return df["time"].max()
+def get_current_time()->int:
+    current_time: float = datetime.now().timestamp()
+    # Convert to minutes
+    current_time = int(current_time / 60)
+    return current_time
 
 
 OPERATION_INTERVAL = (24 * 60)
 PASSAGE_DENSITY = 0.7
 SAMPLING_DENSITY = 0.4
+MEDIUM_CHANGE_1_DENSITY = 0.05
 
 
 
@@ -76,21 +81,19 @@ class PassageState(State):
 @dataclass
 class GetImage1State(State):
     def transition_function(self, df: pl.DataFrame) -> str:
-        passage_count = len(df.filter(pl.col("operation") == "Passage"))
+        # Sort time and get the latest density
+        latest_density = df.sort("time", descending=True).select("density").head(1).get_column("density")[0]
 
-        if passage_count <= 1:
-            optimal_time = calculate_optimal_time_from_df(df, target_density=SAMPLING_DENSITY)
-
-            if optimal_time >= OPERATION_INTERVAL:
-                return "MediumChange1State"
-            else:
-                return "GetImage1State"
+        if MEDIUM_CHANGE_1_DENSITY <= latest_density:
+            return "MediumChange1State"
+        else:
+            return "GetImage1State"
             
 
         return "ExpireState"
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        current_time = df["time"].max()
-        optimal_time = int(current_time) + OPERATION_INTERVAL
+        previous_operation_time = df["time"].max()
+        optimal_time = int(previous_operation_time) + OPERATION_INTERVAL
         return OneMachineTaskLocalInformation(
             optimal_time=optimal_time,
             processing_time=PROCESSING_TIME["GET_IMAGE_1"],
@@ -102,68 +105,69 @@ class GetImage1State(State):
 class MediumChange1State(State):
     def transition_function(self, df: pl.DataFrame) -> str:
         return "GetImage2State"
-
         return "ExpireState"
+    
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        # DUMMY
         return OneMachineTaskLocalInformation(
             optimal_time=int(df["time"].max()),
             processing_time=PROCESSING_TIME["MEDIUM_CHANGE_1"],
-            penalty_type=NonePenalty(),
-            experiment_operation="MediumChange"
+            penalty_type=LinearPenalty(penalty_coefficient=100),
+            experiment_operation="MediumChange1"
         )
 
 @dataclass
 class GetImage2State(State):
     def transition_function(self, df: pl.DataFrame) -> str:
         optimal_time = calculate_optimal_time_from_df(df, target_density=SAMPLING_DENSITY)
-
-        if optimal_time >= OPERATION_INTERVAL:
+        time_to_optimal_time = optimal_time - int(df["time"].max())
+        if time_to_optimal_time >= OPERATION_INTERVAL*2:
             return "PlateCoatingState"
         else:
             return "MediumChange2State"
 
         return "ExpireState"
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        # If the latest operation is medium change, the optimal time is the current time + 48 hours
+        latest_operation = df.sort("time", descending=True).select("operation").head(1).get_column("operation")[0]
+        if latest_operation == "MediumChange1":
+            optimal_time = int(df["time"].max()) + OPERATION_INTERVAL*2
+        else:
+            optimal_time = int(df["time"].max()) + OPERATION_INTERVAL
 
-        # DUMMY
         return OneMachineTaskLocalInformation(
-            optimal_time=int(df["time"].max()),
-            processing_time=PROCESSING_TIME["MEDIUM_CHANGE_1"],
-            penalty_type=NonePenalty(),
-            experiment_operation="MediumChange"
+            optimal_time=optimal_time,
+            processing_time=PROCESSING_TIME["GET_IMAGE_2"],
+            penalty_type=LinearPenalty(penalty_coefficient=1),
+            experiment_operation="GetImage"
         )
 
 @dataclass
 class MediumChange2State(State):
     def transition_function(self, df: pl.DataFrame) -> str:
         return "GetImage2State"
-
         return "ExpireState"
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-
-        # DUMMY
         return OneMachineTaskLocalInformation(
             optimal_time=int(df["time"].max()),
-            processing_time=PROCESSING_TIME["MEDIUM_CHANGE_1"],
-            penalty_type=NonePenalty(),
-            experiment_operation="MediumChange"
+            processing_time=PROCESSING_TIME["MEDIUM_CHANGE_2"],
+            penalty_type=LinearPenalty(penalty_coefficient=1),
+            experiment_operation="MediumChange2"
         )
 
 @dataclass
 class PlateCoatingState(State):
     def transition_function(self, df: pl.DataFrame) -> str:
         return "PassageState"
-
         return "ExpireState"
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-
+        optimal_time = calculate_optimal_time_from_df(df, target_density=SAMPLING_DENSITY)
+        optimal_time = optimal_time - PROCESSING_TIME["PLATE_COATING"]
         # DUMMY
         return OneMachineTaskLocalInformation(
-            optimal_time=int(df["time"].max()),
-            processing_time=PROCESSING_TIME["MEDIUM_CHANGE_1"],
-            penalty_type=NonePenalty(),
-            experiment_operation="MediumChange"
+            optimal_time=optimal_time,
+            processing_time=PROCESSING_TIME["PLATE_COATING"],
+            penalty_type=LinearPenalty(penalty_coefficient=100),
+            experiment_operation="PlateCoating"
         )
 
 
