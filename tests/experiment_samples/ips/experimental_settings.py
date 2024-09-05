@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+import uuid
 import numpy as np
 import polars as pl
 from gems_python.onemachine_problem.penalty import *
@@ -70,10 +71,13 @@ class PassageState(State):
         return "ExpireState"
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         optimal_time: float = calculate_optimal_time_from_df(df, target_density=PASSAGE_DENSITY)
+        print(f"passage:{optimal_time=}")
+        if np.isinf(optimal_time):
+            raise ValueError("Optimal time is inf")
         return OneMachineTaskLocalInformation(
-            optimal_time=int(optimal_time),  # 現在の時間
+            optimal_time=int(optimal_time), 
             processing_time=PROCESSING_TIME["PASSAGE"],
-            penalty_type=LinearPenalty(penalty_coefficient=100),
+            penalty_type=LinearPenalty(penalty_coefficient=1000),
             experiment_operation="Passage"
         )
 
@@ -118,12 +122,25 @@ class MediumChange1State(State):
 @dataclass
 class GetImage2State(State):
     def transition_function(self, df: pl.DataFrame) -> str:
+        #     def transition_function(self, df: pl.DataFrame) -> str:
+        
         optimal_time = calculate_optimal_time_from_df(df, target_density=PASSAGE_DENSITY)
+        # If optimal time is inf
+        if np.isinf(optimal_time):
+            return "MediumChange2State"
         time_to_optimal_time = optimal_time - int(df["time"].max())
-        if time_to_optimal_time <= OPERATION_INTERVAL*2:
+        getimage_count = len(df.filter(pl.col("operation") == "GetImage"))
+        print(f"{getimage_count=}")
+        if time_to_optimal_time <= OPERATION_INTERVAL*2 and getimage_count > 2:
             return "PlateCoatingState"
         else:
             return "MediumChange2State"
+        # optimal_time = calculate_optimal_time_from_df(df, target_density=PASSAGE_DENSITY)
+        # time_to_optimal_time = optimal_time - int(df["time"].max())
+        # if time_to_optimal_time <= OPERATION_INTERVAL*2:
+        #     return "PlateCoatingState"
+        # else:
+        #     return "MediumChange2State"
 
         return "ExpireState"
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
@@ -161,8 +178,8 @@ class PlateCoatingState(State):
         return "ExpireState"
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         optimal_time = calculate_optimal_time_from_df(df, target_density=PASSAGE_DENSITY)
+        print(f"plate_coat:{optimal_time=}")
         optimal_time = optimal_time - PROCESSING_TIME["PLATE_COATING"]
-        # DUMMY
         return OneMachineTaskLocalInformation(
             optimal_time=optimal_time,
             processing_time=PROCESSING_TIME["PLATE_COATING"],
@@ -172,7 +189,7 @@ class PlateCoatingState(State):
 
 
 class IPSExperiment(Experiment):
-    def __init__(self, current_state_name, shared_variable_history=None):
+    def __init__(self, current_state_name, shared_variable_history=None, experiment_uuid=uuid.uuid4()):
         # Define the experiment using the states
 
         # Create a shared variable history DataFrame (empty for this example)
@@ -202,7 +219,8 @@ class IPSExperiment(Experiment):
                 PlateCoatingState(),
             ],
             current_state_name=current_state_name,
-            shared_variable_history=shared_variable_history
+            shared_variable_history=shared_variable_history,
+            experiment_uuid=experiment_uuid
         )
 
 

@@ -1,3 +1,4 @@
+from datetime import datetime
 import textwrap
 from matplotlib import pyplot as plt
 from matplotlib.patches import Arc, Arrow
@@ -15,6 +16,7 @@ import polars as pl
 from pathlib import Path
 import os
 
+from gems_python.config import get_current_time_from_simulation_file_as_int, send_schedule_to_simulator_and_get_result
 from gems_python.onemachine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation        
 
 """MODULE: State
@@ -66,10 +68,11 @@ class State(ABC):
         visitor = ReturnVisitor()
         visitor.visit(tree)
         return visitor.returns
-        tree = ast.parse(source)
-        visitor = ReturnVisitor()
-        visitor.visit(tree)
-        return visitor.returns
+    
+
+    @abstractmethod
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        pass
 
     @abstractmethod
     def transition_function(self, df: pl.DataFrame) -> str:
@@ -78,9 +81,6 @@ class State(ABC):
         """
         pass
 
-    @abstractmethod
-    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        pass
 
 """MODULE: Experiment
 """
@@ -136,7 +136,6 @@ class Experiment:
         :return: JSON string representation of the experiment object.
         """
         data = self.to_dict()
-        print(f"{data=}")
         return json.dumps(data)
 
     @classmethod
@@ -285,8 +284,11 @@ class Experiment:
         """
         save_path = save_dir if save_dir is not None else Path("experiments")
         os.makedirs(save_path, exist_ok=True)
-        with open(save_path / f"{self.experiment_name}.json", "w") as f:
+        with open(save_path / f"{self.experiment_name}_{self.experiment_uuid}.json", "w") as f:
             f.write(self.to_json())
+
+        # Save shared_variable_history
+        self.shared_variable_history.write_csv(save_path / f"{self.experiment_name}_{self.experiment_uuid}_shared_variable_history.csv")
         
         # for state in self.states:
         #     state.save_all(save_path)
@@ -477,9 +479,9 @@ class Experiments:
 
         os.makedirs(save_path, exist_ok=True)
         tasks = [task.to_json() for task in self.tasks]
-        print(f"{tasks=}")
-        for task in self.tasks:
-            print(f"{task.to_json()=}")
+        # print(f"{tasks=}")
+        # for task in self.tasks:
+        #     print(f"{task.to_json()=}")
         with open(save_path / "tasks.json", "w") as f:
             json.dump(tasks, f, ensure_ascii=False, indent=2)
         
@@ -504,6 +506,8 @@ class Experiments:
             if self.tasks[task].task_id != task_id:
                 new_tasks.append(copy.deepcopy(self.tasks[task]))
 
+        self.tasks = new_tasks
+
     def execute_scheduling(
             self,
             scheduling_method: str = 's',
@@ -520,7 +524,7 @@ class Experiments:
         tasks = self.tasks.copy()
 
         for task in tasks:
-            task.scheduled_time = task.optimal_time - optimal_time_reference_time
+            task.optimal_time = task.optimal_time - optimal_time_reference_time
 
         match scheduling_method:
             case 's':
@@ -528,13 +532,20 @@ class Experiments:
             case _:
                 AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
 
+        
+        for task in tasks:
+            task.optimal_time = task.optimal_time + optimal_time_reference_time
+            task.scheduled_time = task.scheduled_time + optimal_time_reference_time
+
+        self.tasks = tasks
+
     def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
             self,
             task_id: int,
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
             scheduling_method = 's',
-            optimal_time_reference_time: int = 0
+            optimal_time_reference_time: int = get_current_time_from_simulation_file_as_int()
             ) -> OneMachineTask:
         """
         TODO: explanation
@@ -574,6 +585,33 @@ class Experiments:
 
         return OneMachineTask.get_earliest_scheduled_task(self.tasks)
     
-    def start_experiments(self):
-        pass
+    def start_experiments(self, steps: int = 100):
+        """
+        Start the experiments.
+        """
+
+        self.save_all(save_dir="initial")
+        self.assign_task_ids()
+
+        # Schedule
+        optimal_time_reference_time=get_current_time_from_simulation_file_as_int()
+        print(f"{optimal_time_reference_time=}")
+        self.execute_scheduling(optimal_time_reference_time=get_current_time_from_simulation_file_as_int())
+        self.save_all(save_dir=f"step_0")
+        task_path = self.parent_dir_path / "step_0" / "tasks.json"
+
+        task_id, new_result_of_experiment = send_schedule_to_simulator_and_get_result(task_path)
+
+        for step in range(1, steps):
+            optimal_time_reference_time=get_current_time_from_simulation_file_as_int()
+            new_task = self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(task_id, new_result_of_experiment, optimal_time_reference_time=optimal_time_reference_time)
+            self.save_all(save_dir=f"step_{step}")
+            task_path = self.parent_dir_path / f"step_{step}" / "tasks.json"
+
+            task_id, new_result_of_experiment = send_schedule_to_simulator_and_get_result(task_path)
+            # Execute the tasks
+
+            # input("Press Enter to continue...")
+
+
 

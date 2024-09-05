@@ -13,6 +13,8 @@ matplotlib = "^3.9.1"
 watchdog = "^4.0.1"
 networkx = "^3.3"
 scipy = "^1.14.0"
+python-dotenv = "^1.0.1"
+requests = "^2.32.3"
 
 
 [build-system]

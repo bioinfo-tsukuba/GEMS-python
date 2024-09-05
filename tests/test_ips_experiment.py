@@ -1,12 +1,16 @@
+from datetime import datetime
 import inspect
 
 
+import os
 from pathlib import Path
 import unittest
 import uuid
+from dotenv import load_dotenv
 import numpy as np
 import polars as pl
 
+from gems_python.config import CellAPIClient
 from gems_python.onemachine_problem.transition_manager import Experiment, Experiments
 from tests.experiment_samples.ips.experimental_settings import PROCESSING_TIME, IPSExperiment
 
@@ -346,6 +350,7 @@ class TestExperimentStructureIPS(unittest.TestCase):
         density[0] = None
         optimal_time = self.calculate_optimal_time_simple(optimal_density, r, N0)
         print(f"time: {time}")
+        print(f"optimal_time: {datetime.fromtimestamp(optimal_time*60)}")
         print(f"density: {density}")
 
         print(f"optimal_time: {optimal_time}")
@@ -411,6 +416,14 @@ class TestExperimentStructureIPS(unittest.TestCase):
 class TestRunExperimentIPS(unittest.TestCase):
 
     def test_run_experiment(self):
+        print(f"~~~~~~~~~~~~~~\n{inspect.currentframe().f_code.co_name=}")
+
+        load_dotenv(override=True)
+        path = os.environ['TIME_PATH']
+        current_time = "20240905000000"
+        with open(path, "w") as f:
+            f.write(current_time)
+
         parent_dir_path = Path(f"volatile_{uuid.uuid4()}")
         
         # Make directory
@@ -419,36 +432,111 @@ class TestRunExperimentIPS(unittest.TestCase):
 
         shared_variable_history = pl.DataFrame(
             {
-                "time": [0],
-                "density": [None],
+                "time": [28757700],
+                "density": [0.05],
                 "operation": ["Passage"],
             }
         )
-        experiment = IPSExperiment(current_state_name="GetImage1State", shared_variable_history=shared_variable_history)
+        experiment = IPSExperiment(current_state_name="GetImage1State", shared_variable_history=shared_variable_history, experiment_uuid="decf8024-a408-441f-986e-4ba3f25a5e6c")
         experiments = Experiments(
             experiments=[],
             parent_dir_path=parent_dir_path,
         )
 
         experiments.add_experiment(experiment)
+
+
+        experiment = IPSExperiment(current_state_name="GetImage1State", shared_variable_history=shared_variable_history, experiment_uuid="e2d40ad3-b896-41a6-9e3e-ee4387a8d7bb")
+        experiments.add_experiment(experiment)
         
         print(f"{experiments=}")
         experiments.execute_scheduling()
         print(f"{experiments=}")
 
-        experiments.save_all()
 
-        test_experiment_path = parent_dir_path / "experiments/IPSExperiment.json"
-        print(f"{test_experiment_path=}")
+        for experiment in experiments.experiments:
+            experiment_uuid = experiment.experiment_uuid
+            api = CellAPIClient("http://localhost:8000")
+            api.update_cell(experiment_uuid, 
+                            n0=0.05,
+                            r=0.00025,
+                            k=1,
+                            reference_time=current_time)
 
-        experiments.start_experiments()
+
+        experiments.start_experiments(100)
 
 
 
         # Sleep 10 seconds
         import time
-        time.sleep(10)
 
         # Remove directory
         import shutil
-        shutil.rmtree(parent_dir_path)
+        # shutil.rmtree(parent_dir_path)
+
+
+    def test_run_ten_experiments(self):
+        print(f"~~~~~~~~~~~~~~\n{inspect.currentframe().f_code.co_name=}")
+
+        ids = [
+                "decf8024-a408-441f-986e-4ba3f25a5e6c",
+                "e2d40ad3-b896-41a6-9e3e-ee4387a8d7bb",
+                "259da77d-6f31-4cb6-bdce-f231fa2ebd44",
+                "4fe62bf9-28b8-4fa8-854f-2a7a968000dd",
+                "72983f72-243b-4454-9c4b-f6d03db00a02",
+                "9bc1d50d-2f80-4649-9209-04285095fb00",
+                "81acaa26-d417-4c6f-9d7c-390379834d7b",
+                "da6afcc9-4f86-4220-b34e-2a2e2c379d65",
+                "e5cf2342-c2a6-44a8-a4aa-599ad59d4e20",
+                "bf756764-bda1-4d70-b103-a01937042a69"
+        ]
+
+        load_dotenv(override=True)
+        path = os.environ['TIME_PATH']
+        current_time = "20240905000000"
+        with open(path, "w") as f:
+            f.write(current_time)
+
+        parent_dir_path = Path(f"volatile_IPS_ten_2024-09-06_00_52_{uuid.uuid4()}")
+        
+        # Make directory
+        parent_dir_path.mkdir(parents=True, exist_ok=True)
+
+        experiments = Experiments(
+            experiments=[],
+            parent_dir_path=parent_dir_path,
+        )
+        
+        shared_variable_history = pl.DataFrame(
+            {
+                "time": [28757700],
+                "density": [0.05],
+                "operation": ["Passage"],
+            }
+        )
+        for i in range(10):
+            id = ids[i]
+            experiment = IPSExperiment(current_state_name="GetImage1State", shared_variable_history=shared_variable_history, experiment_uuid=id)
+            experiments.add_experiment(experiment)
+
+        for experiment in experiments.experiments:
+            experiment_uuid = experiment.experiment_uuid
+            api = CellAPIClient("http://localhost:8000")
+            api.update_cell(experiment_uuid, 
+                            n0=0.05,
+                            r=0.00025,
+                            k=1,
+                            reference_time=current_time)
+
+
+        experiments.start_experiments(10)
+
+
+
+        # Sleep 10 seconds
+        import time
+
+        # Remove directory
+        import shutil
+        # shutil.rmtree(parent_dir_path)
