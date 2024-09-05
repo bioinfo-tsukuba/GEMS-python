@@ -106,7 +106,6 @@ class Experiment:
     current_task: OneMachineTask = field(default=None)
     current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
-    all_node: set = field(default=None, init=False)
 
 
     def to_dict(self) -> dict:
@@ -117,6 +116,7 @@ class Experiment:
         data = asdict(self)
         data['states'] = [state.__class__.__name__ for state in self.states]  # Store class names instead of class objects
         data['shared_variable_history'] = self.shared_variable_history.to_dict(as_series=False)
+        
         return data
 
     @classmethod
@@ -136,6 +136,7 @@ class Experiment:
         :return: JSON string representation of the experiment object.
         """
         data = self.to_dict()
+        print(f"{data=}")
         return json.dumps(data)
 
     @classmethod
@@ -147,6 +148,18 @@ class Experiment:
         """
         data = json.loads(json_str)
         return cls.from_dict(data)
+    
+    def define_all_node(self)-> set:
+        all_node = set()
+        for state in self.states:
+            all_node.add(state.state_name)
+            next_state_names = state.extract_all_state_transition_candidates()
+            for next_state_name in next_state_names:
+                all_node.add(next_state_name)
+
+        return all_node
+        
+        
 
     def show_experiment_with_tooltips(self, save_path: Path = "./experiment_with_tooltips.png", hide_nodes: List[str] = ["ExpireState"]):
         """
@@ -231,7 +244,7 @@ class Experiment:
         Show the directed graph of the experiment.
         """
         G = nx.DiGraph()
-        all_node = self.all_node
+        all_node = self.define_all_node()
 
         # Filter hide_nodes to include only those that are in all_node
         if hide_nodes is not None:
@@ -285,13 +298,6 @@ class Experiment:
         self.update_current_state_name_and_index(self.current_state_name)
         if self.current_task is None:
             self.current_task = self.generate_task_of_the_state()
-
-        self.all_node = set()
-        for state in self.states:
-            self.all_node.add(state.state_name)
-            next_state_names = state.extract_all_state_transition_candidates()
-            for next_state_name in next_state_names:
-                self.all_node.add(next_state_name)
 
         # if self.shared_variable_history != pl.DataFrame:
         #     pl.read_csv(self.shared_variable_history)
