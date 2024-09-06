@@ -66,10 +66,11 @@ class State(ABC):
         visitor = ReturnVisitor()
         visitor.visit(tree)
         return visitor.returns
-        tree = ast.parse(source)
-        visitor = ReturnVisitor()
-        visitor.visit(tree)
-        return visitor.returns
+    
+
+    @abstractmethod
+    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+        pass
 
     @abstractmethod
     def transition_function(self, df: pl.DataFrame) -> str:
@@ -78,9 +79,6 @@ class State(ABC):
         """
         pass
 
-    @abstractmethod
-    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        pass
 
 """MODULE: Experiment
 """
@@ -136,7 +134,6 @@ class Experiment:
         :return: JSON string representation of the experiment object.
         """
         data = self.to_dict()
-        print(f"{data=}")
         return json.dumps(data)
 
     @classmethod
@@ -285,8 +282,11 @@ class Experiment:
         """
         save_path = save_dir if save_dir is not None else Path("experiments")
         os.makedirs(save_path, exist_ok=True)
-        with open(save_path / f"{self.experiment_name}.json", "w") as f:
+        with open(save_path / f"{self.experiment_name}_{self.experiment_uuid}.json", "w") as f:
             f.write(self.to_json())
+
+        # Save shared_variable_history
+        self.shared_variable_history.write_csv(save_path / f"{self.experiment_name}_{self.experiment_uuid}_shared_variable_history.csv")
         
         # for state in self.states:
         #     state.save_all(save_path)
@@ -477,9 +477,9 @@ class Experiments:
 
         os.makedirs(save_path, exist_ok=True)
         tasks = [task.to_json() for task in self.tasks]
-        print(f"{tasks=}")
-        for task in self.tasks:
-            print(f"{task.to_json()=}")
+        # print(f"{tasks=}")
+        # for task in self.tasks:
+        #     print(f"{task.to_json()=}")
         with open(save_path / "tasks.json", "w") as f:
             json.dump(tasks, f, ensure_ascii=False, indent=2)
         
@@ -504,6 +504,8 @@ class Experiments:
             if self.tasks[task].task_id != task_id:
                 new_tasks.append(copy.deepcopy(self.tasks[task]))
 
+        self.tasks = new_tasks
+
     def execute_scheduling(
             self,
             scheduling_method: str = 's',
@@ -520,13 +522,20 @@ class Experiments:
         tasks = self.tasks.copy()
 
         for task in tasks:
-            task.scheduled_time = task.optimal_time - optimal_time_reference_time
+            task.optimal_time = task.optimal_time - optimal_time_reference_time
 
         match scheduling_method:
             case 's':
                 self.tasks = OneMachineTask.simulated_annealing_schedule(tasks)
             case _:
                 AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
+
+        
+        for task in tasks:
+            task.optimal_time = task.optimal_time + optimal_time_reference_time
+            task.scheduled_time = task.scheduled_time + optimal_time_reference_time
+
+        self.tasks = tasks
 
     def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
             self,
