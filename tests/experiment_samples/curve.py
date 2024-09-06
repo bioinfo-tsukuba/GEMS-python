@@ -177,10 +177,14 @@ def fit_param_with_weight(df: pl.DataFrame, time_column: str = "time", density_c
     assert time_column in df.columns, f"Column {time_column} as time column is not found."
     assert density_column in df.columns, f"Column {density_column} as density column is not found."
     assert operation_column in df.columns, f"Column {operation_column} as operation column is not found."
+    df_grouped = df
 
-    if "passage_group" not in df.columns:
+    if "passage_group" not in df_grouped.columns:
         # passage_group列を作成
-        df = group_by_passage(df, time_column, operation_column)
+        df_grouped = group_by_passage(df, time_column, operation_column)
+    
+
+    df = df_grouped.filter((pl.col(operation_column) == "GetImage") | (pl.col(operation_column) == "Passage"))
 
     # 各 passage_group ごとに最小密度 (n0) を推定
     n0_estimates = df.filter(pl.col(density_column).is_not_null()) \
@@ -228,7 +232,7 @@ def fit_param_with_weight(df: pl.DataFrame, time_column: str = "time", density_c
     # Group num == len(n0_fitted) であることを確認
     assert len(n0_fitted) == group_num + 1, f"Number of n0_fitted ({len(n0_fitted)}) is not equal to the number of passage groups ({group_num + 1})."
 
-    return k, r, n0_fitted, df
+    return k, r, n0_fitted, df_grouped
 
 
 def plot_fit(df: pl.DataFrame, k: float, r: float, n0_fitted: list, time_column: str = "time", density_column: str = "density", operation_column: str = "operation"):
