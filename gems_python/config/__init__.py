@@ -72,7 +72,7 @@ def get_current_time_from_simulation_file_as_int()->int:
     
 
 
-def send_schedule_to_simulator_and_get_result(task_path: Path) -> (int, pl.DataFrame):
+def send_schedule_to_simulator(task_path: Path) -> (int, pl.DataFrame):
     # Send schedule to simulator
     with open(task_path) as f:
         task_json = json.load(f)

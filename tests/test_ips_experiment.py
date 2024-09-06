@@ -498,7 +498,7 @@ class TestRunExperimentIPS(unittest.TestCase):
         with open(path, "w") as f:
             f.write(current_time)
 
-        parent_dir_path = Path(f"volatile_IPS_ten_2024-09-06_00_52_{uuid.uuid4()}")
+        parent_dir_path = Path(f"volatile_IPS_ten_DEMO_{uuid.uuid4()}")
         
         # Make directory
         parent_dir_path.mkdir(parents=True, exist_ok=True)
@@ -530,7 +530,7 @@ class TestRunExperimentIPS(unittest.TestCase):
                             reference_time=current_time)
 
 
-        experiments.start_experiments(10)
+        experiments.start_experiments(1000)
 
 
 

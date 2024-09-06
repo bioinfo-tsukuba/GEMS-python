@@ -16,7 +16,7 @@ import polars as pl
 from pathlib import Path
 import os
 
-from gems_python.config import get_current_time_from_simulation_file_as_int, send_schedule_to_simulator_and_get_result
+from gems_python.config import get_current_time_from_simulation_file_as_int, send_schedule_to_simulator
 from gems_python.onemachine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation        
 
 """MODULE: State
@@ -600,7 +600,7 @@ class Experiments:
         self.save_all(save_dir=f"step_0")
         task_path = self.parent_dir_path / "step_0" / "tasks.json"
 
-        task_id, new_result_of_experiment = send_schedule_to_simulator_and_get_result(task_path)
+        task_id, new_result_of_experiment = send_schedule_to_simulator(task_path)
 
         for step in range(1, steps):
             optimal_time_reference_time=get_current_time_from_simulation_file_as_int()
@@ -608,7 +608,7 @@ class Experiments:
             self.save_all(save_dir=f"step_{step}")
             task_path = self.parent_dir_path / f"step_{step}" / "tasks.json"
 
-            task_id, new_result_of_experiment = send_schedule_to_simulator_and_get_result(task_path)
+            task_id, new_result_of_experiment = send_schedule_to_simulator(task_path)
             # Execute the tasks
 
             # input("Press Enter to continue...")
