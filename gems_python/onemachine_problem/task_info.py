@@ -4,7 +4,7 @@ import json
 from typing import List, Type
 from pathlib import Path
 
-from gems_python.onemachine_problem.penalty.base import PenaltyType        
+from gems_python.onemachine_problem.penalty.penalty_class import PenaltyType        
         
 @dataclass
 class OneMachineTaskLocalInformation:

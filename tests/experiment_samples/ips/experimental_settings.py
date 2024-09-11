@@ -3,11 +3,10 @@ from datetime import datetime
 import uuid
 import numpy as np
 import polars as pl
-from gems_python.onemachine_problem.penalty import *
+from gems_python.onemachine_problem.penalty.penalty_class import LinearPenalty, LinearWithRangePenalty
 from gems_python.onemachine_problem.transition_manager import Experiment, OneMachineTaskLocalInformation, State
 from dataclasses import dataclass
 import polars as pl
-from scipy.optimize import curve_fit
 
 from tests.experiment_samples.curve import calculate_optimal_time_from_df
 
@@ -59,7 +58,7 @@ class ExpireState(State):
         return OneMachineTaskLocalInformation(
             optimal_time=optimal_time,
             processing_time=PROCESSING_TIME["EXPIRE"], 
-            penalty_type=LinearWithRange(lower=0, lower_coefficient=0, upper=0, upper_coefficient=0),
+            penalty_type=LinearWithRangePenalty(lower=0, lower_coefficient=0, upper=0, upper_coefficient=0),
             experiment_operation="Getimage"
         )
 

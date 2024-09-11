@@ -3,15 +3,10 @@ from pathlib import Path
 import unittest
 import polars as pl
 import inspect
-from gems_python.onemachine_problem.penalty.base import PenaltyType
-from gems_python.onemachine_problem.penalty.cyclical_rest_penalty_with_linear import CyclicalRestPenaltyWithLinear
-from gems_python.onemachine_problem.penalty.linear_penalty import LinearPenalty
-from gems_python.onemachine_problem.penalty.linear_with_range import LinearWithRange
-from gems_python.onemachine_problem.penalty.none_penalty import NonePenalty
+from gems_python.onemachine_problem.penalty.penalty_class import CyclicalRestPenaltyWithLinear, LinearPenalty, LinearWithRangePenalty, NonePenalty, PenaltyType
 from gems_python.onemachine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation
 from gems_python.onemachine_problem.transition_manager import Experiment, Experiments, State
 from tests.experiment_samples.hek_cell_culture import HekCellCulture
-from tests.experiment_samples.ips.experimental_settings import IPSExperiment
 
 @dataclass
 class State_1(State):
@@ -44,7 +39,7 @@ class State_2(State):
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
         task_name = "example_task"
         task_count = df.height
-        pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
+        pelalty_type = LinearWithRangePenalty(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
         return OneMachineTaskLocalInformation(
             optimal_time=0,
             processing_time=1,
@@ -64,7 +59,7 @@ class State_3(State):
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
         task_name = "example_task"
         task_count = df.height
-        pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
+        pelalty_type = LinearWithRangePenalty(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
         return OneMachineTaskLocalInformation(
             optimal_time=0,
             processing_time=1,
@@ -87,7 +82,7 @@ class State_4(State):
         # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
         task_name = "example_task"
         task_count = df.height
-        pelalty_type = LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
+        pelalty_type = LinearWithRangePenalty(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
         return OneMachineTaskLocalInformation(
             optimal_time=0,
             processing_time=1,
@@ -226,7 +221,7 @@ class TestScheduler(unittest.TestCase):
         tasks = [
             OneMachineTask(optimal_time=1, processing_time=5, penalty_type=LinearPenalty(penalty_coefficient=10), experiment_operation="op1", experiment_name="exp1", experiment_uuid="uuid1", task_id=1),
             OneMachineTask(optimal_time=3, processing_time=3, penalty_type=CyclicalRestPenaltyWithLinear(cycle_start_time=0, cycle_duration=10, rest_time_ranges=[(0, 5), (10, 15)], penalty_coefficient=10), experiment_operation="op2", experiment_name="exp2", experiment_uuid="uuid2", task_id=2),
-            OneMachineTask(optimal_time=5, processing_time=8, penalty_type=LinearWithRange(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
+            OneMachineTask(optimal_time=5, processing_time=8, penalty_type=LinearWithRangePenalty(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20), experiment_operation="op3", experiment_name="exp3", experiment_uuid="uuid3", task_id=3),
         ]
 
         scheduled_tasks = OneMachineTask.simulated_annealing_schedule(tasks)
@@ -291,7 +286,7 @@ class SeedingState(State):
         return OneMachineTaskLocalInformation(
             optimal_time=0,
             processing_time=2,
-            penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
+            penalty_type=LinearWithRangePenalty(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
             experiment_operation='Seeding Cells'
         )
 
@@ -312,7 +307,7 @@ class CulturingState(State):
         return OneMachineTaskLocalInformation(
             optimal_time=3,
             processing_time=5,
-            penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
+            penalty_type=LinearWithRangePenalty(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
             experiment_operation='Culturing Cells'
         )
 
@@ -326,7 +321,7 @@ class HarvestingState(State):
         return OneMachineTaskLocalInformation(
             optimal_time=9,
             processing_time=1,
-            penalty_type=LinearWithRange(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
+            penalty_type=LinearWithRangePenalty(lower=-1, lower_coefficient=10, upper=1, upper_coefficient=10),
             experiment_operation='Harvesting Cells'
         )
 

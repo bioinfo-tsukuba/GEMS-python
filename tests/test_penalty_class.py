@@ -1,7 +1,9 @@
 import json
 import unittest
 
-from gems_python.onemachine_problem.transition_manager import LinearPenalty
+from gems_python.onemachine_problem.penalty.penalty_class import LinearPenalty, PenaltyType
+
+
 
 class TestPenalty(unittest.TestCase):
     def test_linear_penalty(self):
@@ -11,11 +13,13 @@ class TestPenalty(unittest.TestCase):
 
 
     def test_linear_penalty_json(self):
+        print()
         linear_penalty = LinearPenalty(10)
         pena_json = linear_penalty.to_json()
-        print("pena", linear_penalty.to_json())
-
-        print("pena", LinearPenalty.from_json(pena_json))
+        read_pena = PenaltyType.from_json(pena_json)
+        self.assertEqual(linear_penalty, read_pena)
+        print("pena\n", linear_penalty)
+        print("read_pena\n", read_pena)
 
         must_panic_json = {
             "coefficient": 10, 
