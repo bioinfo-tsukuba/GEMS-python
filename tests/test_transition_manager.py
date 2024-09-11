@@ -3,9 +3,9 @@ from pathlib import Path
 import unittest
 import polars as pl
 import inspect
-from gems_python.onemachine_problem.penalty.penalty_class import CyclicalRestPenaltyWithLinear, LinearPenalty, LinearWithRangePenalty, NonePenalty, PenaltyType
-from gems_python.onemachine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation
-from gems_python.onemachine_problem.transition_manager import Experiment, Experiments, State
+from gems_python.one_machine_problem.penalty.penalty_class import CyclicalRestPenaltyWithLinear, LinearPenalty, LinearWithRangePenalty, NonePenalty, PenaltyType
+from gems_python.one_machine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation
+from gems_python.one_machine_problem.transition_manager import Experiment, Experiments, State
 from tests.experiment_samples.hek_cell_culture import HekCellCulture
 
 @dataclass

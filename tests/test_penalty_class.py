@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from gems_python.onemachine_problem.penalty.penalty_class import LinearPenalty, PenaltyType
+from gems_python.one_machine_problem.penalty.penalty_class import LinearPenalty, PenaltyType
 
 
 

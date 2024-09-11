@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, asdict
 import json
 from typing import List, Type
 
-from gems_python.onemachine_problem.penalty.penalty_class import NonePenalty, PenaltyType
+from gems_python.one_machine_problem.penalty.penalty_class import NonePenalty, PenaltyType
 
 
 
@@ -255,14 +255,14 @@ class TaskScheduler:
                 # TODO: 実装を軽くするために、無駄なdiffの計算をなくす。すなわち、group.optimal_start_time + diff >= self.schedule_reference_timeを満たすdiffだけを試す
                 time_candidate = max(self.schedule_reference_time, group.optimal_start_time + diff)
                 group.schedule_tasks(time_candidate)
+                if self.eval_machine_penalty(scheduled_groups) == 0:
+                    break
+
                 if diff <= 0:
                     diff *= -1
                     diff += 1
                 else:
                     diff *= -1
-
-                if self.eval_machine_penalty(scheduled_groups) == 0:
-                    break
 
         return scheduled_groups
     

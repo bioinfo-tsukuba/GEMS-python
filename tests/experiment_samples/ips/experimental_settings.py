@@ -3,8 +3,8 @@ from datetime import datetime
 import uuid
 import numpy as np
 import polars as pl
-from gems_python.onemachine_problem.penalty.penalty_class import LinearPenalty, LinearWithRangePenalty
-from gems_python.onemachine_problem.transition_manager import Experiment, OneMachineTaskLocalInformation, State
+from gems_python.one_machine_problem.penalty.penalty_class import LinearPenalty, LinearWithRangePenalty
+from gems_python.one_machine_problem.transition_manager import Experiment, OneMachineTaskLocalInformation, State
 from dataclasses import dataclass
 import polars as pl
 

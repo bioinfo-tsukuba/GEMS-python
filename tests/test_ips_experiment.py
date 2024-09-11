@@ -7,7 +7,7 @@ import uuid
 import numpy as np
 import polars as pl
 
-from gems_python.onemachine_problem.transition_manager import Experiment, Experiments
+from gems_python.one_machine_problem.transition_manager import Experiment, Experiments
 from tests.experiment_samples.ips.experimental_settings import PROCESSING_TIME, IPSExperiment
 
 
