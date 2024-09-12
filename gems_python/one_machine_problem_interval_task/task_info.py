@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, asdict
 import json
 from typing import List, Type
 
-from gems_python.one_machine_problem.penalty.penalty_class import NonePenalty, PenaltyType
+from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty, PenaltyType
 
 
 
@@ -348,13 +348,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-        
-
-        
-
-
-
-
-

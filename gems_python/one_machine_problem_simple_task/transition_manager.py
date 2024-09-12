@@ -15,7 +15,7 @@ import polars as pl
 from pathlib import Path
 import os
 
-from gems_python.one_machine_problem.task_info import OneMachineTask, OneMachineTaskLocalInformation        
+from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask, OneMachineTaskLocalInformation        
 
 """MODULE: State
 """
