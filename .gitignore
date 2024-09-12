@@ -170,3 +170,5 @@ cython_debug/
 
 # Volatile directory like volatile*
 volatile*/
+
+.DS_Store
