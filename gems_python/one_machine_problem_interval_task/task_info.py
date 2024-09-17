@@ -15,10 +15,12 @@ class TaskGroupStatus(Enum):
 
 @dataclass
 class Task:
-    start_time: int    # タスクの開始時刻
     processing_time: int  # タスクの処理時間
     interval: int        # タスク間のインターバル、最初のタスクにはインターバルはない
+    experiment_operation: str
     completed: bool = False  # タスクが終了したかどうか
+    scheduled_time: int = field(default=None)  # タスクの開始時刻
+    task_id: int = field(default=None)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -39,11 +41,17 @@ class Task:
 
 @dataclass
 class TaskGroup:
-    group_id: int               # グループ番号
     optimal_start_time: int      # 最適な開始時刻
     penalty_type: Type[PenaltyType] # ペナルティの種類
     tasks: List[Task] = field(default_factory=list)  # タスクのリスト
     status: TaskGroupStatus = TaskGroupStatus.NOT_STARTED  # デフォルトで未開始
+    group_id: int = field(default=None) # グループ番号
+    experiment_name: str = field(default=None)  
+    experiment_uuid: str = field(default=None)  
+
+    def __post_init__(self):
+        # タスクのIDを割り当て
+        self.allocate_task_id()
 
     def to_dict(self):
         return asdict(self)
@@ -108,13 +116,32 @@ class TaskGroup:
         current_time = start_time
         for task in self.tasks:
             current_time += task.interval
-            task.start_time = current_time
+            task.scheduled_time = current_time
             current_time += task.processing_time
+
+    def allocate_task_id(self):
+        # Not None id
+        used_task_ids_set = {task.task_id for task in self.tasks}
+        new_task_id = 0
+        for task_index in range(len(self.tasks)):
+            if self.tasks[task_index].task_id is None:
+                while new_task_id in used_task_ids_set:
+                    new_task_id += 1
+                self.tasks[task_index].task_id = new_task_id
+                used_task_ids_set.add(new_task_id)
+
+    def configure_task_group_settings(self, experiment_name: str, experiment_uuid: str):
+        self.experiment_name = experiment_name
+        self.experiment_uuid = experiment_uuid
 
 @dataclass
 class TaskScheduler:
     task_groups: List[TaskGroup] = field(default_factory=list)
     schedule_reference_time: int = 0
+
+    def __post_init__(self):
+        # タスク群のIDを割り当て
+        self.allocate_task_group_id()
 
 
     def to_dict(self):
@@ -140,7 +167,37 @@ class TaskScheduler:
     def set_schedule_reference_time(self, time: int):
         self.schedule_reference_time = time
 
-    def add_task_group(self, group_id: int, T0: int, M: int, processing_times: List[int], intervals: List[int], penalty_type: Type[PenaltyType]):
+    def allocate_task_group_id(self):
+        # Not None id
+        used_group_ids_set = {group.group_id for group in self.task_groups}
+        new_group_id = 0
+        for group_index in range(len(self.task_groups)):
+            if new_group_id is None:
+                while new_group_id in used_group_ids_set:
+                    new_group_id += 1
+                self.task_groups[group_index].group_id = new_group_id
+                used_group_ids_set.add(new_group_id)
+
+    def add_task_group(self, group: TaskGroup):
+        # タスク群を追加
+        self.task_groups.append(group)
+        # タスク群のidを割り当て
+        self.allocate_task_group_id()
+        # タスク群のスケジュールを更新
+        self.schedule_greedy()
+
+    def _add_task_group_manual_style(
+        self,
+        group_id: int,
+        T0: int,
+        M: int,
+        processing_times: List[int],
+        intervals: List[int],
+        penalty_type: Type[PenaltyType],
+        experiment_operations: List[str],
+        experiment_name: str,
+        experiment_uuid: str,
+    ):
         """
         Add a task group to the scheduler.
 
@@ -148,11 +205,16 @@ class TaskScheduler:
         :param T0: タスク群の最適な開始時刻
         :param M: タスクの数
         :param processing_times: タスクの処理時間のリスト、長さはM
-        :param intervals: タスク間のインターバル（前タスクの終了時刻から次のタスクの開始時刻までの時間）のリスト、 最初のタスクにはインターバルはないためその長さはM-1
+        :param intervals: タスク間のインターバル（前タスクの終了時刻から次のタスクの開始時刻までの時間）のリスト、最初のタスクにはインターバルはないためその長さはM-1
         :param penalty_type: ペナルティの種類
+        :param experiment_operations: 各タスクの実験操作のリスト、長さはM
+        :param experiment_name: 実験の名前
+        :param experiment_uuid: 実験のUUID
         """
-        assert len(processing_times) == M
-        assert len(intervals) == M - 1
+        assert len(processing_times) == M, "processing_timesの長さがMと一致しません。"
+        assert len(intervals) == M - 1, "intervalsの長さがM-1と一致しません。"
+        assert len(experiment_operations) == M, "experiment_operationsの長さがMと一致しません。"
+
         # タスク群がすでに存在するかどうかを確認
         existing_group = self.find_task_group(group_id)
         if existing_group:
@@ -160,13 +222,31 @@ class TaskScheduler:
             return
 
         # 新しいタスク群を追加
-        tasks = [Task(start_time=0, processing_time=processing_times[i], interval=intervals[i-1] if i > 0 else 0) for i in range(M)]
-        new_group = TaskGroup(group_id=group_id, optimal_start_time=T0, tasks=tasks, penalty_type=penalty_type)
+        tasks = [
+            Task(
+                processing_time=processing_times[i],
+                interval=intervals[i - 1] if i > 0 else 0,
+                experiment_operation=experiment_operations[i],
+                scheduled_time=0,
+                task_id=None
+            )
+            for i in range(M)
+        ]
+
+        new_group = TaskGroup(
+            group_id=group_id,
+            optimal_start_time=T0,
+            penalty_type=penalty_type,
+            tasks=tasks,
+            experiment_name=experiment_name,
+            experiment_uuid=experiment_uuid
+        )
 
         self.task_groups.append(new_group)
 
-        # タスク群のスケジュール
+        # タスク群のスケジュールを更新
         self.schedule_greedy()
+
 
     def complete_task(self, group_id: int, task_id: int):
         group = self.find_task_group(group_id)
@@ -209,8 +289,8 @@ class TaskScheduler:
         for group in self.task_groups:
             if group.group_id in eval_group_id:
                 for task in group.tasks:
-                    occupied_time.append((task.start_time, True))
-                    occupied_time.append((task.start_time + task.processing_time, False))
+                    occupied_time.append((task.scheduled_time, True))
+                    occupied_time.append((task.scheduled_time + task.processing_time, False))
 
         occupied_time.sort(key=lambda x: (x[0], x[1]))
         penalty = 0
@@ -269,8 +349,32 @@ class TaskScheduler:
 
 def main():
     task_scheduler = TaskScheduler()
-    task_scheduler.add_task_group(1, 0, 3, [2, 3, 4], [15, 20], NonePenalty())
-    task_scheduler.add_task_group(2, 0, 3, [2, 3, 4], [1, 2], NonePenalty())
+
+    task_group_1 = TaskGroup(
+        optimal_start_time=0,
+        penalty_type=NonePenalty(),
+        tasks=[
+            Task(processing_time=2, interval=0, experiment_operation="A"),
+            Task(processing_time=3, interval=15, experiment_operation="B"),
+            Task(processing_time=4, interval=20, experiment_operation="C")
+        ]
+    )
+
+    task_group_2 = TaskGroup(
+        optimal_start_time=2,
+        penalty_type=NonePenalty(),
+        tasks=[
+            Task(processing_time=2, interval=0, experiment_operation="A"),
+            Task(processing_time=3, interval=1, experiment_operation="B"),
+            Task(processing_time=4, interval=2, experiment_operation="C")
+        ]
+    )
+    
+    print(task_group_1.tasks)
+
+    task_scheduler.add_task_group(task_group_1)
+    print(task_scheduler.task_groups)
+    task_scheduler.add_task_group(task_group_2)
 
     desired_task_schedule_1 = [0, 17, 40]
     desired_task_schedule_2 = [2, 5, 10]
@@ -280,7 +384,7 @@ def main():
 
     for group, desired_task_schedule in zip(task_scheduler.task_groups, [desired_task_schedule_1, desired_task_schedule_2]):
         for task, desired_start_time in zip(group.tasks, desired_task_schedule):
-            assert task.start_time == desired_start_time
+            assert task.scheduled_time == desired_start_time
 
 
 
@@ -288,7 +392,7 @@ def main():
     # 本来できない操作
     task_scheduler.task_groups[1].schedule_tasks(0)
     for task in task_scheduler.task_groups[1].tasks:
-        print(task.start_time)
+        print(task.scheduled_time)
     # タスクを終了
     # task_scheduler.complete_task(1, 0)
     # task_scheduler.complete_task(1, 1)
