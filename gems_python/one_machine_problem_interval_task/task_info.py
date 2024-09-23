@@ -15,6 +15,23 @@ class TaskGroupStatus(Enum):
 
 @dataclass
 class Task:
+    """
+    A class to represent a task with scheduling and status management.
+    Attributes:
+    ----------
+    processing_time : int
+        The processing time of the task.
+    interval : int
+        The interval between the task and the previous task. There is no interval for the first task.
+    experiment_operation : str
+        The experiment operation associated with the task.
+    completed : bool
+        Whether the task has been completed.
+    scheduled_time : int
+        The start time of the task. Defaults to None.
+    task_id : int
+        The unique identifier for the task. Defaults to None.
+    """
     processing_time: int  # タスクの処理時間
     interval: int        # タスク間のインターバル、最初のタスクにはインターバルはない
     experiment_operation: str
@@ -41,17 +58,66 @@ class Task:
 
 @dataclass
 class TaskGroup:
+    """
+    A class to represent a group of tasks with scheduling and status management.
+    Attributes:
+    ----------
+    optimal_start_time : int
+        The optimal start time for the task group.
+    penalty_type : Type[PenaltyType]
+        The type of penalty associated with the task group.
+    tasks : List[Task]
+        A list of tasks in the task group.
+    status : TaskGroupStatus
+        The current status of the task group. Defaults to NOT_STARTED.
+    group_id : int
+        The unique identifier for the task group. Defaults to None.
+    experiment_name : str
+        The name of the experiment associated with the task group. Defaults to None.
+    experiment_uuid : str
+        The unique identifier for the experiment associated with the task group. Defaults to None.
+    Methods:
+    -------
+    __post_init__():
+        Allocates task IDs after initialization.
+    to_dict() -> dict:
+        Converts the task group to a dictionary.
+    from_dict(data: dict) -> 'TaskGroup':
+        Creates a TaskGroup instance from a dictionary.
+    to_json() -> str:
+        Converts the task group to a JSON string.
+    from_json(json_str: str) -> 'TaskGroup':
+        Creates a TaskGroup instance from a JSON string.
+    is_completed() -> bool:
+        Checks if the task group is completed.
+    is_in_progress() -> bool:
+        Checks if the task group is in progress.
+    is_not_started() -> bool:
+        Checks if the task group has not started.
+    is_error() -> bool:
+        Checks if the task group is in an error state.
+    status_update():
+        Updates the status of the task group based on the status of its tasks.
+    schedule_tasks(start_time: int):
+        Schedules the tasks in the group starting from the given start time.
+    allocate_task_id():
+        Allocates unique IDs to tasks in the group.
+    configure_task_group_settings(experiment_name: str, experiment_uuid: str):
+        Configures the settings for the task group with the given experiment name and UUID.
+    """
+
     optimal_start_time: int      # 最適な開始時刻
     penalty_type: Type[PenaltyType] # ペナルティの種類
     tasks: List[Task] = field(default_factory=list)  # タスクのリスト
     status: TaskGroupStatus = TaskGroupStatus.NOT_STARTED  # デフォルトで未開始
-    group_id: int = field(default=None) # グループ番号
-    experiment_name: str = field(default=None)  
-    experiment_uuid: str = field(default=None)  
+    task_group_id: int = field(default=None) # グループ番号. Experiments 生成時に割り当て
+    experiment_name: str = field(default=None)  # 実験の名前. Experiment 生成時に割り当て
+    experiment_uuid: str = field(default=None)  # 実験のUUID. Experiment 生成時に割り当て
+
 
     def __post_init__(self):
         # タスクのIDを割り当て
-        self.allocate_task_id()
+        self._allocate_task_id()
 
     def to_dict(self):
         return asdict(self)
@@ -109,7 +175,7 @@ class TaskGroup:
             start_time = self.optimal_start_time
         # タスクのスケジュールを計算
         if self.status != TaskGroupStatus.NOT_STARTED:
-            print(f"タスク群 {self.group_id} はすでに進行しています。")
+            print(f"タスク群 {self.task_group_id} はすでに進行しています。")
             return
 
         # 最適な開始時刻に合わせて、タスクの開始時刻を設定
@@ -119,7 +185,10 @@ class TaskGroup:
             task.scheduled_time = current_time
             current_time += task.processing_time
 
-    def allocate_task_id(self):
+    def _allocate_task_id(self):
+        """
+        Allocate unique IDs to the tasks in the group.
+        """
         # Not None id
         used_task_ids_set = {task.task_id for task in self.tasks}
         new_task_id = 0
@@ -134,8 +203,20 @@ class TaskGroup:
         self.experiment_name = experiment_name
         self.experiment_uuid = experiment_uuid
 
+    @classmethod
+    def set_task_group_ids(cls, task_groups: List['TaskGroup']):
+        """
+        Set the task group IDs for a list of task groups.
+        """
+        for group_index in range(len(task_groups)):
+            task_groups[group_index].task_group_id = group_index
+
+    
+    
+
 @dataclass
 class TaskScheduler:
+    # TODO: TaskGroupのclassmethodにする
     task_groups: List[TaskGroup] = field(default_factory=list)
     schedule_reference_time: int = 0
 
@@ -168,14 +249,15 @@ class TaskScheduler:
         self.schedule_reference_time = time
 
     def allocate_task_group_id(self):
+        # TODO: TaskGroupのclassmethodにする
         # Not None id
-        used_group_ids_set = {group.group_id for group in self.task_groups}
+        used_group_ids_set = {group.task_group_id for group in self.task_groups}
         new_group_id = 0
         for group_index in range(len(self.task_groups)):
             if new_group_id is None:
                 while new_group_id in used_group_ids_set:
                     new_group_id += 1
-                self.task_groups[group_index].group_id = new_group_id
+                self.task_groups[group_index].task_group_id = new_group_id
                 used_group_ids_set.add(new_group_id)
 
     def add_task_group(self, group: TaskGroup):
@@ -234,7 +316,7 @@ class TaskScheduler:
         ]
 
         new_group = TaskGroup(
-            group_id=group_id,
+            task_group_id=group_id,
             optimal_start_time=T0,
             penalty_type=penalty_type,
             tasks=tasks,
@@ -273,7 +355,7 @@ class TaskScheduler:
     def find_task_group(self, group_id: int) -> TaskGroup:
         # 指定されたグループ番号に一致するタスク群を探す
         for group in self.task_groups:
-            if group.group_id == group_id:
+            if group.task_group_id == group_id:
                 return group
         return None
     
@@ -285,9 +367,9 @@ class TaskScheduler:
         occupied_time = list()
 
         if eval_group_id is None:
-            eval_group_id = [group.group_id for group in self.task_groups]
+            eval_group_id = [group.task_group_id for group in self.task_groups]
         for group in self.task_groups:
-            if group.group_id in eval_group_id:
+            if group.task_group_id in eval_group_id:
                 for task in group.tasks:
                     occupied_time.append((task.scheduled_time, True))
                     occupied_time.append((task.scheduled_time + task.processing_time, False))
@@ -326,7 +408,7 @@ class TaskScheduler:
         scheduled_groups = list()
         for group in self.task_groups:
             diff = 0
-            scheduled_groups.append(group.group_id)
+            scheduled_groups.append(group.task_group_id)
             while True:
                 # もし、スケジュール基準時刻がタスク群の最適な開始時刻よりも遅い場合、スケジュール基準時刻を最適な開始時刻に設定
                 # そうでない場合、スケジュール基準時刻を最適な開始時刻に設定
@@ -403,7 +485,7 @@ def main():
     # タスクをスケジュール
     task_scheduler.schedule_greedy()
     for group in task_scheduler.task_groups:
-        print(group.group_id)
+        print(group.task_group_id)
         print(group.tasks)
 
 
