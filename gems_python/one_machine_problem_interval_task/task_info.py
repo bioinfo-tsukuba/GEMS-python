@@ -7,12 +7,6 @@ from gems_python.one_machine_problem_interval_task.penalty.penalty_class import 
 
 
 
-class TaskGroupStatus(Enum):
-    NOT_STARTED = "Not Started"
-    IN_PROGRESS = "In Progress"
-    COMPLETED = "Completed"
-    ERROR = "Error"
-
 @dataclass
 class Task:
     """
@@ -55,6 +49,12 @@ class Task:
         return cls.from_dict(data)
     
 
+
+class TaskGroupStatus(Enum):
+    NOT_STARTED = "Not Started"
+    IN_PROGRESS = "In Progress"
+    COMPLETED = "Completed"
+    ERROR = "Error"
 
 @dataclass
 class TaskGroup:
@@ -203,13 +203,140 @@ class TaskGroup:
         self.experiment_name = experiment_name
         self.experiment_uuid = experiment_uuid
 
+    # --以下のメソッドは、scheduling に関するものである。
+
     @classmethod
-    def set_task_group_ids(cls, task_groups: List['TaskGroup']):
+    def set_task_group_ids(cls, task_groups: List['TaskGroup']) -> List['TaskGroup']:
         """
         Set the task group IDs for a list of task groups.
         """
         for group_index in range(len(task_groups)):
             task_groups[group_index].task_group_id = group_index
+
+        return task_groups
+
+    @classmethod
+    def find_task_group(cls, task_groups: List['TaskGroup'], group_id: int) -> int:
+        # 指定されたグループ番号に一致するタスク群のインデックスを探す
+        for index, group in enumerate(task_groups):
+            if group.task_group_id == group_id:
+                return index
+        return None
+
+    @classmethod
+    def complete_task(cls, task_groups: List['TaskGroup'], group_id: int, task_id: int) -> List['TaskGroup']:
+        """
+        Complete a task in the task group.
+
+        :param task_groups: A list of task groups.
+        :param group_id: The ID of the task group.
+        :param task_id: The ID of the task to complete.
+
+        :return: A list of task groups with the completed task.
+        """
+        group_index = cls.find_task_group(task_groups, group_id)
+        if group_index is None:
+            print(f"タスク群 {group_id}が存在しません。")
+            return
+
+        task = task_groups[group_index].tasks[task_id]
+        if task.completed:
+            print(f"タスク群 {group_id} のタスク {task_id} は既に終了しています。")
+            return
+
+        # タスクを終了としてマーク
+        task_groups[group_index].tasks[task_id].completed = True
+        print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
+
+        # タスク群のステータスを更新
+        task_groups[group_index].status_update()
+
+        # 全てのタスクが終了しているかをチェック
+        if task_groups[group_index].is_completed():
+            print(f"タスク群 {group_id} が全て終了しました")
+
+        return task_groups
+
+    @classmethod
+    def schedule_task_groups(cls, task_groups: List['TaskGroup'], reference_time: int) -> List['TaskGroup']:
+        """
+        Schedule a list of task groups.
+
+        :param task_groups: A list of task groups to schedule.
+        :param reference_time: The reference time for scheduling the task groups.
+
+        :return: A list of scheduled task groups.
+        """
+
+        """
+        Schedule all the groups one by one group.
+        """
+        # すでに終わっているタスクも含めてゼロの位置を決める
+        # スケジュールするやつの基準はそれはそれで決める
+        # 例えば、available_reference_time
+
+        # タスク群をNOT_STARTEDを最後にして、開始時刻の昇順にソート
+        task_groups = task_groups.copy()
+        task_groups.sort(key=lambda group: (group.is_not_started(), group.optimal_start_time))
+        
+        # タスク群を順番にスケジュール
+        scheduled_groups = list()
+        for group in task_groups:
+            diff = 0
+            scheduled_groups.append(group.task_group_id)
+            while True:
+                # もし、スケジュール基準時刻がタスク群の最適な開始時刻よりも遅い場合、スケジュール基準時刻を最適な開始時刻に設定
+                # そうでない場合、スケジュール基準時刻を最適な開始時刻に設定
+                # スケジュール基準時刻より遅い範囲で、タスク群のスケジュールを試行（0, 1, -1, 2, -2, ...）
+                # ちょっと遅いが、とりあえず実装はこれでいいかも
+                # TODO: 実装を軽くするために、無駄なdiffの計算をなくす。すなわち、group.optimal_start_time + diff >= self.schedule_reference_timeを満たすdiffだけを試す
+                time_candidate = max(reference_time, group.optimal_start_time + diff)
+                group.schedule_tasks(time_candidate)
+                if cls.eval_machine_penalty(task_groups, scheduled_groups) == 0:
+                    break
+
+                if diff <= 0:
+                    diff *= -1
+                    diff += 1
+                else:
+                    diff *= -1
+
+        return task_groups
+
+    @classmethod
+    def eval_machine_penalty(cls, task_groups: List['TaskGroup'], eval_group_ids: List[int] = None) -> int:
+        """
+        Evaluate the penalty for the machine.
+        """
+        occupied_time = list()
+
+        if eval_group_ids is None:
+            eval_group_ids = [group.task_group_id for group in task_groups]
+        for group in task_groups:
+            if group.task_group_id in eval_group_ids:
+                for task in group.tasks:
+                    occupied_time.append((task.scheduled_time, True))
+                    occupied_time.append((task.scheduled_time + task.processing_time, False))
+
+        occupied_time.sort(key=lambda x: (x[0], x[1]))
+        penalty = 0
+        count = 0
+        privous_time = occupied_time[0][0]
+        for time, is_start in occupied_time:
+            if count >= 2:
+                penalty += (time - privous_time)*(count - 1)
+
+            if is_start:
+                count += 1
+            else:
+                count -= 1
+            privous_time = time
+
+        assert count == 0
+
+        return penalty
+
+    
 
     
     
@@ -251,14 +378,7 @@ class TaskScheduler:
     def allocate_task_group_id(self):
         # TODO: TaskGroupのclassmethodにする
         # Not None id
-        used_group_ids_set = {group.task_group_id for group in self.task_groups}
-        new_group_id = 0
-        for group_index in range(len(self.task_groups)):
-            if new_group_id is None:
-                while new_group_id in used_group_ids_set:
-                    new_group_id += 1
-                self.task_groups[group_index].task_group_id = new_group_id
-                used_group_ids_set.add(new_group_id)
+        TaskGroup.set_task_group_ids(self.task_groups)
 
     def add_task_group(self, group: TaskGroup):
         # タスク群を追加

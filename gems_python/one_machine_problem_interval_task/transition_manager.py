@@ -15,7 +15,7 @@ import polars as pl
 from pathlib import Path
 import os
 
-from gems_python.one_machine_problem_interval_task.task_info import TaskGroup
+from gems_python.one_machine_problem_interval_task.task_info import TaskGroup, TaskGroupStatus
 
 """MODULE: State
 """
@@ -136,6 +136,7 @@ class Experiment:
         :return: JSON string representation of the experiment object.
         """
         data = self.to_dict()
+        data['current_task_group']['status'] = data['current_task_group']['status'].value
         return json.dumps(data)
 
     @classmethod
@@ -146,6 +147,7 @@ class Experiment:
         :return: Experiment object.
         """
         data = json.loads(json_str)
+        data['current_task_group']['status'] = TaskGroupStatus(data['current_task_group']['status'])
         return cls.from_dict(data)
     
     def define_all_node(self)-> set:
@@ -376,6 +378,7 @@ class Experiment:
         state_index = self.current_state_index
         try:
             task_group: TaskGroup = self.states[state_index].task_generator(self.shared_variable_history.clone())
+            self.current_task_group = task_group
             self.current_task_group.configure_task_group_settings(self.experiment_uuid, self.current_state_name)
 
         except Exception as err:
