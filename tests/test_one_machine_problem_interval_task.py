@@ -107,7 +107,14 @@ class TestClass(unittest.TestCase):
             task_groups = TaskGroup.complete_task(task_groups, group_id=0, task_id=task_id)
 
         print(f"{task_groups[0].to_json()=}")
-        
+
+        j = task_groups[0].to_json()
+        task_group = TaskGroup.from_json(j)
+        print(f"{task_group=}")
+
+
+
+    def test_experiment(self):
         with tempfile.TemporaryDirectory() as dname:
             print(dname)                 
             lab: Experiments = gen_minimum_experiments(temp_dir=dname)
@@ -117,13 +124,5 @@ class TestClass(unittest.TestCase):
 
             input("press enter to continue")
 
-
-
-        # experiment = Experiment(
-        #     experiment_name="test", 
-        #     states=[],
-        #     current_state_name="",
-        #     shared_variable_history=pl.DataFrame(),
-        # )
 
         
