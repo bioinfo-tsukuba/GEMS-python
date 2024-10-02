@@ -42,3 +42,33 @@ def recursive_to_json(obj):
 def recursive_from_json(cls, json_str):
     data = json.loads(json_str)
     return recursive_from_dict(cls, data)
+
+
+# カスタムデコレーター
+def auto_dataclass(cls):
+    # クラスに to_dict メソッドを追加
+    def to_dict(self):
+        return recursive_to_dict(self)
+
+    # クラスに from_dict クラスメソッドを追加
+    @classmethod
+    def from_dict(cls, data: dict):
+        return recursive_from_dict(cls, data)
+
+    # クラスに to_json メソッドを追加
+    def to_json(self):
+        return recursive_to_json(self)
+
+    # クラスに from_json クラスメソッドを追加
+    @classmethod
+    def from_json(cls, json_str: str):
+        return recursive_from_json(cls, json_str)
+
+    # メソッドをクラスに追加
+    setattr(cls, 'to_dict', to_dict)
+    setattr(cls, 'from_dict', from_dict)
+    setattr(cls, 'to_json', to_json)
+    setattr(cls, 'from_json', from_json)
+    
+    # 元のdataclassデコレーターを適用してクラスを返す
+    return dataclass(cls)
