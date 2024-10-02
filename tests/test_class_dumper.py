@@ -1,3 +1,4 @@
+from enum import Enum
 import unittest
 from typing import List, Dict
 import inspect
@@ -10,10 +11,15 @@ def print_separate_line(info: str):
     print(info, "*" * (SEPARATE_LINE_LENGTH-len(info)), sep="")
     print("*" * SEPARATE_LINE_LENGTH)
 
+# Enum例
+class Status(Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
 
 @dataclass
 class A:
     A_a: int
+    status: Status = Status.ACTIVE
 
 @dataclass
 class B:
@@ -35,6 +41,7 @@ class TestDumper(unittest.TestCase):
     def test_recursive_to_dict(self):
         print_separate_line(inspect.currentframe().f_code.co_name)
         dic = self.c.to_dict()
+        print(f"{dic=}")
         c = C.from_dict(dic)
         print(self.c)
         print(c)
@@ -43,6 +50,7 @@ class TestDumper(unittest.TestCase):
     def test_recursive_to_json(self):
         print_separate_line(inspect.currentframe().f_code.co_name)
         json_str = self.c.to_json()
+        print(f"{json_str=}")
         c = C.from_json(json_str)
         print(self.c)
         print(c)
