@@ -8,14 +8,14 @@ from abc import ABC, abstractmethod
 import copy
 from dataclasses import asdict, dataclass, field
 import json
-from typing import List, Type, Union
+from typing import List, Tuple, Type, Union
 import uuid
 import numpy as np
 import polars as pl
 from pathlib import Path
 import os
 
-from gems_python.one_machine_problem_interval_task.task_info import TaskGroup, TaskGroupStatus
+from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGroup, TaskGroupStatus
 
 """MODULE: State
 """
@@ -301,7 +301,7 @@ class Experiment:
         """
         self.update_current_state_name_and_index(self.current_state_name)
         if self.current_task_group is None:
-            self.current_task_group = self.generate_task_of_the_state()
+            self.current_task_group = self.generate_task_group_of_the_state()
 
         # if self.shared_variable_history != pl.DataFrame:
         #     pl.read_csv(self.shared_variable_history)
@@ -346,7 +346,7 @@ class Experiment:
         self.current_task_group = new_task_group
 
     def execute_one_step(self) -> TaskGroup:
-        # TODO: TaskGroupに対応
+        # TODO-DONE: TaskGroupに対応
         """
         Execute one step of the experiment.
         :return: Task 
@@ -362,17 +362,17 @@ class Experiment:
         
         # Generate a task
         try:
-            task = self.generate_task_of_the_state()
+            task_group = self.generate_task_group_of_the_state()
         except Exception as err:
-            raise RuntimeError(f"Error generating task: {err}")
+            raise RuntimeError(f"Error generating task_group: {err}")
 
-        return task
+        return task_group
     
-    def generate_task_of_the_state(self) -> TaskGroup:
-        # TODO: TaskGroupに対応
+    def generate_task_group_of_the_state(self) -> TaskGroup:
+        # TODO-DONE: TaskGroupに対応
         """
-        Generate a task of the state.
-        :return: Generated task.
+        Generate a task group of the current state.
+        :return: Generated task group.
         """
         # Generate a task
         state_index = self.current_state_index
@@ -510,60 +510,49 @@ class Experiments:
     def execute_scheduling(
             self,
             scheduling_method: str = 's',
-            optimal_time_reference_time: int = 0
+            reference_time: int = 0
             ):
-        # TODO: TaskGroupに対応
+        # TODO-DONE: TaskGroupに対応
         """
         Execute the scheduling of the tasks.
         :param scheduling_method: The method of scheduling. 's' for simulated annealing.
-        :param optimal_time_reference_time: The reference time for the optimal time.
+        :param reference_time: The reference time for the optimal time.
         """
 
         self.set_task_group_ids()
         # Reschedule
-        tasks = self.task_groups.copy()
-
-        for task in tasks:
-            task.optimal_time = task.optimal_time - optimal_time_reference_time
+        task_groups = self.task_groups.copy()
+        scheduled_task_groups = list()
 
         match scheduling_method:
             case 's':
-                self.task_groups = TaskGroup.simulated_annealing_schedule(tasks)
+                scheduled_task_groups = TaskGroup.schedule_task_groups(task_groups, reference_time)
             case _:
                 AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
 
-        
-        for task in tasks:
-            task.optimal_time = task.optimal_time + optimal_time_reference_time
-            task.scheduled_time = task.scheduled_time + optimal_time_reference_time
-
-        self.task_groups = tasks
+        self.task_groups = scheduled_task_groups
 
     def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
             self,
+            task_group_id: int,
             task_id: int,
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
             scheduling_method = 's',
             optimal_time_reference_time: int = 0
-            ) -> TaskGroup:
+            ) -> Tuple[TaskGroup, Task]:
         """
         TODO: explanation
         """
-        # TODO: TaskGroupに対応
-        experiment_uuid = 0
-        for index in range(len(self.task_groups)):
-            if self.task_groups[index].task_group_id == task_id:
-                experiment_uuid = self.task_groups[index].experiment_uuid
-                break
-
+        # TODO-DONE: TaskGroupに対応
+        # Update task_group
+        self.task_groups = TaskGroup.complete_task(self.task_groups, group_id=task_group_id, task_id=task_id)
+        task_group_index = TaskGroup.find_task_group(self.task_groups, task_group_id)
+        experiment_uuid = self.task_groups[task_group_index].experiment_uuid
         experiment_index = 0
         for index in range(len(self.experiments)):
             if self.experiments[index].experiment_uuid == experiment_uuid:
                 experiment_index = index
-
-        # Clean up the last task
-        self.delete_task_with_task_id(task_id)
 
         # Update the shared variable history(dataframe) of the experiment of the task
         match update_type:
@@ -576,15 +565,28 @@ class Experiments:
             case _:
                 AssertionError(f"Unexpected input: update_type {update_type}")
 
-        # Generate a new task of the updated experiment
-        new_task = self.experiments[experiment_index].execute_one_step()
         
-        self.task_groups.append(new_task)
+        if self.task_groups[task_group_index].is_completed():
+            # Delete the task group
+            self.task_groups = TaskGroup.delete_task_group(self.task_groups, task_group_id)
+            # Transition and generate a new task group
+            new_task_group = self.experiments[experiment_index].execute_one_step()
+            # Add the new task group and reschedule
+            self.task_groups = TaskGroup.add_task_group(self.task_groups, new_task_group)
+
         self.set_task_group_ids()
         
         self.execute_scheduling(scheduling_method, optimal_time_reference_time)
+        print(f"{self.task_groups=}")
 
-        return TaskGroup.get_earliest_scheduled_task(self.task_groups)
+        earliest_task, eariest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
+        print(f"{earliest_task=}")
+        print(f"{eariest_group_id=}")
+        eariest_group_index = TaskGroup.find_task_group(self.task_groups, eariest_group_id)
+        earliest_task_group = self.task_groups[eariest_group_index]
+
+
+        return earliest_task_group, earliest_task
     
     def start_experiments(self):
         pass

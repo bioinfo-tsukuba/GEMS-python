@@ -1,7 +1,7 @@
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 import json
-from typing import List, Type
+from typing import List, Tuple, Type
 
 from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty, PenaltyType
 
@@ -49,6 +49,19 @@ class Task:
         return cls.from_dict(data)
     
 
+
+    @classmethod
+    def find_task(cls, tasks: List['Task'], task_id: int) -> int:
+        """
+        Find the index of the task with the given ID in the list of tasks.
+        :param tasks: A list of tasks.
+        :param task_id: The ID of the task to find.
+        :return: The index of the task with the given ID in the list of tasks.
+        """
+        for index, task in enumerate(tasks):
+            if task.task_id == task_id:
+                return index
+        return None
 
 class TaskGroupStatus(Enum):
     NOT_STARTED = "Not Started"
@@ -203,6 +216,18 @@ class TaskGroup:
         self.experiment_name = experiment_name
         self.experiment_uuid = experiment_uuid
 
+    def get_ealiest_task(self) -> Task:
+        """
+        Get the task with the earliest scheduled time.
+        """
+        earliest_task = None
+        for task in self.tasks:
+            if task.completed:
+                continue
+            if earliest_task is None or task.scheduled_time < earliest_task.scheduled_time:
+                earliest_task = task
+        return earliest_task
+
     # --以下のメソッドは、scheduling に関するものである。
 
     @classmethod
@@ -222,6 +247,63 @@ class TaskGroup:
             if group.task_group_id == group_id:
                 return index
         return None
+    
+    @classmethod
+    def add_task_group(cls, task_groups: List['TaskGroup'], group: 'TaskGroup') -> List['TaskGroup']:
+        """
+        Add a task group to the list of task groups.
+        :param task_groups: A list of task groups.
+        :param group: The task group to add.
+        :return: A list of task groups with the specified task group added.
+        """
+
+        # タスク群を追加
+        task_groups.append(group)
+        # タスク群のidを割り当て
+        task_groups = cls.set_task_group_ids(task_groups)
+        # タスク群のスケジュールを更新
+        task_groups = cls.schedule_task_groups(task_groups, reference_time=0)
+        
+        return task_groups
+
+    
+    @classmethod
+    def delete_task_group(cls, task_groups: List['TaskGroup'], group_id: int) -> List['TaskGroup']:
+        """
+        Delete a task group from the list of task groups.
+        :param task_groups: A list of task groups.
+        :param group_id: The ID of the task group to delete.
+        :return: A list of task groups with the specified task group deleted.
+        """
+        group_index = cls.find_task_group(task_groups, group_id)
+        if group_index is None:
+            print(f"タスク群 {group_id} が存在しません。")
+            return
+        
+        task_groups.pop(group_index)
+        print(f"タスク群 {group_id} を削除しました。")
+        return task_groups
+    
+    @classmethod
+    def find_task(cls, task_groups: List['TaskGroup'], group_id: int, task_id: int) -> Tuple[int, int]:
+        """
+        Find the index of the task with the given ID in the list of tasks.
+        :param task_groups: A list of task groups.
+        :param group_id: The ID of the task group.
+        :param task_id: The ID of the task to find.
+        :return: The index of the task with the given ID in the list of tasks.
+        """
+        group_index = cls.find_task_group(task_groups, group_id)
+        if group_index is None:
+            print(f"タスク群 {group_id}が存在しません。")
+            return
+
+        task_index = Task.find_task(task_groups[group_index].tasks, task_id)
+        if task_index is None:
+            print(f"タスク群 {group_id}にタスク {task_id}が存在しません。")
+            return
+        
+        return group_index, task_index
 
     @classmethod
     def complete_task(cls, task_groups: List['TaskGroup'], group_id: int, task_id: int) -> List['TaskGroup']:
@@ -234,18 +316,15 @@ class TaskGroup:
 
         :return: A list of task groups with the completed task.
         """
-        group_index = cls.find_task_group(task_groups, group_id)
-        if group_index is None:
-            print(f"タスク群 {group_id}が存在しません。")
-            return
+        group_index, task_index = cls.find_task(task_groups, group_id, task_id)
 
-        task = task_groups[group_index].tasks[task_id]
+        task = task_groups[group_index].tasks[task_index]
         if task.completed:
             print(f"タスク群 {group_id} のタスク {task_id} は既に終了しています。")
             return
 
         # タスクを終了としてマーク
-        task_groups[group_index].tasks[task_id].completed = True
+        task_groups[group_index].tasks[task_index].completed = True
         print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
 
         # タスク群のステータスを更新
@@ -335,7 +414,22 @@ class TaskGroup:
         assert count == 0
 
         return penalty
-
+    
+    @classmethod
+    def get_ealiest_task_in_task_groups(cls, task_groups: List['TaskGroup']) -> Tuple['Task', int]:
+        """
+        Get the task with the earliest scheduled time in the task groups.
+        :param task_groups: A list of task groups.
+        :return: The task with the earliest scheduled time and the ID of the group it belongs to.
+        """
+        earliest_task = None
+        group_id = None
+        for group in task_groups:
+            task = group.get_ealiest_task()
+            if earliest_task is None or (task is not None and task.scheduled_time < earliest_task.scheduled_time):
+                earliest_task = task
+                group_id = group.task_group_id
+        return earliest_task, group_id
     
 
     

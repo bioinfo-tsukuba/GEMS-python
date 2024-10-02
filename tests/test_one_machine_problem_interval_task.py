@@ -114,15 +114,54 @@ class TestClass(unittest.TestCase):
 
 
 
-    def test_experiment(self):
+    def test_experiment_save(self):
         with tempfile.TemporaryDirectory() as dname:
             print(dname)                 
             lab: Experiments = gen_minimum_experiments(temp_dir=dname)
             print(lab)
 
-            lab.save_all()
+            # lab.save_all()
 
-            input("press enter to continue")
+            # input("press enter to continue")
+
+    def test_experiment_loop(self):
+        with tempfile.TemporaryDirectory() as dname:
+            lab = gen_minimum_experiments(temp_dir=dname)
+            print(lab)
+            lab.execute_scheduling()
+            print(lab)
+
+            earliest_task, earliest_group_id = TaskGroup.get_ealiest_task_in_task_groups(lab.task_groups)
+            print(f"{earliest_task=}")
+            print(f"all {lab.task_groups=}")
+
+            for i in range(10):
+                print("*"*separate_line_length, f"iteration {i}", "*"*separate_line_length)
+                task_groups_before = lab.task_groups.copy()
+                for task_group in task_groups_before:
+                    print("#"* (separate_line_length//2), "Task groups before", "#"* (separate_line_length//2))
+                    print(f"{task_group.task_group_id=}")
+                    for task in task_group.tasks:
+                        print(f"{task=}")
+                shared_variable_history = pl.DataFrame()
+
+                earliest_task_group, earliest_task = lab.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+                    task_group_id=earliest_group_id,
+                    task_id=earliest_task.task_id,
+                    new_result_of_experiment=shared_variable_history
+                )
+
+                earliest_group_id = earliest_task_group.task_group_id
+
+           
+
+                for task_group in lab.task_groups:
+                    print("#"* (separate_line_length//2), "Task groups after", "#"* (separate_line_length//2))
+                    print(f"{task_group.task_group_id=}")
+                    for task in task_group.tasks:
+                        print(f"{task=}")
+
+            
 
 
         
