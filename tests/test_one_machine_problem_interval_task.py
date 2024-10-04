@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-from pathlib import Path
 import unittest
 import polars as pl
 import inspect
@@ -8,48 +6,10 @@ import os
 
 from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty
 from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGroup
-from gems_python.one_machine_problem_interval_task.transition_manager import Experiments, Experiment, State
+from gems_python.one_machine_problem_interval_task.transition_manager import Experiments
+from tests.experiment_samples.minimum import gen_minimum_experiments
 
 separate_line_length = 50
-
-@dataclass
-class MinimumState(State):
-    def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        return  TaskGroup(
-            optimal_start_time=0,
-            penalty_type=NonePenalty(),
-            tasks=[
-                Task(processing_time=2, interval=0, experiment_operation="A"),
-                Task(processing_time=3, interval=15, experiment_operation="B"),
-                Task(processing_time=4, interval=20, experiment_operation="C")
-            ]
-        )
-    
-    def transition_function(self, df: pl.DataFrame) -> str:
-        # return the state name
-        return "MinimumState"
-    
-
-def gen_minimum_experiment(experiment_name = "minimum_experiment"):
-    return Experiment(
-        experiment_name=experiment_name,
-        states=[
-            MinimumState()
-        ],
-        current_state_name="MinimumState",
-        shared_variable_history=pl.DataFrame()
-    )
-
-def gen_minimum_experiments(temp_dir: str, experiment_name = "minimum_experiment"):
-    # Path is volatile
-    return Experiments(
-        experiments=[
-            gen_minimum_experiment(experiment_name=experiment_name)
-        ],
-        parent_dir_path = Path(temp_dir)
-    )
-
-
 
 class TestClass(unittest.TestCase):
     def setUp(self):
@@ -65,6 +25,9 @@ class TestClass(unittest.TestCase):
                 Task(processing_time=4, interval=20, experiment_operation="C")
             ]
         )
+
+        print(f"{inspect.getfile(TaskGroup)=}")
+        print(f"{inspect.getfile(task_group_1.__class__)=}")
 
         task_group_2 = TaskGroup(
             optimal_start_time=2,
@@ -117,10 +80,22 @@ class TestClass(unittest.TestCase):
     def test_experiment_save(self):
         with tempfile.TemporaryDirectory() as dname:
             print(dname)                 
-            lab: Experiments = gen_minimum_experiments(temp_dir=dname)
-            print(lab)
+            lab: Experiments = gen_minimum_experiments(temp_dir="volatile")
+            print(f"{lab=}")
+            
+            dict_dumped = lab.to_dict()
+            json_dumped = lab.to_json()
+            print(f"{json_dumped=}")
 
-            # lab.save_all()
+            # Save to file
+            with open(os.path.join(dname, "experiment.json"), "w") as f:
+                f.write(json_dumped)
+
+            # # Load from file
+            # lab2 = Experiments.from_dict(dict_dumped)
+            # print(f"{lab2=}")
+            # lab2 = Experiments.from_json(json_dumped)
+            # print(f"{lab2=}")
 
             # input("press enter to continue")
 

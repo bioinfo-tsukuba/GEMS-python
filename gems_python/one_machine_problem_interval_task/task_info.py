@@ -1,5 +1,6 @@
 from enum import Enum
-from dataclasses import dataclass, field, asdict
+from dataclasses import field, asdict
+from gems_python.common.class_dumper import auto_dataclass as dataclass
 import json
 from typing import List, Tuple, Type
 
@@ -32,23 +33,6 @@ class Task:
     completed: bool = False  # タスクが終了したかどうか
     scheduled_time: int = field(default=None)  # タスクの開始時刻
     task_id: int = field(default=None)
-
-    def to_dict(self) -> dict:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Task':
-        return cls(**data)
-    
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
-    
-    @classmethod
-    def from_json(cls, json_str: str) -> 'Task':
-        data = json.loads(json_str)
-        return cls.from_dict(data)
-    
-
 
     @classmethod
     def find_task(cls, tasks: List['Task'], task_id: int) -> int:
@@ -131,29 +115,6 @@ class TaskGroup:
     def __post_init__(self):
         # タスクのIDを割り当て
         self._allocate_task_id()
-
-    def to_dict(self):
-        return asdict(self)
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> 'TaskGroup':
-        # Recreate the penalty type from its dictionary
-        return cls(**data)
-
-    def to_json(self) -> str:
-        data = self.to_dict()
-        data["penalty_type"] = self.penalty_type.to_json()
-        data["status"] = self.status.value
-        return json.dumps(data)
-    
-    @classmethod
-    def from_json(cls, json_str: str) -> 'TaskGroup':
-        data = json.loads(json_str)
-        # Recreate the penalty type from its JSON string
-        data["penalty_type"] = PenaltyType.from_json(data["penalty_type"])
-        data["status"] = TaskGroupStatus(data["status"])
-        data["tasks"] = [Task.from_dict(task_data) for task_data in data["tasks"]]
-        return cls.from_dict(data)
 
     def is_completed(self) -> bool:
         # タスク群が完了しているかどうかを確認
@@ -444,27 +405,6 @@ class TaskScheduler:
     def __post_init__(self):
         # タスク群のIDを割り当て
         self.allocate_task_group_id()
-
-
-    def to_dict(self):
-        return asdict(self)
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> 'TaskScheduler':
-        # Recreate the task groups from their dictionaries
-        return cls(**data)
-
-    def to_json(self) -> str:
-        data = self.to_dict()
-        data["task_groups"] = [group.to_json() for group in self.task_groups]
-        return json.dumps(data)
-
-    @classmethod
-    def from_json(cls, json_str: str) -> 'TaskScheduler':
-        data = json.loads(json_str)
-        # Recreate the task groups from their JSON strings
-        data["task_groups"] = [TaskGroup.from_json(group_data) for group_data in data["task_groups"]]
-        return cls.from_dict(data)
 
     def set_schedule_reference_time(self, time: int):
         self.schedule_reference_time = time

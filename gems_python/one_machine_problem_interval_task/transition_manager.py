@@ -6,7 +6,7 @@ import ast
 import inspect
 from abc import ABC, abstractmethod
 import copy
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, field
 import json
 from typing import List, Tuple, Type, Union
 import uuid
@@ -14,6 +14,8 @@ import numpy as np
 import polars as pl
 from pathlib import Path
 import os
+from gems_python.common.class_dumper import auto_dataclass as dataclass
+from typing_extensions import deprecated
 
 from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGroup, TaskGroupStatus
 
@@ -104,51 +106,6 @@ class Experiment:
     current_task_group: TaskGroup = field(default=None)
     current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-
-    def to_dict(self) -> dict:
-        """
-        Converts the experiment object to a dictionary.
-        :return: Dictionary representation of the experiment object.
-        """
-        data = asdict(self)
-        data['states'] = [state.__class__.__name__ for state in self.states]  # Store class names instead of class objects
-        data['shared_variable_history'] = self.shared_variable_history.to_dict(as_series=False)
-        data['current_task_group'] = self.current_task_group.to_dict() if self.current_task_group is not None else None
-        
-        return data
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Experiment':
-        """
-        Creates an experiment object from a dictionary.
-        :param data: Dictionary containing the experiment data.
-        :return: Experiment object.
-        """
-        data['states'] = [globals()[state_name] for state_name in data['states']]
-        data['shared_variable_history'] = pl.DataFrame(data['shared_variable_history'])
-        data['current_task_group'] = TaskGroup.from_dict(data['current_task_group']) if data['current_task_group'] is not None else None
-        return cls(**data)
-
-    def to_json(self) -> str:
-        """
-        Converts the experiment object to a JSON string.
-        :return: JSON string representation of the experiment object.
-        """
-        data = self.to_dict()
-        data['current_task_group']['status'] = data['current_task_group']['status'].value
-        return json.dumps(data)
-
-    @classmethod
-    def from_json(cls, json_str: str) -> 'Experiment':
-        """
-        Creates an experiment object from a JSON string.
-        :param json_str: JSON string containing the experiment data.
-        :return: Experiment object.
-        """
-        data = json.loads(json_str)
-        data['current_task_group']['status'] = TaskGroupStatus(data['current_task_group']['status'])
-        return cls.from_dict(data)
     
     def define_all_node(self)-> set:
         all_node = set()
@@ -470,6 +427,7 @@ class Experiments:
         for experiment in self.experiments:
             print(f"Experiment name: {experiment.experiment_name}, Experiment uuid: {experiment.experiment_uuid}")
 
+    @deprecated("Use to_json instead")
     def save_all(self, save_dir: Path = None, under_parent_dir: bool = True):
         if under_parent_dir:
             save_path = self.parent_dir_path / (save_dir if save_dir is not None else "")
@@ -590,4 +548,3 @@ class Experiments:
     
     def start_experiments(self):
         pass
-
