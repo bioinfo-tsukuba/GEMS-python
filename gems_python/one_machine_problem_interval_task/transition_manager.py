@@ -427,7 +427,7 @@ class Experiments:
         for experiment in self.experiments:
             print(f"Experiment name: {experiment.experiment_name}, Experiment uuid: {experiment.experiment_uuid}")
 
-    @deprecated("Use to_json instead")
+    # @deprecated("Use to_json instead")
     def save_all(self, save_dir: Path = None, under_parent_dir: bool = True):
         if under_parent_dir:
             save_path = self.parent_dir_path / (save_dir if save_dir is not None else "")

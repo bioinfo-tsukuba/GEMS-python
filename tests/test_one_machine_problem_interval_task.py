@@ -91,6 +91,8 @@ class TestClass(unittest.TestCase):
             with open(os.path.join(dname, "experiment.json"), "w") as f:
                 f.write(json_dumped)
 
+
+            # TODO: Stateの再構築ができないので、コメントアウト
             # # Load from file
             # lab2 = Experiments.from_dict(dict_dumped)
             # print(f"{lab2=}")

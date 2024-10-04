@@ -1,5 +1,4 @@
 
-import json
 from pathlib import Path
 from gems_python.one_machine_problem_interval_task.transition_manager import Experiment, Experiments, State
 from gems_python.common.class_dumper import auto_dataclass as dataclass
@@ -24,23 +23,6 @@ class MinimumState(State):
     def transition_function(self, df: pl.DataFrame) -> str:
         # return the state name
         return "MinimumState"
-    
-
-    def to_dict(self):
-        print("ans;casclmac")
-        return {'state_name': self.state_name}
-
-    @classmethod
-    def from_dict(cls, data):
-        return cls(state_name=data['state_name'])
-    
-    def to_json(self):
-        return json.dumps(self.to_dict())
-    
-    @classmethod
-    def from_json(cls, json_str):
-        data = json.loads(json_str)
-        return cls.from_dict(data)
     
 
 def gen_minimum_experiment(experiment_name = "minimum_experiment") -> Experiment:
