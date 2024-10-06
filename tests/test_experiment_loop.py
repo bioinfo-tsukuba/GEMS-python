@@ -2,7 +2,7 @@
 
 import unittest
 
-from tests.experiment_samples.hek_cell_culture import HekCellCulture
+from tests.experiment_samples_simple_task.hek_cell_culture import HekCellCulture
 
 
 class TestExperimentStructure(unittest.TestCase):

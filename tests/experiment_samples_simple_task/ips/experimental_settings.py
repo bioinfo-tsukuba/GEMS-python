@@ -8,7 +8,7 @@ from gems_python.one_machine_problem_simple_task.transition_manager import Exper
 from dataclasses import dataclass
 import polars as pl
 
-from tests.experiment_samples.curve import calculate_optimal_time_from_df
+from tests.experiment_samples_simple_task.curve import calculate_optimal_time_from_df
 
 
 IPS_CULTURE_STATE_TIMES = {

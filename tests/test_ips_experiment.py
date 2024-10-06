@@ -8,7 +8,7 @@ import numpy as np
 import polars as pl
 
 from gems_python.one_machine_problem_simple_task.transition_manager import Experiment, Experiments
-from tests.experiment_samples.ips.experimental_settings import PROCESSING_TIME, IPSExperiment
+from tests.experiment_samples_simple_task.ips.experimental_settings import PROCESSING_TIME, IPSExperiment
 
 
 class TestExperimentStructureIPS(unittest.TestCase):

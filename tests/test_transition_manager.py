@@ -6,7 +6,7 @@ import inspect
 from gems_python.one_machine_problem_simple_task.penalty.penalty_class import CyclicalRestPenaltyWithLinear, LinearPenalty, LinearWithRangePenalty, NonePenalty, PenaltyType
 from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask, OneMachineTaskLocalInformation
 from gems_python.one_machine_problem_simple_task.transition_manager import Experiment, Experiments, State
-from tests.experiment_samples.hek_cell_culture import HekCellCulture
+from tests.experiment_samples_simple_task.hek_cell_culture import HekCellCulture
 
 @dataclass
 class State_1(State):

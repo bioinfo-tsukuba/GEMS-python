@@ -7,7 +7,7 @@ import os
 from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty
 from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGroup
 from gems_python.one_machine_problem_interval_task.transition_manager import Experiments
-from tests.experiment_samples.minimum import gen_minimum_experiments
+from tests.experiment_samples_simple_task.minimum import gen_minimum_experiments
 
 separate_line_length = 50
 

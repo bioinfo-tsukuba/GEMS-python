@@ -28,8 +28,8 @@ class Task:
         The unique identifier for the task. Defaults to None.
     """
     processing_time: int  # タスクの処理時間
-    interval: int        # タスク間のインターバル、最初のタスクにはインターバルはない
     experiment_operation: str
+    interval: int = field(default=0)        # タスク間のインターバル、最初のタスクにはインターバルはない
     completed: bool = False  # タスクが終了したかどうか
     scheduled_time: int = field(default=None)  # タスクの開始時刻
     task_id: int = field(default=None)
@@ -55,54 +55,6 @@ class TaskGroupStatus(Enum):
 
 @dataclass
 class TaskGroup:
-    """
-    A class to represent a group of tasks with scheduling and status management.
-    Attributes:
-    ----------
-    optimal_start_time : int
-        The optimal start time for the task group.
-    penalty_type : Type[PenaltyType]
-        The type of penalty associated with the task group.
-    tasks : List[Task]
-        A list of tasks in the task group.
-    status : TaskGroupStatus
-        The current status of the task group. Defaults to NOT_STARTED.
-    group_id : int
-        The unique identifier for the task group. Defaults to None.
-    experiment_name : str
-        The name of the experiment associated with the task group. Defaults to None.
-    experiment_uuid : str
-        The unique identifier for the experiment associated with the task group. Defaults to None.
-    Methods:
-    -------
-    __post_init__():
-        Allocates task IDs after initialization.
-    to_dict() -> dict:
-        Converts the task group to a dictionary.
-    from_dict(data: dict) -> 'TaskGroup':
-        Creates a TaskGroup instance from a dictionary.
-    to_json() -> str:
-        Converts the task group to a JSON string.
-    from_json(json_str: str) -> 'TaskGroup':
-        Creates a TaskGroup instance from a JSON string.
-    is_completed() -> bool:
-        Checks if the task group is completed.
-    is_in_progress() -> bool:
-        Checks if the task group is in progress.
-    is_not_started() -> bool:
-        Checks if the task group has not started.
-    is_error() -> bool:
-        Checks if the task group is in an error state.
-    status_update():
-        Updates the status of the task group based on the status of its tasks.
-    schedule_tasks(start_time: int):
-        Schedules the tasks in the group starting from the given start time.
-    allocate_task_id():
-        Allocates unique IDs to tasks in the group.
-    configure_task_group_settings(experiment_name: str, experiment_uuid: str):
-        Configures the settings for the task group with the given experiment name and UUID.
-    """
-
     optimal_start_time: int      # 最適な開始時刻
     penalty_type: Type[PenaltyType] # ペナルティの種類
     tasks: List[Task] = field(default_factory=list)  # タスクのリスト
@@ -142,8 +94,10 @@ class TaskGroup:
             self.status = TaskGroupStatus.NOT_STARTED
     
     def schedule_tasks(self, start_time: int):
-        """
-        Schedule the tasks in the group.
+        """_summary_
+
+        Args:
+            start_time (int): _description_
         """
         if start_time is None:
             start_time = self.optimal_start_time
@@ -211,12 +165,15 @@ class TaskGroup:
     
     @classmethod
     def add_task_group(cls, task_groups: List['TaskGroup'], group: 'TaskGroup') -> List['TaskGroup']:
-        """
-        Add a task group to the list of task groups.
-        :param task_groups: A list of task groups.
-        :param group: The task group to add.
-        :return: A list of task groups with the specified task group added.
-        """
+        """_summary_
+
+        Args:
+            task_groups (List['TaskGroup']): Current task groups.
+            group ('TaskGroup'): New task group to add.
+
+        Returns:
+            List['TaskGroup']: Updated task groups.
+        """        
 
         # タスク群を追加
         task_groups.append(group)
