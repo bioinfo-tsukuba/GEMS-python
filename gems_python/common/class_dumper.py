@@ -4,6 +4,7 @@ import io
 import json
 from dataclasses import dataclass, asdict, fields, is_dataclass
 from pathlib import Path
+import pickle
 from typing import List, Dict, get_type_hints
 import polars as pl
 
@@ -144,12 +145,32 @@ def auto_dataclass(cls):
     @classmethod
     def from_json(cls, json_str: str):
         return recursive_from_json(cls, json_str)
+    
+    def to_pickle(self, path: Path = None):
+        dumped = pickle.dumps(self)
+        if path is not None:
+            with open(path, 'wb') as f:
+                f.write(dumped)
+        return dumped
+    
+    @classmethod
+    def from_pickle(cls, path: Path = None, dumped: bytes = None):
+        if dumped is None:
+            ret = pickle.load(dumped)
+        elif path is not None:
+            with open(path, 'rb') as f:
+                ret = pickle.load(f)
+        else:
+            raise ValueError("Either dumped or path must be specified.")
+        return ret
 
     # メソッドをクラスに追加
     setattr(cls, 'to_dict', to_dict)
     setattr(cls, 'from_dict', from_dict)
     setattr(cls, 'to_json', to_json)
     setattr(cls, 'from_json', from_json)
+    setattr(cls, 'to_pickle', to_pickle)
+    setattr(cls, 'from_pickle', from_pickle)
     
     # 元のdataclassデコレーターを適用してクラスを返す
     return dataclass(cls)
