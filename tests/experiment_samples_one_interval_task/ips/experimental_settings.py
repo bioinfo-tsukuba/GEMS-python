@@ -48,7 +48,7 @@ MEDIUM_CHANGE_1_DENSITY = 0.05
 
 
 
-@dataclass
+
 class ExpireState(State):
 
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
@@ -72,7 +72,7 @@ class ExpireState(State):
 
 
 
-@dataclass
+
 class PassageState(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
         optimal_time: float = calculate_optimal_time_from_df(df, target_density=PASSAGE_DENSITY)
@@ -104,7 +104,7 @@ class PassageState(State):
         return "ExpireState"
 
 
-@dataclass
+
 class GetImage1State(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
         previous_operation_time = df["time"].max()
@@ -132,7 +132,6 @@ class GetImage1State(State):
 
         return "ExpireState"
 
-@dataclass
 class MediumChange1State(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
         return TaskGroup(
@@ -151,7 +150,7 @@ class MediumChange1State(State):
         return "ExpireState"
 
 
-@dataclass
+
 class GetImage2FirstState(State):
 
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
@@ -185,7 +184,7 @@ class GetImage2FirstState(State):
         return "ExpireState"
 
 
-@dataclass
+
 class GetImage2State(State):
 
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
@@ -218,7 +217,7 @@ class GetImage2State(State):
 
         return "ExpireState"
 
-@dataclass
+
 class MediumChange2State(State):
 
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
@@ -279,6 +278,7 @@ class IPSExperiment(Experiment):
 if __name__ == "__main__":
     # Create an instance of the experiment
     experiment = IPSExperiment(current_state_name="ExpireState")
+    print(experiment.current_state_name)
     experiment.show_experiment_with_tooltips()
 
     
