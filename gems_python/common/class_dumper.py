@@ -1,5 +1,6 @@
 from enum import Enum
 import inspect
+import io
 import json
 from dataclasses import dataclass, asdict, fields, is_dataclass
 from pathlib import Path
@@ -27,7 +28,11 @@ def recursive_to_dict(obj):
         for field in fields(obj):
             key = field.name
             value = getattr(obj, key)
-            if hasattr(value, 'to_dict'):  # to_dictメソッドがあればそれを使う
+            if pl.DataFrame == type(value):
+                result[key] = value.serialize(format="json")
+                print(f"{result[key]=}")
+
+            elif hasattr(value, 'to_dict'):  # to_dictメソッドがあればそれを使う
                 result[key] = value.to_dict()
             
             elif isinstance(value, Enum):  # Enum型の場合、名前を保存
@@ -65,11 +70,14 @@ def recursive_from_dict(cls, data):
                 init_args[key] = value
                 continue
 
-            if hasattr(field_type, 'from_dict'):
+            # DataFrame の場合の処理
+            if field_type == pl.DataFrame:
+                init_args[key] = pl.DataFrame.deserialize(io.BytesIO(value.encode()), format="json")
+            elif hasattr(field_type, 'from_dict'):
                 init_args[key] = field_type.from_dict(value)
             
             # Enum 型の場合の処理
-            if isinstance(field_type, type) and issubclass(field_type, Enum):
+            elif isinstance(field_type, type) and issubclass(field_type, Enum):
                 init_args[key] = deserialize_enum(field_type, value)
             
             # dataclass の場合の再帰処理

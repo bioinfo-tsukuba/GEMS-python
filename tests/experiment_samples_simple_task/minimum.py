@@ -42,3 +42,63 @@ def gen_minimum_experiments(temp_dir: str, experiment_name = "minimum_experiment
         ],
         parent_dir_path = Path(temp_dir)
     )
+
+class StandardState1(State):
+    def task_generator(self, df: pl.DataFrame) -> TaskGroup:
+        return  TaskGroup(
+            optimal_start_time=0,
+            penalty_type=NonePenalty(),
+            tasks=[
+                Task(processing_time=2, interval=0, experiment_operation="A"),
+                Task(processing_time=3, interval=15, experiment_operation="B"),
+                Task(processing_time=4, interval=20, experiment_operation="C")
+            ]
+        )
+    
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # return the state name
+        return "StandardState2"
+    
+
+class StandardState2(State):
+    def task_generator(self, df: pl.DataFrame) -> TaskGroup:
+        return  TaskGroup(
+            optimal_start_time=0,
+            penalty_type=NonePenalty(),
+            tasks=[
+                Task(processing_time=2, interval=0, experiment_operation="D"),
+                Task(processing_time=3, interval=15, experiment_operation="E"),
+                Task(processing_time=4, interval=20, experiment_operation="F")
+            ]
+        )
+    
+    def transition_function(self, df: pl.DataFrame) -> str:
+        # return the state name
+        return "StandardState1"
+    
+
+def gen_standard_experiment(experiment_name = "standard_experiment") -> Experiment:
+    return Experiment(
+        experiment_name=experiment_name,
+        states=[
+            MinimumState(),
+            StandardState1(),
+            StandardState2()
+        ],
+        current_state_name="StandardState1",
+        shared_variable_history=
+        pl.DataFrame({
+            "time": [0],
+            "temperature": [0],
+            "pressure": [0]
+        })
+    )
+
+def gen_standard_experiments(temp_dir: str, experiment_name = "standard_experiment") -> Experiments:
+    # Path is volatile
+    return Experiments(
+        experiments=[
+            gen_standard_experiment(experiment_name=experiment_name)
+        ],
+        parent_dir_path = Path(temp_dir)
+    )

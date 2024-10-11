@@ -4,7 +4,7 @@ from typing import List, Dict
 import inspect
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 from gems_python.one_machine_problem_interval_task.transition_manager import Experiments
-from tests.experiment_samples_simple_task.minimum import gen_minimum_experiments
+from tests.experiment_samples_simple_task.minimum import gen_minimum_experiments, gen_standard_experiments
 
 
 SEPARATE_LINE_LENGTH = 100
@@ -61,7 +61,7 @@ class TestDumper(unittest.TestCase):
 
 
 
-class TestExperimentsDumper(unittest.TestCase):
+class TestExperimentsDumperMinimum(unittest.TestCase):
     def setUp(self):
         self.c = gen_minimum_experiments("volatile")
 
@@ -82,3 +82,25 @@ class TestExperimentsDumper(unittest.TestCase):
         print(f"{c=}")
 
         
+
+
+class TestExperimentsDumperStandard(unittest.TestCase):
+    def setUp(self):
+        self.c = gen_standard_experiments("volatile")
+
+    def test_recursive_to_dict(self):
+        # Print Class, Func
+        print_separate_line(f"{self.__class__.__name__}:{inspect.currentframe().f_code.co_name}")
+        dic = self.c.to_dict()
+        print(f"{dic=}")
+        c = Experiments.from_dict(dic)
+        print(self.c)
+        print(c)
+
+    def test_recursive_to_json(self):
+        print_separate_line(inspect.currentframe().f_code.co_name)
+        json_str = self.c.to_json()
+        print(f"{json_str=}")
+        c = Experiments.from_json(json_str)
+        print(f"{self.c=}")
+        print(f"{c=}")
