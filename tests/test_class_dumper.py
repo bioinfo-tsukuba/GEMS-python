@@ -4,7 +4,7 @@ from typing import List, Dict
 import inspect
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 from gems_python.one_machine_problem_interval_task.transition_manager import Experiments
-from tests.experiment_samples_simple_task.minimum import gen_minimum_experiments, gen_standard_experiments
+from tests.experiment_samples_one_interval_task.minimum import gen_minimum_experiments, gen_standard_experiments
 
 
 SEPARATE_LINE_LENGTH = 100
