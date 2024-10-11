@@ -98,9 +98,13 @@ class TestExperimentsDumperStandard(unittest.TestCase):
         print(c)
 
     def test_recursive_to_json(self):
+        path = self.c.parent_dir_path
         print_separate_line(f"{self.__class__.__name__}:{inspect.currentframe().f_code.co_name}")
         json_str = self.c.to_json()
         print(f"{json_str=}")
+        with open(path / "experiments.json", "w") as f:
+            f.write(json_str)
+
         c = Experiments.from_json(json_str)
         print(f"{self.c=}")
         print(f"{c=}")
@@ -108,9 +112,12 @@ class TestExperimentsDumperStandard(unittest.TestCase):
     
 
     def test_to_pickle(self):
+        path = self.c.parent_dir_path
         print_separate_line(f"{self.__class__.__name__}:{inspect.currentframe().f_code.co_name}")
         dumped = self.c.to_pickle()
         print(f"{dumped=}")
+        with open(path / "experiments.pkl", "wb") as f:
+            f.write(dumped)
         c = Experiments.from_pickle(dumped=dumped)
         print(f"{self.c=}")
         print(f"{c=}")
