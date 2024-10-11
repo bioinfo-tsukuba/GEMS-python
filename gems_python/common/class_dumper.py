@@ -155,8 +155,8 @@ def auto_dataclass(cls):
     
     @classmethod
     def from_pickle(cls, path: Path = None, dumped: bytes = None):
-        if dumped is None:
-            ret = pickle.load(dumped)
+        if dumped is not None:
+            ret = pickle.loads(dumped)
         elif path is not None:
             with open(path, 'rb') as f:
                 ret = pickle.load(f)
