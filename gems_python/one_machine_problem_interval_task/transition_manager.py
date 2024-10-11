@@ -1,3 +1,4 @@
+import importlib
 import textwrap
 from matplotlib import pyplot as plt
 from matplotlib.patches import Arc, Arrow
@@ -8,7 +9,7 @@ from abc import ABC, abstractmethod
 import copy
 from dataclasses import asdict, field
 import json
-from typing import List, Tuple, Type, Union
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 import uuid
 import numpy as np
 import polars as pl
@@ -23,7 +24,8 @@ from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGr
 """
 
 
-@dataclass
+T = TypeVar('T', bound='State')
+
 class State(ABC):
     """State class.
     This class is used as just an superclass for the State class.
@@ -34,10 +36,13 @@ class State(ABC):
     - task_generator
     """
 
-    state_name: str = field(init=False, default=None)
+    def __init__(self):
+        print(f"{self.__class__.__module__=}.{self.__class__.__name__=}")
+        pass
 
-    def __post_init__(self):
-        self.state_name = self.__class__.__name__
+    @property
+    def state_name(self) -> str:
+        return str(self.__class__.__name__)
 
     def extract_all_state_transition_candidates(self):
         func = self.transition_function
@@ -81,6 +86,29 @@ class State(ABC):
         """
         pass
 
+    def to_dict(self) -> dict:
+        result = dict()
+        result['_class'] = f"{self.__class__.__module__}.{self.__class__.__name__}"
+        return result
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_dict(cls: Type[T], data: Dict[str, Any]) -> T:
+        if '_class' in data:
+            class_path = data.pop('_class')
+            module_name, class_name = class_path.rsplit('.', 1)
+            module = importlib.import_module(module_name)
+            cls = getattr(module, class_name)
+        return cls(**data)
+
+    @classmethod
+    def from_json(cls: Type[T], json_str: str) -> T:
+        data = json.loads(json_str)
+        return cls.from_dict(data)
+
+
 
 """MODULE: Experiment
 """
@@ -100,7 +128,7 @@ class Experiment:
         experiment_uuid (str) (Automatically generated): The UUID of the experiment.
     """
     experiment_name: str
-    states: List[Type[State]]
+    states: List[State]
     current_state_name: str
     shared_variable_history: pl.DataFrame
     current_task_group: TaskGroup = field(default=None)

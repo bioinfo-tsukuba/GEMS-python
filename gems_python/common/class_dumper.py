@@ -1,4 +1,5 @@
 from enum import Enum
+import inspect
 import json
 from dataclasses import dataclass, asdict, fields, is_dataclass
 from pathlib import Path
@@ -34,9 +35,9 @@ def recursive_to_dict(obj):
             elif is_dataclass(value):  # dataclassであれば再帰的に処理
                 result[key] = recursive_to_dict(value)
             elif isinstance(value, list):  # リストの場合
-                result[key] = [recursive_to_dict(v) if is_dataclass(v) else serialize_enum(v) for v in value]
+                result[key] = [(v).to_dict() if hasattr(v, 'to_dict') else v for v in value]
             elif isinstance(value, dict):  # 辞書の場合
-                result[key] = {k: recursive_to_dict(v) if is_dataclass(v) else serialize_enum(v) for k, v in value.items()}
+                result[key] = {k: (v).to_dict() if hasattr(v, 'to_dict') else v for k, v in value.items()}
             elif isinstance(value, Path):
                 result[key] = str(value)
             else:
@@ -50,6 +51,8 @@ def recursive_from_dict(cls, data):
         init_args = {}
         type_hints = get_type_hints(cls)
         dataclass_fields = {f.name: f for f in fields(cls)}
+        
+
         for key, value in data.items():
             if key not in type_hints or dataclass_fields[key].init is False:
                 # 型ヒントに無いか、init=Falseのフィールドは無視
@@ -61,6 +64,9 @@ def recursive_from_dict(cls, data):
             if field_type is None:
                 init_args[key] = value
                 continue
+
+            if hasattr(field_type, 'from_dict'):
+                init_args[key] = field_type.from_dict(value)
             
             # Enum 型の場合の処理
             if isinstance(field_type, type) and issubclass(field_type, Enum):
@@ -75,7 +81,8 @@ def recursive_from_dict(cls, data):
                 # 型ヒントに __args__ があるかを確認
                 if hasattr(field_type, '__args__') and len(field_type.__args__) > 0:
                     list_type = field_type.__args__[0]  # リストの要素型を取得
-                    init_args[key] = [recursive_from_dict(list_type, v) if is_dataclass(list_type) else v for v in value]
+                    # from_dict メソッドがあればそれを使う
+                    init_args[key] = [list_type.from_dict(v) if hasattr(list_type, 'from_dict') else v for v in value]
                 else:
                     init_args[key] = value  # 型ヒントが無い場合、そのまま使う
             
@@ -84,7 +91,7 @@ def recursive_from_dict(cls, data):
                 # 型ヒントに __args__ があり、辞書の値の型が指定されているかを確認
                 if hasattr(field_type, '__args__') and len(field_type.__args__) > 1:
                     dict_value_type = field_type.__args__[1]
-                    init_args[key] = {k: recursive_from_dict(dict_value_type, v) if is_dataclass(dict_value_type) else v for k, v in value.items()}
+                    init_args[key] = {k: dict_value_type.from_dict(v) if hasattr(dict_value_type, 'from_dict') else v for k, v in value.items()}
                 else:
                     init_args[key] = value  # 型ヒントが無い場合、そのまま使う
 
@@ -102,9 +109,6 @@ def recursive_from_dict(cls, data):
 # 辞書をJSONに変換するメソッドも追加
 def recursive_to_json(obj):
     dic = recursive_to_dict(obj)
-    print("WWWWWWWWWWWW")
-    print(f"{dic=}")
-    print("MMMMMMMMMMMM")
     return json.dumps(dic)
 
 # JSONから復元するメソッドも追加

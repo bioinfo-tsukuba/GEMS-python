@@ -7,8 +7,9 @@ from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGr
 from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty
 
 
-@dataclass
 class MinimumState(State):
+    def __init__(self):
+        super().__init__()
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
         return  TaskGroup(
             optimal_start_time=0,
