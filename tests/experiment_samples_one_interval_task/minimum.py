@@ -11,7 +11,7 @@ class MinimumState(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
         return  TaskGroup(
             optimal_start_time=0,
-            penalty_type=NonePenalty(),
+            penalty_type=NonePenalty(), 
             tasks=[
                 Task(processing_time=2, interval=0, experiment_operation="A"),
                 Task(processing_time=3, interval=15, experiment_operation="B"),
