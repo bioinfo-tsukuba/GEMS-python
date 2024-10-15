@@ -364,7 +364,10 @@ class Experiment:
         try:
             task_group: TaskGroup = self.states[state_index].task_generator(self.shared_variable_history.clone())
             self.current_task_group = task_group
-            self.current_task_group.configure_task_group_settings(self.experiment_uuid, self.current_state_name)
+            self.current_task_group.configure_task_group_settings(
+                experiment_name = self.experiment_name,
+                experiment_uuid = self.experiment_uuid
+            )
 
         except Exception as err:
             raise RuntimeError(f"Error generating task: {err}")
