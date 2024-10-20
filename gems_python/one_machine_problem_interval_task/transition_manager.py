@@ -403,7 +403,7 @@ class Experiments:
     experiments: List[Experiment]
     parent_dir_path: Path
     # Automatically generated fields, not accept user input
-    task_groups: List[TaskGroup] = field(default=None, init=False)
+    task_groups: List[TaskGroup] = field(default=None)
 
     def __post_init__(self):
         # TODO: TaskGroupに対応
