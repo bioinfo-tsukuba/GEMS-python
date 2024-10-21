@@ -1,5 +1,8 @@
 from enum import Enum
 from dataclasses import field, asdict
+import random
+
+from simanneal import Annealer
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 import json
 from typing import List, Tuple, Type
@@ -299,6 +302,84 @@ class TaskGroup:
                     diff *= -1
 
         return task_groups
+    
+
+
+    @classmethod
+    def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], reference_time: int) -> List['TaskGroup']:
+        """
+        Schedule a list of task groups using simulated annealing.
+
+        :param task_groups: A list of task groups to schedule.
+        :param reference_time: The reference time for scheduling the task groups.
+
+        :return: A list of scheduled task groups.
+        """
+        print("SA_schedule:")
+
+        # TODO: Implement the simulated annealing scheduler
+        class TaskAnnealer(Annealer):
+
+            def __init__(self, state):
+                super().__init__(state)
+                self.step_count: int = 0
+
+            def move(self):
+                self.step_count += 1
+
+                """
+                random move or swap
+                """
+                temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
+                # PASS: ここで、タスクのスケジュールを変更する
+                for i in range(min(temp, len(self.state))):
+                  a = random.randint(0, len(self.state) - 1)
+                  scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
+                  self.state[a].scheduled_time += random.randint(-int(temp), int(temp))
+                  self.state[a].scheduled_time = max(0, self.state[a].scheduled_time)
+
+                if random.random() < 0.5:
+                    a = random.randint(0, len(self.state) - 1)
+                    b = random.randint(0, len(self.state) - 1)
+                    self.state[a].scheduled_time, self.state[b].scheduled_time = self.state[b].scheduled_time, self.state[a].scheduled_time
+
+            def energy(self):
+                """Calculates the total penalty for the current state."""
+                # PASS: ここで、タスクのペナルティを計算する
+                total_penalty = 0
+                for task in self.state:
+                    total_penalty += task.penalty_type.calculate_penalty(
+                        task.scheduled_time, task.optimal_time
+                    )
+
+                # Overlapping penalty
+                sorted_tasks = sorted(self.state, key=lambda x: x.scheduled_time)
+                for i in range(len(sorted_tasks) - 1):
+                    task1 = sorted_tasks[i]
+                    task2 = sorted_tasks[i + 1]
+                    overlap = task1.scheduled_time + task1.processing_time - task2.scheduled_time
+                    if overlap > 0:
+                        total_penalty += overlap * 100000
+                return total_penalty
+
+        # Initialize the tasks with some initial schedule (e.g., their optimal timings)
+        time = 0
+        tasks = sorted(tasks, key=lambda x: x.optimal_time + x.processing_time)
+        for task in tasks:
+            task.scheduled_time = max(time, task.optimal_time)
+            time = task.scheduled_time + task.processing_time
+
+        # Create an instance of the annealer with the initial state
+        annealer = TaskAnnealer(tasks)
+        # Set the annealing parameters as needed
+        annealer.steps = 100000
+        annealer.Tmax = 25000.0
+        annealer.Tmin = 1.0
+
+        # Run the annealing process
+        state, _ = annealer.anneal()
+
+        return state
 
     @classmethod
     def eval_machine_penalty(cls, task_groups: List['TaskGroup'], eval_group_ids: List[int] = None) -> int:
@@ -333,6 +414,20 @@ class TaskGroup:
 
         return penalty
     
+
+
+    @classmethod
+    def eval_schedule_penalty(cls, task_groups: List['TaskGroup'], eval_group_ids: List[int] = None) -> int:
+        """
+        Evaluate the penalty for the schedule.
+        """
+        penalty = 0
+        for group in task_groups:
+            scheduled_time = group.tasks[0].scheduled_time
+            penalty += group.penalty_type.calculate_penalty(scheduled_time=scheduled_time, optimal_time=group.optimal_start_time)
+
+        return penalty
+    
     @classmethod
     def get_ealiest_task_in_task_groups(cls, task_groups: List['TaskGroup']) -> Tuple['Task', int]:
         """
@@ -349,299 +444,3 @@ class TaskGroup:
                 group_id = group.task_group_id
         return earliest_task, group_id
     
-
-    
-    
-
-@dataclass
-class TaskScheduler:
-    # TODO: TaskGroupのclassmethodにする
-    task_groups: List[TaskGroup] = field(default_factory=list)
-    schedule_reference_time: int = 0
-
-    def __post_init__(self):
-        # タスク群のIDを割り当て
-        self.allocate_task_group_id()
-
-    def set_schedule_reference_time(self, time: int):
-        self.schedule_reference_time = time
-
-    def allocate_task_group_id(self):
-        # TODO: TaskGroupのclassmethodにする
-        # Not None id
-        TaskGroup.set_task_group_ids(self.task_groups)
-
-    def add_task_group(self, group: TaskGroup):
-        # タスク群を追加
-        self.task_groups.append(group)
-        # タスク群のidを割り当て
-        self.allocate_task_group_id()
-        # タスク群のスケジュールを更新
-        self.schedule_greedy()
-
-    def _add_task_group_manual_style(
-        self,
-        group_id: int,
-        T0: int,
-        M: int,
-        processing_times: List[int],
-        intervals: List[int],
-        penalty_type: Type[PenaltyType],
-        experiment_operations: List[str],
-        experiment_name: str,
-        experiment_uuid: str,
-    ):
-        """
-        Add a task group to the scheduler.
-
-        :param group_id: タスク群のID
-        :param T0: タスク群の最適な開始時刻
-        :param M: タスクの数
-        :param processing_times: タスクの処理時間のリスト、長さはM
-        :param intervals: タスク間のインターバル（前タスクの終了時刻から次のタスクの開始時刻までの時間）のリスト、最初のタスクにはインターバルはないためその長さはM-1
-        :param penalty_type: ペナルティの種類
-        :param experiment_operations: 各タスクの実験操作のリスト、長さはM
-        :param experiment_name: 実験の名前
-        :param experiment_uuid: 実験のUUID
-        """
-        assert len(processing_times) == M, "processing_timesの長さがMと一致しません。"
-        assert len(intervals) == M - 1, "intervalsの長さがM-1と一致しません。"
-        assert len(experiment_operations) == M, "experiment_operationsの長さがMと一致しません。"
-
-        # タスク群がすでに存在するかどうかを確認
-        existing_group = self.find_task_group(group_id)
-        if existing_group:
-            print(f"タスク群 {group_id} はすでに存在します。")
-            return
-
-        # 新しいタスク群を追加
-        tasks = [
-            Task(
-                processing_time=processing_times[i],
-                interval=intervals[i - 1] if i > 0 else 0,
-                experiment_operation=experiment_operations[i],
-                scheduled_time=0,
-                task_id=None
-            )
-            for i in range(M)
-        ]
-
-        new_group = TaskGroup(
-            task_group_id=group_id,
-            optimal_start_time=T0,
-            penalty_type=penalty_type,
-            tasks=tasks,
-            experiment_name=experiment_name,
-            experiment_uuid=experiment_uuid
-        )
-
-        self.task_groups.append(new_group)
-
-        # タスク群のスケジュールを更新
-        self.schedule_greedy()
-
-
-    def complete_task(self, group_id: int, task_id: int):
-        group = self.find_task_group(group_id)
-        if not group or task_id >= len(group.tasks):
-            print(f"タスク群 {group_id} またはタスク {task_id} が存在しません。")
-            return
-
-        task = group.tasks[task_id]
-        if task.completed:
-            print(f"タスク群 {group_id} のタスク {task_id} は既に終了しています。")
-            return
-
-        # タスクを終了としてマーク
-        task.completed = True
-        print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
-
-        # タスク群のステータスを更新
-        group.status_update()
-
-        # 全てのタスクが終了しているかをチェック
-        if group.is_completed():
-            print(f"タスク群 {group_id} が全て終了しました")
-
-    def find_task_group(self, group_id: int) -> TaskGroup:
-        # 指定されたグループ番号に一致するタスク群を探す
-        for group in self.task_groups:
-            if group.task_group_id == group_id:
-                return group
-        return None
-    
-    def eval_machine_penalty(self, eval_group_id: List[int] = None) -> int:
-        """
-        Evaluate the penalty for the machine.
-        """
-
-        occupied_time = list()
-
-        if eval_group_id is None:
-            eval_group_id = [group.task_group_id for group in self.task_groups]
-        for group in self.task_groups:
-            if group.task_group_id in eval_group_id:
-                for task in group.tasks:
-                    occupied_time.append((task.scheduled_time, True))
-                    occupied_time.append((task.scheduled_time + task.processing_time, False))
-
-        occupied_time.sort(key=lambda x: (x[0], x[1]))
-        penalty = 0
-        count = 0
-        privous_time = occupied_time[0][0]
-        for time, is_start in occupied_time:
-            if count >= 2:
-                penalty += (time - privous_time)*(count - 1)
-
-            if is_start:
-                count += 1
-            else:
-                count -= 1
-            privous_time = time
-
-        assert count == 0
-
-        return penalty
-
-
-    def schedule_greedy(self)  -> List[TaskGroup]:
-        """
-        Schedule all the groups one by one group.
-        """
-        # すでに終わっているタスクも含めてゼロの位置を決める
-        # スケジュールするやつの基準はそれはそれで決める
-        # 例えば、available_reference_time
-
-        # タスク群をNOT_STARTEDを最後にして、開始時刻の昇順にソート
-        self.task_groups.sort(key=lambda group: (group.is_not_started(), group.optimal_start_time))
-        
-        # タスク群を順番にスケジュール
-        scheduled_groups = list()
-        for group in self.task_groups:
-            diff = 0
-            scheduled_groups.append(group.task_group_id)
-            while True:
-                # もし、スケジュール基準時刻がタスク群の最適な開始時刻よりも遅い場合、スケジュール基準時刻を最適な開始時刻に設定
-                # そうでない場合、スケジュール基準時刻を最適な開始時刻に設定
-                # スケジュール基準時刻より遅い範囲で、タスク群のスケジュールを試行（0, 1, -1, 2, -2, ...）
-                # ちょっと遅いが、とりあえず実装はこれでいいかも
-                # TODO: 実装を軽くするために、無駄なdiffの計算をなくす。すなわち、group.optimal_start_time + diff >= self.schedule_reference_timeを満たすdiffだけを試す
-                time_candidate = max(self.schedule_reference_time, group.optimal_start_time + diff)
-                group.schedule_tasks(time_candidate)
-                if self.eval_machine_penalty(scheduled_groups) == 0:
-                    break
-
-                if diff <= 0:
-                    diff *= -1
-                    diff += 1
-                else:
-                    diff *= -1
-
-        return scheduled_groups
-    
-
-def main():
-    task_scheduler = TaskScheduler()
-
-    task_group_1 = TaskGroup(
-        optimal_start_time=0,
-        penalty_type=NonePenalty(),
-        tasks=[
-            Task(processing_time=2, interval=0, experiment_operation="A"),
-            Task(processing_time=3, interval=15, experiment_operation="B"),
-            Task(processing_time=4, interval=20, experiment_operation="C")
-        ]
-    )
-
-    task_group_2 = TaskGroup(
-        optimal_start_time=2,
-        penalty_type=NonePenalty(),
-        tasks=[
-            Task(processing_time=2, interval=0, experiment_operation="A"),
-            Task(processing_time=3, interval=1, experiment_operation="B"),
-            Task(processing_time=4, interval=2, experiment_operation="C")
-        ]
-    )
-    
-    print(task_group_1.tasks)
-
-    task_scheduler.add_task_group(task_group_1)
-    print(task_scheduler.task_groups)
-    task_scheduler.add_task_group(task_group_2)
-
-    desired_task_schedule_1 = [0, 17, 40]
-    desired_task_schedule_2 = [2, 5, 10]
-
-    for group in task_scheduler.task_groups:
-        print(group.tasks)
-
-    for group, desired_task_schedule in zip(task_scheduler.task_groups, [desired_task_schedule_1, desired_task_schedule_2]):
-        for task, desired_start_time in zip(group.tasks, desired_task_schedule):
-            assert task.scheduled_time == desired_start_time
-
-
-
-    # タスクをスケジュール
-    # 本来できない操作
-    task_scheduler.task_groups[1].schedule_tasks(0)
-    for task in task_scheduler.task_groups[1].tasks:
-        print(task.scheduled_time)
-    # タスクを終了
-    # task_scheduler.complete_task(1, 0)
-    # task_scheduler.complete_task(1, 1)
-    # task_scheduler.complete_task(1, 2)
-    task_scheduler.complete_task(2, 0)
-    task_scheduler.set_schedule_reference_time(2)
-
-    # タスクをスケジュール
-    task_scheduler.schedule_greedy()
-    for group in task_scheduler.task_groups:
-        print(group.task_group_id)
-        print(group.tasks)
-
-
-    original = task_scheduler.task_groups[0]
-    js = original.to_json()
-    js_file_name = "volatile_task_scheduler.json"
-
-    # JSON形式で保存
-    with open(js_file_name, "w") as f:
-        f.write(js)
-
-    # JSON形式で読み込み
-    with open(js_file_name, "r") as f:
-        js = f.read()
-
-    # JSON形式からTaskSchedulerオブジェクトを復元
-    read = original.from_json(js)
-
-    print(f"ori:\n{original}")
-    print(f"read:\n{read}")
-
-    assert original == read
-
-
-    original = task_scheduler
-    js = original.to_json()
-    js_file_name = "volatile_task_scheduler.json"
-
-    # JSON形式で保存
-    with open(js_file_name, "w") as f:
-        f.write(js)
-
-    # JSON形式で読み込み
-    with open(js_file_name, "r") as f:
-        js = f.read()
-
-    # JSON形式からTaskSchedulerオブジェクトを復元
-    read = original.from_json(js)
-
-    print(f"ori:\n{original}")
-    print(f"read:\n{read}")
-
-    assert original == read
-
-    
-
-if __name__ == "__main__":
-    main()
