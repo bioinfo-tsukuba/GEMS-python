@@ -1,0 +1,548 @@
+from enum import Enum
+from dataclasses import field, asdict
+import uuid
+from gems_python.common.class_dumper import auto_dataclass as dataclass
+import json
+from typing import List, Tuple, Type
+
+from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import LinearPenalty
+from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty, PenaltyType
+
+
+
+class TaskStatus(Enum):
+    NOT_STARTED = "Not Started"
+    IN_PROGRESS = "In Progress"
+    COMPLETED = "Completed"
+    ERROR = "Error"
+
+@dataclass
+class Task:
+    """
+    A class to represent a task with scheduling and status management.
+    Attributes:
+    ----------
+    processing_time : int
+        The processing time of the task.
+    interval : int
+        The interval between the task and the previous task. There is no interval for the first task.
+    experiment_operation : str
+        The experiment operation associated with the task.
+    completed : bool
+        Whether the task has been completed.
+    scheduled_time : int
+        The start time of the task. Defaults to None.
+    task_id : int
+        The unique identifier for the task. Defaults to None.
+    """
+    processing_time: int  # タスクの処理時間
+    experiment_operation: str
+    optimal_machine_type: int # タスクの最適なマシンタイプ
+    interval: int = field(default=0)        # タスク間のインターバル、最初のタスクにはインターバルはない
+    task_status: TaskStatus = TaskStatus.NOT_STARTED  # タスクのステータス
+    allocated_machine_id: int = field(default=None)  # タスクが割り当てられたマシンのID
+    scheduled_time: int = field(default=None)  # タスクの開始時刻
+    task_id: int = field(default=None)
+
+    @classmethod
+    def find_task(cls, tasks: List['Task'], task_id: int) -> int:
+        """
+        Find the index of the task with the given ID in the list of tasks.
+        :param tasks: A list of tasks.
+        :param task_id: The ID of the task to find.
+        :return: The index of the task with the given ID in the list of tasks.
+        """
+        for index, task in enumerate(tasks):
+            if task.task_id == task_id:
+                return index
+        return None
+    
+@dataclass
+class Machine:
+    machine_type: int
+    machine_id: str = field(default=str(uuid.uuid4()))
+    description: str = field(default=str(None))
+
+@dataclass
+class MachineList:
+    machines: List['Machine'] = field(default_factory=list)
+
+    def add_machine(self, new_machine: Machine):
+        """_summary_
+
+        Args:
+            new_machine (Machine): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        for machine in self.machines:
+            if new_machine.machine_id == machine.machine_id:
+                print(f"既に machine_idが{new_machine.machine_id}のmachineは存在しています")
+                return
+            
+        self.machines.append(new_machine)
+
+
+
+
+
+class TaskGroupStatus(Enum):
+    NOT_STARTED = "Not Started"
+    IN_PROGRESS = "In Progress"
+    COMPLETED = "Completed"
+    ERROR = "Error"
+
+@dataclass
+class TaskGroup:
+    optimal_start_time: int      # 最適な開始時刻
+    penalty_type: Type[PenaltyType] # ペナルティの種類
+    tasks: List[Task] = field(default_factory=list)  # タスクのリスト
+    status: TaskGroupStatus = TaskGroupStatus.NOT_STARTED  # デフォルトで未開始
+    task_group_id: int = field(default=None) # グループ番号. Experiments 生成時に割り当て
+    experiment_name: str = field(default=None)  # 実験の名前. Experiment 生成時に割り当て
+    experiment_uuid: str = field(default=None)  # 実験のUUID. Experiment 生成時に割り当て
+
+
+    def __post_init__(self):
+        # タスクのIDを割り当て
+        self._allocate_task_id()
+
+    def is_completed(self) -> bool:
+        # タスク群が完了しているかどうかを確認
+        return self.status == TaskGroupStatus.COMPLETED
+    
+    def is_in_progress(self) -> bool:
+        # タスク群が進行中かどうかを確認
+        return self.status == TaskGroupStatus.IN_PROGRESS
+    
+    def is_not_started(self) -> bool:
+        # タスク群が未開始かどうかを確認
+        return self.status == TaskGroupStatus.NOT_STARTED
+    
+    def is_error(self) -> bool:
+        # タスク群がエラーかどうかを確認
+        return self.status == TaskGroupStatus.ERROR
+    
+    def status_update(self):
+        # タスク群のステータスを更新
+        if all(task.task_status == TaskStatus.COMPLETED for task in self.tasks):
+            self.status = TaskGroupStatus.COMPLETED
+        elif any((task.task_status == TaskStatus.COMPLETED or task.task_status == TaskStatus.IN_PROGRESS) for task in self.tasks):
+            self.status = TaskGroupStatus.IN_PROGRESS
+        else:
+            self.status = TaskGroupStatus.NOT_STARTED
+    
+    def schedule_tasks(self, start_time: int):
+        """_summary_
+
+        Args:
+            start_time (int): _description_
+        """
+        if start_time is None:
+            start_time = self.optimal_start_time
+        # タスクのスケジュールを計算
+        if self.status != TaskGroupStatus.NOT_STARTED:
+            print(f"タスク群 {self.task_group_id} はすでに進行しています。")
+            return
+
+        # 最適な開始時刻に合わせて、タスクの開始時刻を設定
+        current_time = start_time
+        for task in self.tasks:
+            current_time += task.interval
+            task.scheduled_time = current_time
+            current_time += task.processing_time
+
+    def _allocate_task_id(self):
+        """
+        Allocate unique IDs to the tasks in the group.
+        """
+        # Not None id
+        used_task_ids_set = {task.task_id for task in self.tasks}
+        new_task_id = 0
+        for task_index in range(len(self.tasks)):
+            if self.tasks[task_index].task_id is None:
+                while new_task_id in used_task_ids_set:
+                    new_task_id += 1
+                self.tasks[task_index].task_id = new_task_id
+                used_task_ids_set.add(new_task_id)
+
+    def configure_task_group_settings(self, experiment_name: str, experiment_uuid: str):
+        self.experiment_name = experiment_name
+        self.experiment_uuid = experiment_uuid
+
+    def get_ealiest_task(self) -> Task:
+        """
+        Get the task with the earliest scheduled time.
+        """
+        earliest_task = None
+        for task in self.tasks:
+            if task.completed:
+                continue
+            if earliest_task is None or task.scheduled_time < earliest_task.scheduled_time:
+                earliest_task = task
+        return earliest_task
+
+    # --以下のメソッドは、scheduling に関するものである。
+
+    @classmethod
+    def set_task_group_ids(cls, task_groups: List['TaskGroup']) -> List['TaskGroup']:
+        """
+        Set the task group IDs for a list of task groups.
+        """
+        for group_index in range(len(task_groups)):
+            task_groups[group_index].task_group_id = group_index
+
+        return task_groups
+
+    @classmethod
+    def find_task_group(cls, task_groups: List['TaskGroup'], group_id: int) -> int:
+        # 指定されたグループ番号に一致するタスク群のインデックスを探す
+        for index, group in enumerate(task_groups):
+            if group.task_group_id == group_id:
+                return index
+        return None
+    
+    @classmethod
+    def add_task_group(cls, task_groups: List['TaskGroup'], machines: MachineList, group: 'TaskGroup') -> List['TaskGroup']:
+        """_summary_
+
+        Args:
+            task_groups (List['TaskGroup']): Current task groups.
+            group ('TaskGroup'): New task group to add.
+
+        Returns:
+            List['TaskGroup']: Updated task groups.
+        """        
+
+        # タスク群を追加
+        task_groups.append(group)
+        # タスク群のidを割り当て
+        task_groups = cls.set_task_group_ids(task_groups)
+        # タスク群のスケジュールを更新
+        task_groups = cls.schedule_task_groups(task_groups, machines, reference_time=0)
+        
+        return task_groups
+
+    
+    @classmethod
+    def delete_task_group(cls, task_groups: List['TaskGroup'], group_id: int) -> List['TaskGroup']:
+        """
+        Delete a task group from the list of task groups.
+        :param task_groups: A list of task groups.
+        :param group_id: The ID of the task group to delete.
+        :return: A list of task groups with the specified task group deleted.
+        """
+        group_index = cls.find_task_group(task_groups, group_id)
+        if group_index is None:
+            print(f"タスク群 {group_id} が存在しません。")
+            return
+        
+        task_groups.pop(group_index)
+        print(f"タスク群 {group_id} を削除しました。")
+        return task_groups
+    
+    @classmethod
+    def find_task(cls, task_groups: List['TaskGroup'], group_id: int, task_id: int) -> Tuple[int, int]:
+        """
+        Find the index of the task with the given ID in the list of tasks.
+        :param task_groups: A list of task groups.
+        :param group_id: The ID of the task group.
+        :param task_id: The ID of the task to find.
+        :return: The index of the task with the given ID in the list of tasks.
+        """
+        group_index = cls.find_task_group(task_groups, group_id)
+        if group_index is None:
+            print(f"タスク群 {group_id}が存在しません。")
+            return
+
+        task_index = Task.find_task(task_groups[group_index].tasks, task_id)
+        if task_index is None:
+            print(f"タスク群 {group_id}にタスク {task_id}が存在しません。")
+            return
+        
+        return group_index, task_index
+    
+    def start_task(cls, task_groups: List['TaskGroup'], group_id: int, task_id: int) -> List['TaskGroup']:
+        group_index, task_index = cls.find_task(task_groups, group_id, task_id)
+
+        task = task_groups[group_index].tasks[task_index]
+        if task.task_status != TaskStatus.NOT_STARTED:
+            print(f"タスク群 {group_id} のタスク {task_id} は既に開始しています。（状態:{task.task_status}）")
+            return
+
+        # タスクを開始としてマーク
+        task_groups[group_index].tasks[task_index].task_status = TaskStatus.IN_PROGRESS
+        print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
+
+        # タスク群のステータスを更新
+        task_groups[group_index].status_update()
+
+        return task_groups
+
+
+    @classmethod
+    def complete_task(cls, task_groups: List['TaskGroup'], group_id: int, task_id: int) -> List['TaskGroup']:
+        """
+        Complete a task in the task group.
+
+        :param task_groups: A list of task groups.
+        :param group_id: The ID of the task group.
+        :param task_id: The ID of the task to complete.
+
+        :return: A list of task groups with the completed task.
+        """
+        group_index, task_index = cls.find_task(task_groups, group_id, task_id)
+
+        task = task_groups[group_index].tasks[task_index]
+        if task.task_status == TaskStatus.COMPLETED:
+            print(f"タスク群 {group_id} のタスク {task_id} は既に終了しています。（状態:{task.task_status}）")
+            return
+
+        # タスクを開始としてマーク
+        task_groups[group_index].tasks[task_index].task_status = TaskStatus.COMPLETED
+        print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
+
+        # タスク群のステータスを更新
+        task_groups[group_index].status_update()
+
+        # 全てのタスクが終了しているかをチェック
+        if task_groups[group_index].is_completed():
+            print(f"タスク群 {group_id} が全て終了しました")
+
+        return task_groups
+
+    @classmethod
+    def schedule_task_groups(cls, task_groups: List['TaskGroup'], machines: MachineList, reference_time: int) -> Tuple[List['TaskGroup'], List[Machine]]:
+        """
+        Schedule a list of task groups.
+
+        :param task_groups: A list of task groups to schedule.
+        :param reference_time: The reference time for scheduling the task groups.
+
+        :return: A list of scheduled task groups.
+        """
+
+        """
+        Schedule all the groups one by one group.
+        """
+        # すでに終わっているタスクも含めてゼロの位置を決める
+        # スケジュールするやつの基準はそれはそれで決める
+        # 例えば、available_reference_time
+
+        # タスク群をNOT_STARTEDを最後にして、開始時刻の昇順にソート
+        task_groups = task_groups.copy()
+        task_groups.sort(key=lambda group: (group.is_not_started(), group.optimal_start_time))
+        
+        # タスク群を順番にスケジュール
+        scheduled_groups = list()
+        for group in task_groups:
+            diff = 0
+            scheduled_groups.append(group.task_group_id)
+            while True:
+                # もし、スケジュール基準時刻がタスク群の最適な開始時刻よりも遅い場合、スケジュール基準時刻を最適な開始時刻に設定
+                # そうでない場合、スケジュール基準時刻を最適な開始時刻に設定
+                # スケジュール基準時刻より遅い範囲で、タスク群のスケジュールを試行（0, 1, -1, 2, -2, ...）
+                # ちょっと遅いが、とりあえず実装はこれでいいかも
+                # TODO: 実装を軽くするために、無駄なdiffの計算をなくす。すなわち、group.optimal_start_time + diff >= self.schedule_reference_timeを満たすdiffだけを試す
+                time_candidate = max(reference_time, group.optimal_start_time + diff)
+                group.schedule_tasks(time_candidate)
+                if cls.eval_machine_penalty(task_groups, machines=machines, eval_group_ids=scheduled_groups) == 0:
+                    break
+
+                if diff <= 0:
+                    diff *= -1
+                    diff += 1
+                else:
+                    diff *= -1
+
+        return task_groups
+
+    @classmethod
+    def eval_machine_penalty(cls, task_groups: List['TaskGroup'], machines: List[Machine], eval_group_ids: List[int] = None) -> int:
+        """
+        Evaluate the penalty for the machine.
+        """
+
+        # TODO REMOVE BUG
+        """
+            main()
+        File "/Users/yuyaarai/Documents/Humanics/Project/GEMS-python/gems_python/multi_machine_problem_interval_task/task_info.py", line 426, in main
+            TaskGroup.schedule_task_groups(task_groups, machines, 0)
+        File "/Users/yuyaarai/Documents/Humanics/Project/GEMS-python/gems_python/multi_machine_problem_interval_task/task_info.py", line 324, in schedule_task_groups
+            if cls.eval_machine_penalty(task_groups, machines=machines, eval_group_ids=scheduled_groups) == 0:
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/Users/yuyaarai/Documents/Humanics/Project/GEMS-python/gems_python/multi_machine_problem_interval_task/task_info.py", line 359, in eval_machine_penalty
+            occupied_time.append((task.scheduled_time + task.processing_time, False, task.optimal_machine_type))
+                                ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+        TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+        """
+        occupied_time = list()
+        machine_available_dict = dict()
+        machine_occupied_dict = dict()
+        machine_type_dict = dict()
+        for index, machine in enumerate(machines.machines):
+            machine_available_dict[machine.machine_type] = 0
+            machine_occupied_dict[machine.machine_type] = 0
+            machine_type_dict[machine.machine_type] = list()
+
+        for index, machine in enumerate(machines.machines):
+            machine_available_dict[machine.machine_type] = machine_available_dict[machine.machine_type] + 1
+            machine_type_dict[machine.machine_type].append(index)
+
+        if eval_group_ids is None:
+            eval_group_ids = [group.task_group_id for group in task_groups]
+        for group in task_groups:
+            if group.task_group_id in eval_group_ids:
+                for task in group.tasks:
+                    occupied_time.append((task.scheduled_time, True, task.optimal_machine_type))
+                    occupied_time.append((task.scheduled_time + task.processing_time, False, task.optimal_machine_type))
+
+        occupied_time.sort(key=lambda x: (x[0], x[1]))
+        penalty = 0
+        privous_time = occupied_time[0][0]
+        for time, is_start, machine_type in occupied_time:
+            if is_start:
+                machine_occupied_dict[machine_type] += 1
+            else:
+                machine_occupied_dict[machine_type] -= 1
+
+            if machine_occupied_dict[machine_type] > machine_available_dict[machine_type]:
+                penalty += max(1, time - privous_time)
+            privous_time = time
+
+        return penalty
+    
+    @classmethod
+    def get_ealiest_task_in_task_groups(cls, task_groups: List['TaskGroup']) -> Tuple['Task', int]:
+        """
+        Get the task with the earliest scheduled time in the task groups.
+        :param task_groups: A list of task groups.
+        :return: The task with the earliest scheduled time and the ID of the group it belongs to.
+        """
+        earliest_task = None
+        group_id = None
+        for group in task_groups:
+            task = group.get_ealiest_task()
+            if earliest_task is None or (task is not None and task.scheduled_time < earliest_task.scheduled_time):
+                earliest_task = task
+                group_id = group.task_group_id
+        return earliest_task, group_id
+    
+    
+
+def main():
+    machines = MachineList()
+    machines.add_machine(Machine(machine_id=0, machine_type=0))
+    machines.add_machine(Machine(machine_id=1, machine_type=1))
+    machines.add_machine(Machine(machine_id=2, machine_type=2))
+    machines.add_machine(Machine(machine_id=3, machine_type=2))
+
+    task_group_1 = TaskGroup(
+        optimal_start_time=0,
+        penalty_type=LinearPenalty(penalty_coefficient=10),
+        tasks=[
+            Task(processing_time=2, interval=0, experiment_operation="A", optimal_machine_type = 0),
+            Task(processing_time=3, interval=15, experiment_operation="B", optimal_machine_type = 1),
+            Task(processing_time=4, interval=20, experiment_operation="C", optimal_machine_type = 2),
+        ]
+    )
+
+    task_group_2 = TaskGroup(
+        optimal_start_time=2,
+        penalty_type=LinearPenalty(penalty_coefficient=10),
+        tasks=[
+            Task(processing_time=2, interval=0, experiment_operation="A", optimal_machine_type = 0),
+            Task(processing_time=3, interval=15, experiment_operation="B", optimal_machine_type = 1),
+            Task(processing_time=4, interval=20, experiment_operation="C", optimal_machine_type = 2),
+        ]
+    )
+
+    task_groups = list()
+    TaskGroup.add_task_group(task_groups, machines, task_group_1)
+    TaskGroup.add_task_group(task_groups, machines, task_group_2)
+    print(task_groups)
+
+    TaskGroup.schedule_task_groups(task_groups, machines, 0)
+    print(task_groups)
+
+    
+    
+    # print(task_group_1.tasks)
+
+    # desired_task_schedule_1 = [0, 17, 40]
+    # desired_task_schedule_2 = [2, 5, 10]
+
+    # for group in task_scheduler.task_groups:
+    #     print(group.tasks)
+
+    # for group, desired_task_schedule in zip(task_scheduler.task_groups, [desired_task_schedule_1, desired_task_schedule_2]):
+    #     for task, desired_start_time in zip(group.tasks, desired_task_schedule):
+    #         assert task.scheduled_time == desired_start_time
+
+
+
+    # # タスクをスケジュール
+    # # 本来できない操作
+    # task_scheduler.task_groups[1].schedule_tasks(0)
+    # for task in task_scheduler.task_groups[1].tasks:
+    #     print(task.scheduled_time)
+    # # タスクを終了
+    # # task_scheduler.complete_task(1, 0)
+    # # task_scheduler.complete_task(1, 1)
+    # # task_scheduler.complete_task(1, 2)
+    # task_scheduler.complete_task(2, 0)
+    # task_scheduler.set_schedule_reference_time(2)
+
+    # # タスクをスケジュール
+    # task_scheduler.schedule_greedy()
+    # for group in task_scheduler.task_groups:
+    #     print(group.task_group_id)
+    #     print(group.tasks)
+
+
+    # original = task_scheduler.task_groups[0]
+    # js = original.to_json()
+    # js_file_name = "volatile_task_scheduler.json"
+
+    # # JSON形式で保存
+    # with open(js_file_name, "w") as f:
+    #     f.write(js)
+
+    # # JSON形式で読み込み
+    # with open(js_file_name, "r") as f:
+    #     js = f.read()
+
+    # # JSON形式からTaskSchedulerオブジェクトを復元
+    # read = original.from_json(js)
+
+    # print(f"ori:\n{original}")
+    # print(f"read:\n{read}")
+
+    # assert original == read
+
+
+    # original = task_scheduler
+    # js = original.to_json()
+    # js_file_name = "volatile_task_scheduler.json"
+
+    # # JSON形式で保存
+    # with open(js_file_name, "w") as f:
+    #     f.write(js)
+
+    # # JSON形式で読み込み
+    # with open(js_file_name, "r") as f:
+    #     js = f.read()
+
+    # # JSON形式からTaskSchedulerオブジェクトを復元
+    # read = original.from_json(js)
+
+    # print(f"ori:\n{original}")
+    # print(f"read:\n{read}")
+
+    # assert original == read
+
+    
+
+if __name__ == "__main__":
+    main()
