@@ -58,7 +58,8 @@ class TestClass(unittest.TestCase):
 
         print(f"*"*separate_line_length)
 
-        task_groups = TaskGroup.schedule_task_groups(task_groups, reference_time=0)
+        # task_groups = TaskGroup.schedule_task_groups(task_groups, reference_time=0)
+        task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time=0)
 
         print(f"*"*int((separate_line_length-len(text))/2) + text + f"*"*int((separate_line_length-len(text))/2))
         for task_group in task_groups:

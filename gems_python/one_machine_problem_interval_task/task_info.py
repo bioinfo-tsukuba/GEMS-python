@@ -308,16 +308,9 @@ class TaskGroup:
     @classmethod
     def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], reference_time: int) -> List['TaskGroup']:
         """
-        Schedule a list of task groups using simulated annealing.
 
-        :param task_groups: A list of task groups to schedule.
-        :param reference_time: The reference time for scheduling the task groups.
-
-        :return: A list of scheduled task groups.
         """
         print("SA_schedule:")
-
-        # TODO: Implement the simulated annealing scheduler
         class TaskAnnealer(Annealer):
 
             def __init__(self, state):
@@ -335,42 +328,30 @@ class TaskGroup:
                 for i in range(min(temp, len(self.state))):
                   a = random.randint(0, len(self.state) - 1)
                   scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
-                  self.state[a].scheduled_time += random.randint(-int(temp), int(temp))
-                  self.state[a].scheduled_time = max(0, self.state[a].scheduled_time)
-
-                if random.random() < 0.5:
-                    a = random.randint(0, len(self.state) - 1)
-                    b = random.randint(0, len(self.state) - 1)
-                    self.state[a].scheduled_time, self.state[b].scheduled_time = self.state[b].scheduled_time, self.state[a].scheduled_time
+                  scheduled_time += random.randint(-int(temp), int(temp))
+                  scheduled_time = max(reference_time, scheduled_time)
+                  self.state[a].schedule_tasks(scheduled_time)
 
             def energy(self):
                 """Calculates the total penalty for the current state."""
                 # PASS: ここで、タスクのペナルティを計算する
                 total_penalty = 0
-                for task in self.state:
-                    total_penalty += task.penalty_type.calculate_penalty(
-                        task.scheduled_time, task.optimal_time
+                for task_group in self.state:
+                    total_penalty += task_group.penalty_type.calculate_penalty(
+                        task_group.tasks[0].scheduled_time, task_group.optimal_start_time
                     )
 
                 # Overlapping penalty
-                sorted_tasks = sorted(self.state, key=lambda x: x.scheduled_time)
-                for i in range(len(sorted_tasks) - 1):
-                    task1 = sorted_tasks[i]
-                    task2 = sorted_tasks[i + 1]
-                    overlap = task1.scheduled_time + task1.processing_time - task2.scheduled_time
-                    if overlap > 0:
-                        total_penalty += overlap * 100000
+                overlap = cls.eval_machine_penalty(self.state)
+                total_penalty += overlap * 100000
                 return total_penalty
 
         # Initialize the tasks with some initial schedule (e.g., their optimal timings)
         time = 0
-        tasks = sorted(tasks, key=lambda x: x.optimal_time + x.processing_time)
-        for task in tasks:
-            task.scheduled_time = max(time, task.optimal_time)
-            time = task.scheduled_time + task.processing_time
+        task_groups = cls.schedule_task_groups(task_groups=task_groups, reference_time=reference_time)
 
         # Create an instance of the annealer with the initial state
-        annealer = TaskAnnealer(tasks)
+        annealer = TaskAnnealer(task_groups)
         # Set the annealing parameters as needed
         annealer.steps = 100000
         annealer.Tmax = 25000.0
