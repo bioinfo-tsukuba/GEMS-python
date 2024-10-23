@@ -1,6 +1,12 @@
 from enum import Enum
 from dataclasses import field, asdict
 import uuid
+
+from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import matplotlib.path as mpath
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 import json
 from typing import List, Tuple, Type
@@ -40,7 +46,7 @@ class Task:
     optimal_machine_type: int # タスクの最適なマシンタイプ
     interval: int = field(default=0)        # タスク間のインターバル、最初のタスクにはインターバルはない
     task_status: TaskStatus = TaskStatus.NOT_STARTED  # タスクのステータス
-    allocated_machine_id: int = field(default=None)  # タスクが割り当てられたマシンのID
+    allocated_machine_id: str = field(default=None)  # タスクが割り当てられたマシンのID
     scheduled_time: int = field(default=None)  # タスクの開始時刻
     task_id: int = field(default=None)
 
@@ -62,6 +68,9 @@ class Machine:
     machine_type: int
     machine_id: str = field(default=str(uuid.uuid4()))
     description: str = field(default=str(None))
+
+    def __post_init__(self):
+        self.machine_id = str(self.machine_id)
 
 @dataclass
 class MachineList:
@@ -263,6 +272,7 @@ class TaskGroup:
         
         return group_index, task_index
     
+    @classmethod
     def start_task(cls, task_groups: List['TaskGroup'], group_id: int, task_id: int) -> List['TaskGroup']:
         group_index, task_index = cls.find_task(task_groups, group_id, task_id)
 
@@ -333,6 +343,10 @@ class TaskGroup:
         # タスク群をNOT_STARTEDを最後にして、開始時刻の昇順にソート
         task_groups = task_groups.copy()
         task_groups.sort(key=lambda group: (group.is_not_started(), group.optimal_start_time))
+        machine_type2machine = {machine.machine_type: list() for machine in machines.machines}
+        machine_shift = {machine.machine_id: False for machine in machines.machines} # Used = True, Not used = False
+        for machine in machines.machines:
+            machine_type2machine[machine.machine_type].append(machine)
         
         # タスク群を順番にスケジュール
         scheduled_groups = list()
@@ -356,6 +370,29 @@ class TaskGroup:
                 else:
                     diff *= -1
 
+        # Machine allocation
+        # (Time, Start/End, MachineType)
+        occupied_time = list()
+        for group in task_groups:
+            if group.task_group_id in scheduled_groups:
+                for task in group.tasks:
+                    task_group_index, task_index = cls.find_task(task_groups, group.task_group_id, task.task_id)
+                    occupied_time.append((task.scheduled_time, True, task.optimal_machine_type, task_group_index, task_index))
+                    occupied_time.append((task.scheduled_time + task.processing_time, False, task.optimal_machine_type, task_group_index, task_index))
+        
+        occupied_time.sort(key=lambda x: (x[0], x[1]))
+        for time, is_start, machine_type, task_group_index, task_index in occupied_time:
+            if is_start:
+                for machine in machine_type2machine[machine_type]:
+                    if not machine_shift[machine.machine_id]:
+                        machine_shift[machine.machine_id] = True
+                        task_groups[task_group_index].tasks[task_index].allocated_machine_id = machine.machine_id
+                        break
+            else:
+                for machine in machine_type2machine[machine_type]:
+                    if machine_shift[machine.machine_id]:
+                        machine_shift[machine.machine_id] = False
+
         return task_groups
 
     @classmethod
@@ -364,19 +401,6 @@ class TaskGroup:
         Evaluate the penalty for the machine.
         """
 
-        # TODO REMOVE BUG
-        """
-            main()
-        File "/Users/yuyaarai/Documents/Humanics/Project/GEMS-python/gems_python/multi_machine_problem_interval_task/task_info.py", line 426, in main
-            TaskGroup.schedule_task_groups(task_groups, machines, 0)
-        File "/Users/yuyaarai/Documents/Humanics/Project/GEMS-python/gems_python/multi_machine_problem_interval_task/task_info.py", line 324, in schedule_task_groups
-            if cls.eval_machine_penalty(task_groups, machines=machines, eval_group_ids=scheduled_groups) == 0:
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        File "/Users/yuyaarai/Documents/Humanics/Project/GEMS-python/gems_python/multi_machine_problem_interval_task/task_info.py", line 359, in eval_machine_penalty
-            occupied_time.append((task.scheduled_time + task.processing_time, False, task.optimal_machine_type))
-                                ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
-        TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
-        """
         occupied_time = list()
         machine_available_dict = dict()
         machine_occupied_dict = dict()
@@ -429,14 +453,125 @@ class TaskGroup:
                 group_id = group.task_group_id
         return earliest_task, group_id
     
+
+def generate_gantt_chart(task_groups: List['TaskGroup'], machine_list: 'MachineList'):
+    """
+    Generates a Gantt chart with Machines on the Y-axis and Time on the X-axis.
+    Each Task is represented as a horizontal bar on its allocated Machine.
+    Optimal start times are shown as vertical dotted lines.
+    Intervals between tasks within the same TaskGroup are shown as curved dotted lines.
+
+    Parameters:
+    ----------
+    task_groups : List[TaskGroup]
+        The list of TaskGroup instances to visualize.
+    machine_list : MachineList
+        The list of Machines available.
+    """
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    # Define colors based on TaskStatus
+    status_colors = {
+        'NOT_STARTED': 'gray',
+        'IN_PROGRESS': 'blue',
+        'COMPLETED': 'green',
+        'ERROR': 'red'
+    }
+    
+    # Assign Y positions to Machines
+    machines = machine_list.machines
+    machine_ids = [machine.machine_id for machine in machines]
+    y_positions = {machine_id: idx+0.5 for idx, machine_id in enumerate(machine_ids)}
+    num_machines = len(machine_ids)
+    
+    # Set Y-axis ticks and labels
+    ax.set_yticks([y + 0.5 for y in range(num_machines)])
+    ax.set_yticklabels(machine_ids)
+    
+    # Iterate over TaskGroups
+    for tg in task_groups:
+        # Plot optimal_start_time as a vertical dotted line spanning all Machines
+        ax.axvline(x=tg.optimal_start_time, color='orange', linestyle='dotted', linewidth=1, label='Optimal Start Time' if tg == task_groups[0] else "")
+        
+        # Sort tasks based on scheduled_time
+        sorted_tasks = sorted(tg.tasks, key=lambda t: t.scheduled_time if t.scheduled_time is not None else 0)
+        
+        previous_task = None
+        
+        for task in sorted_tasks:
+            if task.scheduled_time is None or task.allocated_machine_id is None:
+                continue  # Skip tasks without a scheduled_time or allocated_machine_id
+            
+            machine_id = task.allocated_machine_id  # allocated_machine_id is str
+            if machine_id not in y_positions:
+                print(f"Warning: Machine ID '{machine_id}' not found in MachineList.")
+                continue  # Skip tasks with invalid machine_id
+            
+            y = y_positions[machine_id]
+            
+            start = task.scheduled_time
+            duration = task.processing_time
+            color = status_colors.get(task.task_status.name, 'black')  # Default to black if status not found
+            
+            # Plot the task as a horizontal bar
+            ax.barh(y, duration, left=start, height=0.8, align='center', color=color, edgecolor='black')
+            
+            # Annotate the task with its ID
+            ax.text(start + duration / 2, y, f"Task {task.task_id}", va='center', ha='center', color='white', fontsize=8)
+            
+            # If not the first task in the TaskGroup, draw the interval
+            if previous_task:
+                prev_end = previous_task.scheduled_time + previous_task.processing_time
+                interval = task.scheduled_time - prev_end
+                if interval > 0:
+                    # Get previous task's machine position
+                    prev_machine_id = previous_task.allocated_machine_id
+                    if prev_machine_id not in y_positions:
+                        continue  # Skip if previous machine_id is invalid
+                    y_prev = y_positions[prev_machine_id]
+                    y_current = y_positions[machine_id]
+                    
+                    # Define control points for the Bezier curve
+                    verts = [
+                        (prev_end, y_prev + 0.4),  # Start point
+                        (prev_end + interval / 2, y_prev + 0.4 + 1),  # Control point 1
+                        (task.scheduled_time, y_current + 0.4)  # End point
+                    ]
+                    codes = [mpath.Path.MOVETO, mpath.Path.CURVE3, mpath.Path.CURVE3]
+                    path = mpath.Path(verts, codes)
+                    patch = mpatches.PathPatch(path, facecolor='none', edgecolor='black', linestyle='dotted', linewidth=1)
+                    ax.add_patch(patch)
+            
+            previous_task = task
+    
+    # Set labels and title
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Machines')
+    ax.set_title('Gantt Chart of Task Groups by Machines')
+    
+    # Enable grid on X-axis
+    ax.grid(True, axis='x', linestyle='--', alpha=0.5)
+    
+    # Create custom legend for TaskStatus
+    status_patches = [
+        mpatches.Patch(color=color, label=status.replace('_', ' ').title()) 
+        for status, color in status_colors.items()
+    ]
+    # Add Optimal Start Time to legend
+    optimal_patch = mlines.Line2D([], [], color='orange', linestyle='dotted', label='Optimal Start Time')
+    
+    ax.legend(handles=status_patches + [optimal_patch], bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    plt.tight_layout()
+    plt.show()
     
 
 def main():
     machines = MachineList()
-    machines.add_machine(Machine(machine_id=0, machine_type=0))
-    machines.add_machine(Machine(machine_id=1, machine_type=1))
-    machines.add_machine(Machine(machine_id=2, machine_type=2))
-    machines.add_machine(Machine(machine_id=3, machine_type=2))
+    machines.add_machine(Machine(machine_id="M0", machine_type=0))
+    machines.add_machine(Machine(machine_id="M1", machine_type=1))
+    machines.add_machine(Machine(machine_id="M2", machine_type=2))
+    machines.add_machine(Machine(machine_id="M3", machine_type=2))
 
     task_group_1 = TaskGroup(
         optimal_start_time=0,
@@ -463,10 +598,24 @@ def main():
     TaskGroup.add_task_group(task_groups, machines, task_group_2)
     print(task_groups)
 
-    TaskGroup.schedule_task_groups(task_groups, machines, 0)
-    print(task_groups)
+    task_groups = TaskGroup.schedule_task_groups(task_groups, machines, 0)
+    print(f"{task_groups=}")
 
-    
+    generate_gantt_chart(task_groups, machines)
+
+    TaskGroup.start_task(task_groups, 0, 0)
+    TaskGroup.start_task(task_groups, 1, 0)
+
+
+    TaskGroup.complete_task(task_groups, 0, 0)
+    TaskGroup.start_task(task_groups, 0, 1)
+
+    generate_gantt_chart(task_groups, machines)
+
+
+
+
+
     
     # print(task_group_1.tasks)
 
