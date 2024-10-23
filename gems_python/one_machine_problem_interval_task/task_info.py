@@ -9,6 +9,10 @@ from typing import List, Tuple, Type
 
 from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty, PenaltyType
 
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import matplotlib.path as mpath
 
 
 @dataclass
@@ -425,3 +429,86 @@ class TaskGroup:
                 group_id = group.task_group_id
         return earliest_task, group_id
     
+    @classmethod
+    def generate_gantt_chart(cls, task_groups: List['TaskGroup']):
+
+        """
+        Generates a Gantt chart from a list of TaskGroups, reflecting their statuses.
+        
+        Parameters:
+        ----------
+        task_groups : List[TaskGroup]
+            The list of TaskGroup instances to visualize.
+        """
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Define colors based on TaskGroupStatus
+        status_colors = {
+            'NOT_STARTED': 'gray',
+            'IN_PROGRESS': 'blue',
+            'COMPLETED': 'green',
+            'ERROR': 'red'
+        }
+        
+        # Y positions
+        yticks = []
+        yticklabels = []
+        
+        for idx, tg in enumerate(task_groups):
+            # Determine color based on status
+            status = tg.status.name
+            color = status_colors.get(status, 'black')  # Default to black if status not found
+            y = idx * 10  # Space out each TaskGroup vertically by 10 units
+            yticks.append(y + 5)
+            yticklabels.append(f"Group {tg.task_group_id} - {tg.experiment_name} ({tg.status.value})")
+            
+            # Plot optimal_start_time as a vertical dotted line
+            ax.axvline(x=tg.optimal_start_time, color='orange', linestyle='dotted', linewidth=1, label='Optimal Start Time' if idx == 0 else "")
+            
+            # Sort tasks based on scheduled_time
+            sorted_tasks = sorted(tg.tasks, key=lambda t: t.scheduled_time if t.scheduled_time is not None else 0)
+            
+            for t_idx, task in enumerate(sorted_tasks):
+                if task.scheduled_time is None:
+                    continue  # Skip tasks without a scheduled_time
+                
+                start = task.scheduled_time
+                duration = task.processing_time
+                ax.barh(y, duration, left=start, height=4, align='center', color=color, edgecolor='black')
+                ax.text(start + duration/2, y, f"Task {task.task_id}", va='center', ha='center', color='white', fontsize=8)
+                
+                # If not the first task, draw interval
+                if t_idx > 0:
+                    prev_task = sorted_tasks[t_idx - 1]
+                    prev_end = prev_task.scheduled_time + prev_task.processing_time
+                    interval = task.interval
+                    interval_start = prev_end
+                    interval_end = task.scheduled_time
+                    # Draw a curved dotted line representing the interval
+                    control_offset = 2  # Control point offset for the curve
+                    verts = [
+                        (interval_start, y + 2),  # Start point
+                        (interval_start + (interval_end - interval_start)/2, y + 2 + control_offset),  # Control point
+                        (interval_end, y + 2)  # End point
+                    ]
+                    codes = [mpath.Path.MOVETO, mpath.Path.CURVE3, mpath.Path.CURVE3]
+                    path = mpath.Path(verts, codes)
+                    patch = mpatches.PathPatch(path, facecolor='none', edgecolor='black', linestyle='dotted', linewidth=1)
+                    ax.add_patch(patch)
+        
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticklabels)
+        ax.set_xlabel('Time')
+        ax.set_title('Gantt Chart of Task Groups')
+        ax.grid(True, axis='x', linestyle='--', alpha=0.5)
+        
+        # Create custom legend
+        status_patches = [
+            mpatches.Patch(color=color, label=status.replace('_', ' ').title()) 
+            for status, color in status_colors.items()
+        ]
+        optimal_patch = mlines.Line2D([], [], color='orange', linestyle='dotted', label='Optimal Start Time')
+        ax.legend(handles=status_patches + [optimal_patch], bbox_to_anchor=(1.05, 1), loc='upper left')
+        
+        plt.tight_layout()
+        plt.show()

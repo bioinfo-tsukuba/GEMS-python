@@ -50,7 +50,6 @@ class TestClass(unittest.TestCase):
 
         task_groups = TaskGroup.set_task_group_ids(task_groups)
 
-
         text = "task_groups_aft"
         print(f"*"*int((separate_line_length-len(text))/2) + text + f"*"*int((separate_line_length-len(text))/2))
         for task_group in task_groups:
@@ -60,6 +59,8 @@ class TestClass(unittest.TestCase):
 
         # task_groups = TaskGroup.schedule_task_groups(task_groups, reference_time=0)
         task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time=0)
+        TaskGroup.generate_gantt_chart(task_groups)
+
 
         print(f"*"*int((separate_line_length-len(text))/2) + text + f"*"*int((separate_line_length-len(text))/2))
         for task_group in task_groups:
@@ -69,6 +70,13 @@ class TestClass(unittest.TestCase):
         for task_id in range(len(task_groups[0].tasks)):
             input(f"press enter to complete task {task_id}")
             task_groups = TaskGroup.complete_task(task_groups, group_id=0, task_id=task_id)
+            TaskGroup.generate_gantt_chart(task_groups)
+
+        
+        for task_id in range(len(task_groups[1].tasks)):
+            input(f"press enter to complete task {task_id}")
+            task_groups = TaskGroup.complete_task(task_groups, group_id=1, task_id=task_id)
+            TaskGroup.generate_gantt_chart(task_groups)
 
         print(f"{task_groups[0].to_json()=}")
 
