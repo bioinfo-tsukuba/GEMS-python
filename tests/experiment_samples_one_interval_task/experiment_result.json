@@ -1,0 +1,8 @@
+{
+    "task_group_id": 0,
+    "task_id": 1,
+    "result_path": "/Users/yuyaarai/Documents/Humanics/Project/GEMS-python/tests/experiment_samples_one_interval_task/output.csv",
+    "update_type": "a",
+    "scheduling_method": "s",
+    "optimal_time_reference_time": 0
+}

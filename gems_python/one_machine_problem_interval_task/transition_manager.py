@@ -1,5 +1,6 @@
 import importlib
 import textwrap
+import time
 from matplotlib import pyplot as plt
 from matplotlib.patches import Arc, Arrow
 import networkx as nx
@@ -435,6 +436,7 @@ class Experiments:
         self.experiments.append(experiment)
         self.task_groups.append(copy.deepcopy(experiment.current_task_group))
         self.task_groups[-1].task_group_id = len(self.task_groups) - 1
+        self.execute_scheduling()
 
 
     def delete_experiment_with_experiment_uuid(self, experiment_uuid: str) -> Union[None, ValueError]:
@@ -599,12 +601,27 @@ class Experiments:
         """
         mode = "autoload"
 
+    def proceed_to_next_step(self):
+        self.step += 1
+        next_step_dir = self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
+        if not next_step_dir.exists():
+            os.makedirs(next_step_dir, exist_ok=True)
+            experiment_js_path = next_step_dir / "experiment.json"
+            with open(experiment_js_path, "w") as f:
+                f.write(self.to_json())
+            
+            experiment_pickle_path = next_step_dir / "experiment.pkl"
+            with open(experiment_pickle_path, "wb") as f:
+                f.write(self.to_pickle())
+
+            
+            print(f"Next step directory created: {next_step_dir}")
+
     def auto_load(self):
         """
         Automatically load an experiment result.
         """
         # Check that results are available
-        # step_000001
         result = self.parent_dir_path / f"step_{str(self.step).zfill(8)}/experiment_result.json"
         if not result.exists():
             print(f"Experiment result not found: {result}")
@@ -630,6 +647,9 @@ class Experiments:
                 scheduling_method=scheduling_method,
                 optimal_time_reference_time=optimal_time_reference_time
             )
+            
+            self.proceed_to_next_step()
+            
     
     def experiments_loop(self):
         """

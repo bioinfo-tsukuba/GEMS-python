@@ -110,6 +110,7 @@ class PluginCmd(cmd2.Cmd):
         self.last_command_time = time.time()
         self.auto_load_enabled = True  # 自動ロードが有効かどうか
         self.stop_event = threading.Event()
+        self.proceed_to_next_step()
 
         # バックグラウンドスレッドの開始（self.lock を先に定義）
         self.monitor_thread = threading.Thread(target=self.monitor_inactivity, daemon=True)
@@ -121,7 +122,7 @@ class PluginCmd(cmd2.Cmd):
                 if self.auto_load_enabled:
                     current_time = time.time()
                     if (current_time - self.last_command_time) > 1:
-                        print("\nNo command received for 1 second. Running auto_load().")
+                        print("\nNo command received for 1 second. Running auto_load(). If you want to stop, type 'stop'.")
                         self.plugin_manager.experiments.auto_load()
                         # 自動ロードを一度実行したら再度カウントするため、last_command_timeを更新
                         self.last_command_time = current_time
@@ -149,16 +150,21 @@ class PluginCmd(cmd2.Cmd):
         """各コマンド実行後にタイマーをリセットします。"""
         self.reset_timer()
         return super().postcmd(stop, line)
+    
+    def proceed_to_next_step(self):
+        """次のステップに進むためのメソッド"""
+        self.plugin_manager.experiments.proceed_to_next_step()
 
     def do_add(self, class_name):
         """Add a class to the list."""
         self.plugin_manager.add_experiment_cmd(class_name)
+        self.plugin_manager.experiments.proceed_to_next_step()
 
     def do_show(self, _):
         """Show all added classes."""
         self.plugin_manager.show_classes()
 
-    def do_void(self, _):
+    def do_schedule(self, _):
         """Empty the list of classes."""
         print("Void")
 
