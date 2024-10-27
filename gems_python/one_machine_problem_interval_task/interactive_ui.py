@@ -1,13 +1,15 @@
-from transition_manager import Experiments, Experiment
-
 import sys
 import time
+import threading
 from importlib import import_module, reload
 from pathlib import Path
 
 from watchdog.events import FileSystemEvent, PatternMatchingEventHandler
 from watchdog.observers.polling import PollingObserver as Observer
 import cmd2
+
+from transition_manager import Experiments, Experiment  # 必要なインポートを確認してください
+
 
 class PluginManager:
 
@@ -27,13 +29,12 @@ class PluginManager:
             if event.src_path.endswith('.py'):
                 self.manager.load_plugin(Path(event.src_path))
 
+
     def __init__(self, experiments: Experiments, path: Path = "experimental_setting/"):
         self.plugins = {}
         self.experiments = experiments
         self.path = self.experiments.parent_dir_path / path
         self.observer = Observer()
-        self.classes_list = []
-
 
         self.path: str = str(self.path)
         sys.path.append(self.path)
@@ -65,34 +66,34 @@ class PluginManager:
             self.plugins[module_name] = reload(self.plugins[module_name])
             print('{} reloaded.'.format(module_name))
 
-    def execute_command(self, cmd):
-        parts = cmd.split('.')
+    def add_experiment_cmd(self, experiment_generator_function):
+        parts = experiment_generator_function.split('.')
         if len(parts) == 2:
-            module_name, class_name = parts
+            module_name, experiment_generator_function = parts
             if module_name in self.plugins:
                 module = self.plugins[module_name]
-                cls = getattr(module, class_name, None)
+                cls = getattr(module, experiment_generator_function, None)
                 if cls:
-                    return cls()
+                    self.experiments.add_experiment(cls())
+                    print(f"Class {experiment_generator_function} added.")
                 else:
-                    print(f"Class {class_name} not found in module {module_name}.")
+                    print(f"Class {experiment_generator_function} not found in module {module_name}.")
             else:
                 print(f"Module {module_name} not loaded.")
         else:
             print("Invalid command format. Use 'module.class'.")
 
-    def add_class(self, class_name):
-        self.classes_list.append(class_name)
-        print(f"Added class: {class_name}")
-
-    def show_classes(self):
-        for cls in self.classes_list:
-            print(cls)
-
     def show_possible_commands(self):
-        possible_commands = ["add <class_name>", "show", "module_name.class_name"]
+        possible_commands = ["add <module.class>", "show", "module_name.class_name", "stop", "reloop"]
         for cmd in possible_commands:
             print(cmd)
+
+    def show_classes(self):
+        # 実験クラスの表示メソッド
+        if hasattr(self.experiments, 'show_experiment_directed_graph'):
+            self.experiments.show_experiment_directed_graph()
+        else:
+            print("No experiments to show.")
 
 
 class PluginCmd(cmd2.Cmd):
@@ -102,9 +103,56 @@ class PluginCmd(cmd2.Cmd):
         self.plugin_manager = plugin_manager
         self.prompt = "plugin_manager> "
 
+        # スレッド間で共有するフラグの保護
+        self.lock = threading.Lock()
+
+        # タイマー関連の初期化
+        self.last_command_time = time.time()
+        self.auto_load_enabled = True  # 自動ロードが有効かどうか
+        self.stop_event = threading.Event()
+
+        # バックグラウンドスレッドの開始（self.lock を先に定義）
+        self.monitor_thread = threading.Thread(target=self.monitor_inactivity, daemon=True)
+        self.monitor_thread.start()
+
+    def monitor_inactivity(self):
+        while not self.stop_event.is_set():
+            with self.lock:
+                if self.auto_load_enabled:
+                    current_time = time.time()
+                    if (current_time - self.last_command_time) > 1:
+                        print("\nNo command received for 1 second. Running auto_load().")
+                        self.plugin_manager.experiments.auto_load()
+                        # 自動ロードを一度実行したら再度カウントするため、last_command_timeを更新
+                        self.last_command_time = current_time
+            time.sleep(0.1)  # 監視のインターバル
+
+    def reset_timer(self):
+        with self.lock:
+            self.last_command_time = time.time()
+
+    def enable_auto_load(self):
+        with self.lock:
+            self.auto_load_enabled = True
+            print("Auto-load has been reenabled.")
+
+    def disable_auto_load(self):
+        with self.lock:
+            self.auto_load_enabled = False
+            print("Auto-load has been disabled.")
+
+    def preloop(self):
+        """cmd2 の preloop をオーバーライドして、必要な初期化を行います。"""
+        super().preloop()
+
+    def postcmd(self, stop, line):
+        """各コマンド実行後にタイマーをリセットします。"""
+        self.reset_timer()
+        return super().postcmd(stop, line)
+
     def do_add(self, class_name):
         """Add a class to the list."""
-        self.plugin_manager.add_class(class_name)
+        self.plugin_manager.add_experiment_cmd(class_name)
 
     def do_show(self, _):
         """Show all added classes."""
@@ -113,20 +161,37 @@ class PluginCmd(cmd2.Cmd):
     def do_void(self, _):
         """Empty the list of classes."""
         print("Void")
-        
-    def do_run(self, cmd):
-        """Run a command in the format module_name.class_name."""
-        result = self.plugin_manager.execute_command(cmd)
-        if result:
-            print(f"Executed command {cmd}: {result}")
 
     def do_cmdlist(self, _):
         """Show all possible commands."""
         self.plugin_manager.show_possible_commands()
 
+    def do_stop(self, _):
+        """Disable auto-load functionality."""
+        self.disable_auto_load()
+
+    def do_reloop(self, _):
+        """Enable auto-load functionality."""
+        self.enable_auto_load()
+
     def do_exit(self, _):
         """Exit the plugin manager."""
         return True
+
+    def do_EOF(self, _):
+        """Handle EOF to exit."""
+        print("Exiting.")
+        return True
+
+    def cmdloop(self, intro=None):
+        """Override cmdloop to handle graceful shutdown."""
+        try:
+            super().cmdloop(intro=intro)
+        except KeyboardInterrupt:
+            print("\nInterrupted.")
+        finally:
+            self.stop_event.set()
+            self.monitor_thread.join()
 
 
 def main():
@@ -139,11 +204,11 @@ def main():
 
     plugin_manager.start()
 
-    print("Plugin Manager started.")
     plugin_cmd = PluginCmd(plugin_manager)
     plugin_cmd.cmdloop()
 
     plugin_manager.stop()
+
 
 if __name__ == '__main__':
     main()

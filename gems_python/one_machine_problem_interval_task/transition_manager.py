@@ -404,6 +404,7 @@ class Experiments:
     parent_dir_path: Path = field(default=Path("experiments_dir"))
     # Automatically generated fields, not accept user input
     task_groups: List[TaskGroup] = field(default=None)
+    step: int = field(default=0)
 
     def __post_init__(self):
         self.parent_dir_path = Path(self.parent_dir_path)
@@ -528,14 +529,14 @@ class Experiments:
 
         self.task_groups = scheduled_task_groups
 
-    def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+    
+
+    def update_shared_variable_history(
             self,
             task_group_id: int,
             task_id: int,
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
-            scheduling_method = 's',
-            optimal_time_reference_time: int = 0
             ) -> Tuple[TaskGroup, Task]:
         """
         TODO: explanation
@@ -561,14 +562,21 @@ class Experiments:
             case _:
                 AssertionError(f"Unexpected input: update_type {update_type}")
 
-        
-        if self.task_groups[task_group_index].is_completed():
-            # Delete the task group
-            self.task_groups = TaskGroup.delete_task_group(self.task_groups, task_group_id)
-            # Transition and generate a new task group
-            new_task_group = self.experiments[experiment_index].execute_one_step()
-            # Add the new task group and reschedule
-            self.task_groups = TaskGroup.add_task_group(self.task_groups, new_task_group)
+    def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+            self,
+            task_group_id: int,
+            task_id: int,
+            new_result_of_experiment: pl.DataFrame,
+            update_type: str = 'a',
+            scheduling_method = 's',
+            optimal_time_reference_time: int = 0
+            ) -> Tuple[TaskGroup, Task]:
+        """
+        TODO: explanation
+        """
+        # TODO-DONE: TaskGroupに対応
+        # Update task_group
+        self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type)
 
         self.set_task_group_ids()
         
@@ -584,5 +592,59 @@ class Experiments:
 
         return earliest_task_group, earliest_task
     
+
     def start_experiments(self):
-        pass
+        """
+        Start the experiments.
+        """
+        mode = "autoload"
+
+    def auto_load(self):
+        """
+        Automatically load an experiment result.
+        """
+        # Check that results are available
+        # step_000001
+        result = self.parent_dir_path / f"step_{str(self.step).zfill(8)}/experiment_result.json"
+        if not result.exists():
+            print(f"Experiment result not found: {result}")
+            return
+        else:
+            print(f"Experiment result found: {result}")
+            # Load the result
+            with open(result, "r") as f:
+                result_data = json.load(f)
+            task_group_id = result_data["task_group_id"]
+            task_id = result_data["task_id"]
+            new_result_of_experiment = pl.read_csv(result_data["result_path"])
+            update_type = result_data["update_type"]
+            scheduling_method = result_data["scheduling_method"]
+            optimal_time_reference_time = result_data["optimal_time_reference_time"]
+
+            # Update the shared variable history
+            self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+                task_group_id=task_group_id,
+                task_id=task_id,
+                new_result_of_experiment=new_result_of_experiment,
+                update_type=update_type,
+                scheduling_method=scheduling_method,
+                optimal_time_reference_time=optimal_time_reference_time
+            )
+    
+    def experiments_loop(self):
+        """
+        Start the experiments.
+        """
+        mode = "autoload"
+
+        while True:
+            if mode == "autoload":
+                pass
+            elif mode == "add":
+                pass
+            elif mode == "delete":
+                pass
+            elif mode == "exit":
+                break
+            else:
+                pass
