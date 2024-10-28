@@ -201,7 +201,7 @@ class PluginCmd(cmd2.Cmd):
 
 
 def main():
-    experiments = Experiments(parent_dir_path=Path("experiment_test"))
+    experiments = Experiments(parent_dir_path=Path("volatile"))
     plugin_manager = PluginManager(experiments)
     print("Plugin Manager started.")
     print(f"{plugin_manager=}")

@@ -492,10 +492,21 @@ class Experiments:
 
     def set_task_group_ids(self):
         """
-        Overwrite the task ids in tasks list with identical index
+        Assign the task group ids.
+        If the task group ids are not assigned, assign them.
         """
-        for index in range(len(self.task_groups)):
-            self.task_groups[index].task_group_id = index
+        used_ids = set()
+        new_id = 0
+        for task_group in self.task_groups:
+            if task_group.task_group_id is not None:
+                used_ids.add(task_group.task_group_id)
+
+        for task_group_index in range(len(self.task_groups)):
+            if self.task_groups[task_group_index].task_group_id is None:
+                while new_id in used_ids:
+                    new_id += 1
+                self.task_groups[task_group_index].task_group_id = new_id
+                used_ids.add(new_id)
 
     def delete_task_with_task_id(self, task_id: int):
         # TODO: TaskGroupに対応
@@ -564,6 +575,16 @@ class Experiments:
             case _:
                 AssertionError(f"Unexpected input: update_type {update_type}")
 
+        if self.task_groups[task_group_index].is_completed():
+            # Delete the task group
+            self.task_groups = TaskGroup.delete_task_group(self.task_groups, task_group_id)
+            # Transition and generate a new task group
+            new_task_group = self.experiments[experiment_index].execute_one_step()
+            # Add the new task group and reschedule
+            self.task_groups = TaskGroup.add_task_group(self.task_groups, new_task_group)
+
+        self.set_task_group_ids()
+
     def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
             self,
             task_group_id: int,
@@ -579,7 +600,6 @@ class Experiments:
         # TODO-DONE: TaskGroupに対応
         # Update task_group
         self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type)
-
         self.set_task_group_ids()
         
         self.execute_scheduling(scheduling_method, optimal_time_reference_time)

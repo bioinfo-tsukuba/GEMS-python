@@ -482,10 +482,21 @@ class Experiments:
 
     def set_task_group_ids(self):
         """
-        Overwrite the task ids in tasks list with identical index
+        Assign the task group ids.
+        If the task group ids are not assigned, assign them.
         """
-        for index in range(len(self.task_groups)):
-            self.task_groups[index].task_group_id = index
+        used_ids = set()
+        new_id = 0
+        for task_group in self.task_groups:
+            if task_group.task_group_id is not None:
+                used_ids.add(task_group.task_group_id)
+
+        for task_group_index in range(len(self.task_groups)):
+            if self.task_groups[task_group_index].task_group_id is None:
+                while new_id in used_ids:
+                    new_id += 1
+                self.task_groups[task_group_index].task_group_id = new_id
+                used_ids.add(new_id)
 
     def delete_task_with_task_id(self, task_id: int):
         # TODO: TaskGroupに対応
