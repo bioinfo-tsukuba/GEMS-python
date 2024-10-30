@@ -1,5 +1,6 @@
 from enum import Enum
 from dataclasses import field, asdict
+from pathlib import Path
 import random
 
 from simanneal import Annealer
@@ -430,7 +431,7 @@ class TaskGroup:
         return earliest_task, group_id
     
     @classmethod
-    def generate_gantt_chart(cls, task_groups: List['TaskGroup']):
+    def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name:str = "gantt_chart"):
 
         """
         Generates a Gantt chart from a list of TaskGroups, reflecting their statuses.
@@ -511,4 +512,12 @@ class TaskGroup:
         ax.legend(handles=status_patches + [optimal_patch], bbox_to_anchor=(1.05, 1), loc='upper left')
         
         plt.tight_layout()
-        plt.show()
+
+
+        if save_dir is not None:
+            save_dir = Path(save_dir)
+            plt.savefig(save_dir / f"{file_name}.png")
+            plt.savefig(save_dir / f"{file_name}.pdf")
+            plt.savefig(save_dir / f"{file_name}.svg")
+        else:
+            plt.show()

@@ -650,6 +650,9 @@ class Experiments:
         """
         mode = "autoload"
 
+    def generate_gantt_chart(self):
+        TaskGroup.generate_gantt_chart(self.task_groups, save_dir = self.save_dir())
+
     def proceed_to_next_step(self):
         self.step += 1
         next_step_dir = self.save_dir()
@@ -662,6 +665,8 @@ class Experiments:
             experiment_pickle_path = next_step_dir / "experiment.pkl"
             with open(experiment_pickle_path, "wb") as f:
                 f.write(self.to_pickle())
+
+            self.generate_gantt_chart()
 
             
             print(f"Next step directory created: {next_step_dir}")
