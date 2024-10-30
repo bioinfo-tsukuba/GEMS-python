@@ -236,6 +236,23 @@ def main():
     print(f"{plugin_manager.path=}")
     print(sys.path)
 
+        # プラグインマネージャーの開始前にリロードの選択を促す
+    reload_choice = input("実験をリロードしますか？ (y/n): ").strip().lower()
+    if reload_choice == 'y':
+        try:
+            step = input("リロードするステップを入力してください。空白の場合は自動的に最大ステップまでリロードします。: ").strip()
+            if step == '':
+                step = None
+            else:
+                step = int(step)
+            experiments.reload(step)
+            print(f"ステップ {experiments.step} まで実験をリロードしました。")
+        except ValueError:
+            print("無効なステップ番号です。リロードをスキップします。")
+        except Exception as err:
+            print(f"リロード中にエラーが発生しました: {err}. リロードをスキップします。")
+
+
     plugin_manager.start()
 
     plugin_cmd = PluginCmd(plugin_manager)

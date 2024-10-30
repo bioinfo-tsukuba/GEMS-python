@@ -427,10 +427,23 @@ class Experiments:
 
             self.set_task_group_ids()
 
-    def reload(self, step: int):
+    def reload(self, step: int = None):
         """
         Reload the experiments from the saved directory.
         """
+        if step is None:
+            # 保存ディレクトリ内のすべてのstepディレクトリを取得
+            step_dirs = [
+                d for d in self.parent_dir_path.iterdir()
+                if d.is_dir() and d.name.startswith('step_') and d.name[5:].isdigit()
+            ]
+            if not step_dirs:
+                raise ValueError("リロード可能なステップディレクトリが見つかりません。")
+            # ステップ番号を抽出し、最大値を選択
+            step_numbers = [int(d.name[5:]) for d in step_dirs]
+            step = max(step_numbers)
+            print(f"ステップが指定されなかったため、最大のステップ {step} を選択しました。")
+            
         old_step = self.step
         self.step = step
 
