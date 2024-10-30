@@ -427,6 +427,37 @@ class Experiments:
 
             self.set_task_group_ids()
 
+    def reload(self, step: int):
+        """
+        Reload the experiments from the saved directory.
+        """
+        old_step = self.step
+        self.step = step
+
+        experiments_js_path = self.save_dir() / "experiments.json"
+        experiments_pkl_path = self.save_dir() / "experiments.pkl"
+        try:
+            json_str = ""
+            with open(experiments_js_path, "r") as f:
+                json_str = f.read()
+            experiments = Experiments.from_json(json_str)
+            self.experiments = experiments
+        except Exception as err:
+            print(f"Error loading experiments from json: {err}")
+            try:
+                with open(experiments_pkl_path, "rb") as f:
+                    experiments = Experiments.from_pickle(experiments_pkl_path)
+                    self.experiments = experiments
+            except Exception as err:
+                print(f"Error loading experiments from pickle: {err}")
+                self.step = old_step
+                raise RuntimeError(f"Error loading experiments: {err}")
+
+
+        # with open(experiment_js_path, "r") as f:
+        #     experiment_data = json.load(f)
+        # self.from_json(experiment_data)
+
     def save_dir(self):
         return self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
 
@@ -658,11 +689,11 @@ class Experiments:
         next_step_dir = self.save_dir()
         if not next_step_dir.exists():
             os.makedirs(next_step_dir, exist_ok=True)
-            experiment_js_path = next_step_dir / "experiment.json"
+            experiment_js_path = next_step_dir / "experiments.json"
             with open(experiment_js_path, "w") as f:
                 f.write(self.to_json())
             
-            experiment_pickle_path = next_step_dir / "experiment.pkl"
+            experiment_pickle_path = next_step_dir / "experiments.pkl"
             with open(experiment_pickle_path, "wb") as f:
                 f.write(self.to_pickle())
 
