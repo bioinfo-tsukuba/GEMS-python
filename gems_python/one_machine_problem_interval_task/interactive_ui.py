@@ -84,9 +84,22 @@ class PluginManager:
             print("Invalid command format. Use 'module.class'.")
 
     def show_possible_commands(self):
-        possible_commands = ["add <module.class>", "show", "module_name.class_name", "stop", "reloop"]
+        possible_commands = [
+            "add <module.class>       : 実験を追加します。",
+            "delete <experiment_uuid> : UUIDで実験を削除します。",
+            "show                     : 実験の実験名とUUIDを表示します。",
+            "show_experiments         : showと同様です。",
+            "schedule                 : 未実装です。",
+            "cmdlist                  : すべての可能なコマンドを表示します。",
+            "stop                     : 自動ロード機能を無効にします。",
+            "reloop                   : 自動ロード機能を有効にします。",
+            "reload <step>            : 指定したステップまで実験をリロードします。ステップを指定しない場合は最大ステップにリロードします。",
+            "exit                     : プラグインマネージャーを終了します。",
+            "EOF                      : exitと同様です。"
+        ]
+        print("利用可能なコマンド:")
         for cmd in possible_commands:
-            print(cmd)
+            print(f"  - {cmd}")
 
     def show_classes(self):
         # 実験クラスの表示メソッド
@@ -129,7 +142,7 @@ class PluginCmd(cmd2.Cmd):
                 if self.auto_load_enabled:
                     current_time = time.time()
                     if (current_time - self.last_command_time) > 1:
-                        print("\nNo command received for 1 second. Running auto_load(). If you want to stop, type 'stop'.")
+                        print("\nNo command received for 1 second. Running auto_load(). If you want to stop, type 'stop'. If you want to know all commands, type 'cmdlist'.")
                         self.plugin_manager.experiments.auto_load()
                         # 自動ロードを一度実行したら再度カウントするため、last_command_timeを更新
                         self.last_command_time = current_time
@@ -229,6 +242,9 @@ class PluginCmd(cmd2.Cmd):
 
 
 def main():
+    dir = input("Enter the directory path for experiments: ").strip()
+    if dir == '':
+        dir = "volatile"
     experiments = Experiments(parent_dir_path=Path("volatile"))
     plugin_manager = PluginManager(experiments)
     print("Plugin Manager started.")

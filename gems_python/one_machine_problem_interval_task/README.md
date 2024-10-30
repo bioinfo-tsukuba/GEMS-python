@@ -1,119 +1,63 @@
+This readme file is automatically generated. 
+Note that the content of this file will be changed in the future.
+
 # Plugin Manager
 
-This readme file is automatically generated.
+This project provides a **Plugin Manager** for dynamically loading and reloading Python plugins, integrating with experiments defined in the `gems_python` library. The manager also offers a command-line interface (CLI) to interact with the experiments.
 
-## 概要
+## Features
 
-このプロジェクトは、Pythonで動的なプラグイン管理を提供する `PluginManager` と、ユーザーがコマンドラインインターフェース (CLI) でプラグインの管理・実験プロトコルの操作を行うための `PluginCmd` を実装しています。  
-プラグインの自動ロードや、インタラクティブなコマンドライン操作による管理が可能です。
+- **Plugin auto-loader**: Monitors a directory for `.py` files and loads or reloads plugins on file changes.
+- **Experiment management**: Add, delete, and display experiments via CLI.
+- **Command-line interface**: Built using `cmd2`, providing interactive control over experiments.
+- **Auto-load timer**: Automatically loads experiments if no commands are received within a specified time.
 
-## 特徴
+## Installation
 
-- **動的プラグイン管理**: 新しいプラグインの作成や更新時に自動で読み込み・再読み込みを行います。
-- **CLIインターフェース**: `cmd2` ベースのコマンドラインインターフェースで、プラグインや実験の操作が可能です。
-- **自動ロード機能**: ユーザーが指定しない場合、一定時間無操作が続くとプラグインを自動ロードします。
-- **スレッド管理**: バックグラウンドでの自動処理と、ユーザー操作のスレッド間保護を実現しています。
+1. Ensure you have `Python 3.x` installed.
+2. Install required dependencies by running:
 
----
+   ```bash
+   pip install cmd2 watchdog
+   ```
 
-## インストールと実行
+3. Clone or download the repository and place it in your working directory.
 
-### 必要なライブラリ
+## Usage
 
-以下のPythonパッケージをインストールする必要があります。
+1. Start the Plugin Manager by running:
 
-```bash
-pip install watchdog cmd2
-```
+   ```bash
+   python gems_python/one_machine_problem_interval_task/interactive_ui.py"
+   ```
 
-また、`transition_manager` モジュールを適切にインストールするか、`Experiments` および `Experiment` クラスが参照できることを確認してください。
+2. On startup, the manager will ask if you want to reload experiments.
 
-### 実行方法
+3. Use the available commands within the CLI:
 
-1. このプロジェクトをクローンまたはダウンロードします。
-2. `main()` 関数を持つスクリプトを以下のように実行します:
+   - `add <module.class>`: Add an experiment.
+   - `delete <experiment_uuid>`: Delete an experiment by UUID.
+   - `show`: Display all loaded experiments.
+   - `cmdlist`: Show all available commands.
+   - `stop`: Disable auto-load.
+   - `reloop`: Enable auto-load.
+   - `reload <step>`: Reload experiments to a specific step.
 
-```bash
-python your_script_name.py
-```
+## Directory Structure
 
----
+- **`experimental_setting/`**: Directory where plugins are stored.
+- **`gems_python/`**: Contains the experiment management logic.
 
-## 使用方法
+## How it Works
 
-### プラグインの管理
+- **Plugin Auto-Loader**: Uses `watchdog` to monitor for `.py` file changes.
+- **Experiment Management**: Experiment objects are dynamically added to the system using their module and class names.
 
-プラグインのPythonファイルを `experimental_setting/` ディレクトリに配置することで、以下の操作が可能です。
+## Contributing
 
-- **自動ロード**: `.py` ファイルの新規作成または変更を検出し、自動でプラグインをロードまたは再読み込みします。
-- **手動でのプラグイン追加**:
+Feel free to submit issues or pull requests to improve the Plugin Manager.
 
-  ```bash
-  add <module.class>
-  ```
+## License
 
-### 利用可能なコマンド
+This project is licensed under the MIT License.
 
-CLI上で以下のコマンドが利用できます。
-
-- `add <module.class>`: プラグインから指定されたクラスを追加します。
-- `show`: 現在追加されているクラスを表示します。
-- `schedule`: クラスのリストをクリアします。
-- `cmdlist`: 使用可能なコマンドの一覧を表示します。
-- `stop`: 自動ロード機能を停止します。
-- `reloop`: 自動ロード機能を再開します。
-- `exit` または `EOF`: プログラムを終了します。
-
----
-
-## コード構造
-
-### `PluginManager` クラス
-
-- **`start()`**: プラグインのスキャンを開始し、監視を有効化します。
-- **`stop()`**: 監視を停止します。
-- **`load_plugin(file_path)`**: プラグインをロードまたは再読み込みします。
-- **`add_experiment_cmd()`**: 指定したクラスを実験リストに追加します。
-
-### `PluginCmd` クラス
-
-- **`monitor_inactivity()`**: 無操作状態を監視し、自動ロードをトリガーします。
-- **`do_add()`**: クラスを実験に追加します。
-- **`do_show()`**: 追加されたクラスを表示します。
-- **`do_stop()`**: 自動ロードを停止します。
-- **`do_reloop()`**: 自動ロードを再開します。
-- **`cmdloop()`**: コマンドループを実行し、ユーザー操作を待機します。
-
----
-
-## 実行例
-
-```bash
-plugin_manager> add example_module.ExampleClass
-plugin_manager> show
-plugin_manager> stop
-plugin_manager> reloop
-plugin_manager> exit
-```
-
----
-
-## 注意点
-
-- **プラグインのパス**: プラグインのPythonファイルは `experimental_setting/` ディレクトリ内に配置する必要があります。
-- **ライブラリの依存関係**: 使用する外部モジュールのインストールが必要です。
-- **スレッドセーフな処理**: スレッド間で共有する変数は適切にロックして操作します。
-
----
-
-## 今後の改善点
-
-- エラーハンドリングの強化（無効なモジュール名やクラスが指定された場合の処理）
-- ユーザーインターフェースの拡充（コマンドの補完機能など）
-- プラグインの管理に関する詳細なログ出力
-
----
-
-## お問い合わせ
-
-このプロジェクトに関する質問がある場合は、プロジェクトメンテナにお問い合わせください。
