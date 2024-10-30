@@ -1,5 +1,6 @@
 from enum import Enum
 from dataclasses import field, asdict
+from pathlib import Path
 import random
 
 from simanneal import Annealer
@@ -13,6 +14,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.path as mpath
+
+import matplotlib
+matplotlib.use('Agg')  # 非インタラクティブバックエンドに設定
 
 
 @dataclass
@@ -40,6 +44,9 @@ class Task:
     completed: bool = False  # タスクが終了したかどうか
     scheduled_time: int = field(default=None)  # タスクの開始時刻
     task_id: int = field(default=None)
+
+    def is_completed(self) -> bool:
+        return self.completed
 
     @classmethod
     def find_task(cls, tasks: List['Task'], task_id: int) -> int:
@@ -430,7 +437,7 @@ class TaskGroup:
         return earliest_task, group_id
     
     @classmethod
-    def generate_gantt_chart(cls, task_groups: List['TaskGroup']):
+    def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name:str = "gantt_chart"):
 
         """
         Generates a Gantt chart from a list of TaskGroups, reflecting their statuses.
@@ -471,6 +478,12 @@ class TaskGroup:
             for t_idx, task in enumerate(sorted_tasks):
                 if task.scheduled_time is None:
                     continue  # Skip tasks without a scheduled_time
+
+                if status == "IN_PROGRESS":
+                    if task.is_completed():
+                        color = status_colors.get('COMPLETED', color)
+                    else:
+                        color = status_colors.get('IN_PROGRESS', color)
                 
                 start = task.scheduled_time
                 duration = task.processing_time
@@ -511,4 +524,10 @@ class TaskGroup:
         ax.legend(handles=status_patches + [optimal_patch], bbox_to_anchor=(1.05, 1), loc='upper left')
         
         plt.tight_layout()
-        plt.show()
+
+
+        if save_dir is not None:
+            save_dir = Path(save_dir)
+            plt.savefig(save_dir / f"{file_name}.png")
+            plt.savefig(save_dir / f"{file_name}.pdf")
+            plt.savefig(save_dir / f"{file_name}.svg")

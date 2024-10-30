@@ -1,5 +1,6 @@
 import importlib
 import textwrap
+import time
 from matplotlib import pyplot as plt
 from matplotlib.patches import Arc, Arrow
 import networkx as nx
@@ -400,13 +401,22 @@ class Experiments:
     This class is used as a data class for the experiments.
     """
 
-    experiments: List[Experiment]
-    parent_dir_path: Path
+    experiments: List[Experiment] = field(default_factory=list)
+    parent_dir_path: Path = field(default=Path("experiments_dir"))
     # Automatically generated fields, not accept user input
     task_groups: List[TaskGroup] = field(default=None)
+    step: int = field(default=0)
+    reference_time: int = field(default=0)
 
     def __post_init__(self):
+        self.parent_dir_path = Path(self.parent_dir_path)
         # TODO: TaskGroupに対応
+        if self.parent_dir_path.exists():
+            if not self.parent_dir_path.is_dir():
+                raise ValueError(f"parent_dir_path must be a directory: {self.parent_dir_path}")
+        else:
+            os.makedirs(self.parent_dir_path, exist_ok=True)
+
         """
         Initialize the experiments.
         """
@@ -416,6 +426,62 @@ class Experiments:
                 self.task_groups.append(copy.deepcopy(experiment.current_task_group))
 
             self.set_task_group_ids()
+
+    def reload(self, step: int = None):
+        """
+        Reload the experiments from the saved directory.
+        """
+        if step is None:
+            # 保存ディレクトリ内のすべてのstepディレクトリを取得
+            step_dirs = [
+                d for d in self.parent_dir_path.iterdir()
+                if d.is_dir() and d.name.startswith('step_') and d.name[5:].isdigit()
+            ]
+            if not step_dirs:
+                raise ValueError("リロード可能なステップディレクトリが見つかりません。")
+            # ステップ番号を抽出し、最大値を選択
+            step_numbers = [int(d.name[5:]) for d in step_dirs]
+            step = max(step_numbers)
+            print(f"ステップが指定されなかったため、最大のステップ {step} を選択しました。")
+            
+        old_step = self.step
+        self.step = step
+
+        experiments_js_path = self.save_dir() / "experiments.json"
+        experiments_pkl_path = self.save_dir() / "experiments.pkl"
+        try:
+            json_str = ""
+            with open(experiments_js_path, "r") as f:
+                json_str = f.read()
+            experiments = Experiments.from_json(json_str)
+            self.experiments = experiments
+        except Exception as err:
+            print(f"Error loading experiments from json: {err}")
+            try:
+                with open(experiments_pkl_path, "rb") as f:
+                    experiments = Experiments.from_pickle(experiments_pkl_path)
+                    self.experiments = experiments
+            except Exception as err:
+                print(f"Error loading experiments from pickle: {err}")
+                self.step = old_step
+                raise RuntimeError(f"Error loading experiments: {err}")
+
+
+        # with open(experiment_js_path, "r") as f:
+        #     experiment_data = json.load(f)
+        # self.from_json(experiment_data)
+
+    def save_dir(self):
+        return self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
+
+    def set_reference_time(self, reference_time: int):
+        # Confirm the reference time is int type
+        if not isinstance(reference_time, int):
+            print(f"reference_time must be int type: {reference_time}")
+        elif reference_time < 0:
+            print(f"reference_time must be non-negative: {reference_time}")
+        else:
+            self.reference_time = reference_time
 
     def add_experiment(self, experiment: Experiment) -> Union[None, ValueError]:
 
@@ -427,6 +493,7 @@ class Experiments:
         self.experiments.append(experiment)
         self.task_groups.append(copy.deepcopy(experiment.current_task_group))
         self.task_groups[-1].task_group_id = len(self.task_groups) - 1
+        self.execute_scheduling()
 
 
     def delete_experiment_with_experiment_uuid(self, experiment_uuid: str) -> Union[None, ValueError]:
@@ -450,6 +517,19 @@ class Experiments:
                 new_experiments.append(copy.deepcopy(experiment))
         
         self.experiments = new_experiments
+
+        new_task_groups = list()
+        for task_group in self.task_groups:
+            if task_group.experiment_uuid != experiment_uuid:
+                new_task_groups.append(copy.deepcopy(task_group))
+
+        self.task_groups = new_task_groups
+
+        self.set_task_group_ids()
+        self.execute_scheduling()
+
+        self.proceed_to_next_step()
+        
 
     def list(self):
         """
@@ -482,10 +562,21 @@ class Experiments:
 
     def set_task_group_ids(self):
         """
-        Overwrite the task ids in tasks list with identical index
+        Assign the task group ids.
+        If the task group ids are not assigned, assign them.
         """
-        for index in range(len(self.task_groups)):
-            self.task_groups[index].task_group_id = index
+        used_ids = set()
+        new_id = 0
+        for task_group in self.task_groups:
+            if task_group.task_group_id is not None:
+                used_ids.add(task_group.task_group_id)
+
+        for task_group_index in range(len(self.task_groups)):
+            if self.task_groups[task_group_index].task_group_id is None:
+                while new_id in used_ids:
+                    new_id += 1
+                self.task_groups[task_group_index].task_group_id = new_id
+                used_ids.add(new_id)
 
     def delete_task_with_task_id(self, task_id: int):
         """
@@ -508,7 +599,7 @@ class Experiments:
     def execute_scheduling(
             self,
             scheduling_method: str = 's',
-            reference_time: int = 0
+            reference_time: int = None
             ):
         # TODO-DONE: TaskGroupに対応
         """
@@ -516,7 +607,10 @@ class Experiments:
         :param scheduling_method: The method of scheduling. 's' for simulated annealing.
         :param reference_time: The reference time for the optimal time.
         """
-
+        if reference_time is not None:
+            self.reference_time = reference_time
+        
+        reference_time = self.reference_time
         self.set_task_group_ids()
         # Reschedule
         task_groups = self.task_groups.copy()
@@ -530,14 +624,14 @@ class Experiments:
 
         self.task_groups = scheduled_task_groups
 
-    def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+    
+
+    def update_shared_variable_history(
             self,
             task_group_id: int,
             task_id: int,
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
-            scheduling_method = 's',
-            optimal_time_reference_time: int = 0
             ) -> Tuple[TaskGroup, Task]:
         """
         TODO: explanation
@@ -563,7 +657,6 @@ class Experiments:
             case _:
                 AssertionError(f"Unexpected input: update_type {update_type}")
 
-        
         if self.task_groups[task_group_index].is_completed():
             # Delete the task group
             self.task_groups = TaskGroup.delete_task_group(self.task_groups, task_group_id)
@@ -573,8 +666,28 @@ class Experiments:
             self.task_groups = TaskGroup.add_task_group(self.task_groups, new_task_group)
 
         self.set_task_group_ids()
+
+    def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+            self,
+            task_group_id: int,
+            task_id: int,
+            new_result_of_experiment: pl.DataFrame,
+            update_type: str = 'a',
+            scheduling_method = 's',
+            optimal_time_reference_time: int = None
+            ) -> Tuple[TaskGroup, Task]:
+        """
+        TODO: explanation
+        """
+        # TODO-DONE: TaskGroupに対応
+        # Update task_group
+
+        if optimal_time_reference_time is not None:
+            self.reference_time = optimal_time_reference_time
+        self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type)
+        self.set_task_group_ids()
         
-        self.execute_scheduling(scheduling_method, optimal_time_reference_time)
+        self.execute_scheduling(scheduling_method)
         print(f"{self.task_groups=}")
 
         earliest_task, eariest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
@@ -586,5 +699,82 @@ class Experiments:
 
         return earliest_task_group, earliest_task
     
+
     def start_experiments(self):
-        pass
+        """
+        Start the experiments.
+        """
+        mode = "autoload"
+
+    def generate_gantt_chart(self):
+        TaskGroup.generate_gantt_chart(self.task_groups, save_dir = self.save_dir())
+
+    def proceed_to_next_step(self):
+        self.step += 1
+        next_step_dir = self.save_dir()
+        if not next_step_dir.exists():
+            os.makedirs(next_step_dir, exist_ok=True)
+            experiment_js_path = next_step_dir / "experiments.json"
+            with open(experiment_js_path, "w") as f:
+                f.write(self.to_json())
+            
+            experiment_pickle_path = next_step_dir / "experiments.pkl"
+            with open(experiment_pickle_path, "wb") as f:
+                f.write(self.to_pickle())
+
+            self.generate_gantt_chart()
+
+            
+            print(f"Next step directory created: {next_step_dir}")
+
+    def auto_load(self):
+        """
+        Automatically load an experiment result.
+        """
+        # Check that results are available
+        result = self.save_dir() / "experiment_result.json"
+        if not result.exists():
+            print(f"Experiment result not found: {result}")
+            return
+        else:
+            print(f"Experiment result found: {result}")
+            # Load the result
+            with open(result, "r") as f:
+                result_data = json.load(f)
+            task_group_id = result_data["task_group_id"]
+            task_id = result_data["task_id"]
+            new_result_of_experiment = pl.read_csv(result_data["result_path"])
+            update_type = result_data["update_type"]
+            scheduling_method = result_data["scheduling_method"]
+            optimal_time_reference_time = result_data["optimal_time_reference_time"]
+
+            # Update the shared variable history
+            self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+                task_group_id=task_group_id,
+                task_id=task_id,
+                new_result_of_experiment=new_result_of_experiment,
+                update_type=update_type,
+                scheduling_method=scheduling_method,
+                optimal_time_reference_time=optimal_time_reference_time
+            )
+            
+            self.proceed_to_next_step()
+            
+    
+    def experiments_loop(self):
+        """
+        Start the experiments.
+        """
+        mode = "autoload"
+
+        while True:
+            if mode == "autoload":
+                pass
+            elif mode == "add":
+                pass
+            elif mode == "delete":
+                pass
+            elif mode == "exit":
+                break
+            else:
+                pass
