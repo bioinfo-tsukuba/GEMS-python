@@ -8,7 +8,7 @@ from watchdog.events import FileSystemEvent, PatternMatchingEventHandler
 from watchdog.observers.polling import PollingObserver as Observer
 import cmd2
 
-from transition_manager import Experiments, Experiment  # 必要なインポートを確認してください
+from gems_python.one_machine_problem_interval_task.transition_manager import Experiments, Experiment  # 必要なインポートを確認してください
 
 
 class PluginManager:
@@ -95,6 +95,13 @@ class PluginManager:
         else:
             print("No experiments to show.")
 
+    def show_experiments(self):
+        # 実験クラスの表示メソッド
+        if hasattr(self.experiments, 'list'):
+            self.experiments.list()
+        else:
+            print("No experiments to show.")
+
 
 class PluginCmd(cmd2.Cmd):
 
@@ -160,13 +167,21 @@ class PluginCmd(cmd2.Cmd):
         self.plugin_manager.add_experiment_cmd(class_name)
         self.plugin_manager.experiments.proceed_to_next_step()
 
+    def do_delete(self, experiment_uuid: str):
+        """Delete an experiment by UUID."""
+        self.plugin_manager.experiments.delete_experiment_with_experiment_uuid(experiment_uuid)
+
     def do_show(self, _):
         """Show all added classes."""
         self.plugin_manager.show_classes()
+    
+    def do_show_experiments(self, _):
+        """Show all added classes."""
+        self.plugin_manager.show_experiments()
 
     def do_schedule(self, _):
         """Empty the list of classes."""
-        print("Void")
+        pass
 
     def do_cmdlist(self, _):
         """Show all possible commands."""

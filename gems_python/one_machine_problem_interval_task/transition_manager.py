@@ -406,6 +406,7 @@ class Experiments:
     # Automatically generated fields, not accept user input
     task_groups: List[TaskGroup] = field(default=None)
     step: int = field(default=0)
+    reference_time: int = field(default=0)
 
     def __post_init__(self):
         self.parent_dir_path = Path(self.parent_dir_path)
@@ -425,6 +426,15 @@ class Experiments:
                 self.task_groups.append(copy.deepcopy(experiment.current_task_group))
 
             self.set_task_group_ids()
+
+    def set_reference_time(self, reference_time: int):
+        # Confirm the reference time is int type
+        if not isinstance(reference_time, int):
+            print(f"reference_time must be int type: {reference_time}")
+        elif reference_time < 0:
+            print(f"reference_time must be non-negative: {reference_time}")
+        else:
+            self.reference_time = reference_time
 
     def add_experiment(self, experiment: Experiment) -> Union[None, ValueError]:
 
@@ -460,6 +470,19 @@ class Experiments:
                 new_experiments.append(copy.deepcopy(experiment))
         
         self.experiments = new_experiments
+
+        new_task_groups = list()
+        for task_group in self.task_groups:
+            if task_group.experiment_uuid != experiment_uuid:
+                new_task_groups.append(copy.deepcopy(task_group))
+
+        self.task_groups = new_task_groups
+
+        self.set_task_group_ids()
+        self.execute_scheduling()
+
+        self.proceed_to_next_step()
+        
 
     def list(self):
         """
@@ -520,7 +543,7 @@ class Experiments:
     def execute_scheduling(
             self,
             scheduling_method: str = 's',
-            reference_time: int = 0
+            reference_time: int = None
             ):
         # TODO-DONE: TaskGroupに対応
         """
@@ -528,7 +551,10 @@ class Experiments:
         :param scheduling_method: The method of scheduling. 's' for simulated annealing.
         :param reference_time: The reference time for the optimal time.
         """
-
+        if reference_time is not None:
+            self.reference_time = reference_time
+        
+        reference_time = self.reference_time
         self.set_task_group_ids()
         # Reschedule
         task_groups = self.task_groups.copy()
