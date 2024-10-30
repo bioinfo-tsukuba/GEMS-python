@@ -427,6 +427,9 @@ class Experiments:
 
             self.set_task_group_ids()
 
+    def save_dir(self):
+        return self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
+
     def set_reference_time(self, reference_time: int):
         # Confirm the reference time is int type
         if not isinstance(reference_time, int):
@@ -649,7 +652,7 @@ class Experiments:
 
     def proceed_to_next_step(self):
         self.step += 1
-        next_step_dir = self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
+        next_step_dir = self.save_dir()
         if not next_step_dir.exists():
             os.makedirs(next_step_dir, exist_ok=True)
             experiment_js_path = next_step_dir / "experiment.json"
@@ -668,7 +671,7 @@ class Experiments:
         Automatically load an experiment result.
         """
         # Check that results are available
-        result = self.parent_dir_path / f"step_{str(self.step).zfill(8)}/experiment_result.json"
+        result = self.save_dir() / "experiment_result.json"
         if not result.exists():
             print(f"Experiment result not found: {result}")
             return
