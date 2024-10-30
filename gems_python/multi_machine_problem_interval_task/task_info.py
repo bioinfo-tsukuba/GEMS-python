@@ -1,6 +1,8 @@
 from enum import Enum
 from dataclasses import field, asdict
 import uuid
+import matplotlib
+matplotlib.use('Agg')  # 非インタラクティブバックエンドに設定
 
 from matplotlib import pyplot as plt
 import matplotlib.pyplot as plt

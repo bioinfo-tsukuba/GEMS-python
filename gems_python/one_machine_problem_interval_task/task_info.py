@@ -15,6 +15,9 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.path as mpath
 
+import matplotlib
+matplotlib.use('Agg')  # 非インタラクティブバックエンドに設定
+
 
 @dataclass
 class Task:
@@ -41,6 +44,9 @@ class Task:
     completed: bool = False  # タスクが終了したかどうか
     scheduled_time: int = field(default=None)  # タスクの開始時刻
     task_id: int = field(default=None)
+
+    def is_completed(self) -> bool:
+        return self.completed
 
     @classmethod
     def find_task(cls, tasks: List['Task'], task_id: int) -> int:
@@ -472,6 +478,12 @@ class TaskGroup:
             for t_idx, task in enumerate(sorted_tasks):
                 if task.scheduled_time is None:
                     continue  # Skip tasks without a scheduled_time
+
+                if status == "IN_PROGRESS":
+                    if task.is_completed():
+                        color = status_colors.get('COMPLETED', color)
+                    else:
+                        color = status_colors.get('IN_PROGRESS', color)
                 
                 start = task.scheduled_time
                 duration = task.processing_time
@@ -519,5 +531,3 @@ class TaskGroup:
             plt.savefig(save_dir / f"{file_name}.png")
             plt.savefig(save_dir / f"{file_name}.pdf")
             plt.savefig(save_dir / f"{file_name}.svg")
-        else:
-            plt.show()
