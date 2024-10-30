@@ -173,8 +173,9 @@ class PluginCmd(cmd2.Cmd):
 
     def do_show(self, _):
         """Show all added classes."""
-        self.plugin_manager.show_classes()
-    
+        # self.plugin_manager.show_classes()
+        self.do_show_experiments(_)
+        
     def do_show_experiments(self, _):
         """Show all added classes."""
         self.plugin_manager.show_experiments()
