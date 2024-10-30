@@ -196,6 +196,18 @@ class PluginCmd(cmd2.Cmd):
         """Enable auto-load functionality."""
         self.enable_auto_load()
 
+    def do_reload(self, step: str):
+        """Reload experiments to a specific step."""
+        try:
+            step = int(step)
+            self.plugin_manager.experiments.reload(step)
+            print(f"Experiments reloaded to step {step}.")
+        except ValueError:
+            print("Invalid step. Please provide a valid integer.")
+        except Exception as err:
+            print(f"Error during reload: {err}")
+
+
     def do_exit(self, _):
         """Exit the plugin manager."""
         return True

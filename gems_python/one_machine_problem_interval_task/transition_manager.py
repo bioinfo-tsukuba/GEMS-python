@@ -652,17 +652,20 @@ class Experiments:
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
             scheduling_method = 's',
-            optimal_time_reference_time: int = 0
+            optimal_time_reference_time: int = None
             ) -> Tuple[TaskGroup, Task]:
         """
         TODO: explanation
         """
         # TODO-DONE: TaskGroupに対応
         # Update task_group
+
+        if optimal_time_reference_time is not None:
+            self.reference_time = optimal_time_reference_time
         self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type)
         self.set_task_group_ids()
         
-        self.execute_scheduling(scheduling_method, optimal_time_reference_time)
+        self.execute_scheduling(scheduling_method)
         print(f"{self.task_groups=}")
 
         earliest_task, eariest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
