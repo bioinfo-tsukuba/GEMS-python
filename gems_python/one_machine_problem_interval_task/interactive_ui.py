@@ -59,12 +59,18 @@ class PluginManager:
         module_name = file_path.stem
         if module_name not in self.plugins:
             print('{} loading.'.format(module_name))
-            self.plugins[module_name] = import_module(module_name)
-            print('{} loaded.'.format(module_name))
+            try:
+                self.plugins[module_name] = import_module(module_name)
+                print('{} loaded.'.format(module_name))
+            except Exception as e:
+                print(f"Error loading module {module_name}: {e}")
         else:
             print('{} reloading.'.format(module_name))
-            self.plugins[module_name] = reload(self.plugins[module_name])
-            print('{} reloaded.'.format(module_name))
+            try:
+                self.plugins[module_name] = reload(self.plugins[module_name])
+                print('{} reloaded.'.format(module_name))
+            except Exception as e:
+                print(f"Error reloading module {module_name}: {e}")
 
     def add_experiment_cmd(self, experiment_generator_function):
         parts = experiment_generator_function.split('.')
