@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gems-python"
-version = "0.1.0"
+version = "0.1.2"
 description = ""
 authors = ["CAB314 <85389241+CAB314@users.noreply.github.com>"]
 readme = "README.md"
