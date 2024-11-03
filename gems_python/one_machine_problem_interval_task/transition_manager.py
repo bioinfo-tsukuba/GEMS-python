@@ -723,8 +723,8 @@ class Experiments:
                 f.write(self.to_pickle())
 
             # Save the task groups
-            tasks_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
-            tasks_df.write_csv(next_step_dir / "tasks.csv")
+            schedule_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
+            schedule_df.write_csv(next_step_dir / "schedule.csv")
 
             self.generate_gantt_chart()
 
