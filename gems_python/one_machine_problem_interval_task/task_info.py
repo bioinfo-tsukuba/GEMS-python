@@ -1,6 +1,7 @@
 from enum import Enum
 from dataclasses import field, asdict
 from pathlib import Path
+import polars as pl
 import random
 
 from simanneal import Annealer
@@ -435,6 +436,29 @@ class TaskGroup:
                 earliest_task = task
                 group_id = group.task_group_id
         return earliest_task, group_id
+    
+    @classmethod
+    def create_non_completed_tasks_df(cls, task_groups: List['TaskGroup']) -> pl.DataFrame:
+        # Extract non-completed tasks from each TaskGroup
+        non_completed_tasks = []
+        for tg in task_groups:
+            for task in tg.tasks:
+                if not task.completed:
+                    non_completed_tasks.append({
+                        "experiment_name": tg.experiment_name,
+                        "experiment_uuid": tg.experiment_uuid,
+                        "task_group_id": tg.task_group_id,
+                        "task_id": task.task_id,
+                        "processing_time": task.processing_time,
+                        "experiment_operation": task.experiment_operation,
+                        "scheduled_time": task.scheduled_time,
+                    })
+
+        # Sort by scheduled_time
+        non_completed_tasks = sorted(non_completed_tasks, key=lambda x: x["scheduled_time"])
+        
+        # Create and return the DataFrame using polars
+        return pl.DataFrame(non_completed_tasks)
     
     @classmethod
     def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name:str = "gantt_chart"):

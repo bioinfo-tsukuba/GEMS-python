@@ -722,6 +722,10 @@ class Experiments:
             with open(experiment_pickle_path, "wb") as f:
                 f.write(self.to_pickle())
 
+            # Save the task groups
+            tasks_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
+            tasks_df.write_csv(next_step_dir / "tasks.csv")
+
             self.generate_gantt_chart()
 
             
