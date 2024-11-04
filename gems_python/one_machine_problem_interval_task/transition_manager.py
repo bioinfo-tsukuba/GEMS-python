@@ -706,30 +706,53 @@ class Experiments:
         """
         mode = "autoload"
 
-    def generate_gantt_chart(self):
+    def generate_gantt_chart(self, save_dir: Path = None):
+        if save_dir is None:
+            save_dir = self.save_dir()
         TaskGroup.generate_gantt_chart(self.task_groups, save_dir = self.save_dir())
+
+    def save_results(self, save_dir: Path = None):
+        if save_dir is None:
+            save_dir = self.save_dir()
+
+        os.makedirs(save_dir, exist_ok=True)
+        # Save the task groups
+        experiment_js_path = save_dir / "experiments.json"
+        with open(experiment_js_path, "w") as f:
+            f.write(self.to_json())
+        
+        experiment_pickle_path = save_dir / "experiments.pkl"
+        with open(experiment_pickle_path, "wb") as f:
+            f.write(self.to_pickle())
+
+        # Save the task groups
+        schedule_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
+        schedule_df.write_csv(save_dir / "schedule.csv")
+
+        self.generate_gantt_chart(save_dir=save_dir)
 
     def proceed_to_next_step(self):
         self.step += 1
         next_step_dir = self.save_dir()
+        current_step_dir = self.parent_dir_path / f"step_current"
         if not next_step_dir.exists():
             os.makedirs(next_step_dir, exist_ok=True)
-            experiment_js_path = next_step_dir / "experiments.json"
-            with open(experiment_js_path, "w") as f:
-                f.write(self.to_json())
-            
-            experiment_pickle_path = next_step_dir / "experiments.pkl"
-            with open(experiment_pickle_path, "wb") as f:
-                f.write(self.to_pickle())
-
-            # Save the task groups
-            schedule_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
-            schedule_df.write_csv(next_step_dir / "schedule.csv")
-
-            self.generate_gantt_chart()
-
-            
             print(f"Next step directory created: {next_step_dir}")
+
+        else:
+            print(f"Next step directory already exists: {next_step_dir}")
+            print(f"Overwriting the existing directory: {next_step_dir}")
+
+        # Save the results
+        self.save_results(save_dir=next_step_dir)
+
+        self.save_results(save_dir=current_step_dir)
+
+        # Save the path of the current step in the current directory
+        with open(current_step_dir / "current_step_dir_path.txt", "w") as f:
+            f.write(str(next_step_dir.absolute()))
+
+            
 
     def auto_load(self):
         """
