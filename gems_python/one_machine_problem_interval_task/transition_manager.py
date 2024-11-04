@@ -474,6 +474,9 @@ class Experiments:
     def save_dir(self):
         return self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
 
+    def current_save_dir(self):
+        return self.parent_dir_path / f"step_current"
+
     def set_reference_time(self, reference_time: int):
         # Confirm the reference time is int type
         if not isinstance(reference_time, int):
@@ -734,7 +737,7 @@ class Experiments:
     def proceed_to_next_step(self):
         self.step += 1
         next_step_dir = self.save_dir()
-        current_step_dir = self.parent_dir_path / f"step_current"
+        current_step_dir = self.current_save_dir()
         if not next_step_dir.exists():
             os.makedirs(next_step_dir, exist_ok=True)
             print(f"Next step directory created: {next_step_dir}")
