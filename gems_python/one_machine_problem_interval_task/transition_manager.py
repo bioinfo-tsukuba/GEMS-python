@@ -447,6 +447,27 @@ class Experiments:
         old_step = self.step
         self.step = step
 
+        experiments_js_path = self.save_dir() / "experiments.json"
+        experiments_pkl_path = self.save_dir() / "experiments.pkl"
+        try:
+            json_str = ""
+            with open(experiments_js_path, "r") as f:
+                json_str = f.read()
+            experiments = Experiments.from_json(json_str)
+            self.__dict__.update(experiments.__dict__)
+        except Exception as err:
+            print(f"Error loading experiments from json: {err}")
+            try:
+                with open(experiments_pkl_path, "rb") as f:
+                    experiments = Experiments.from_pickle(experiments_pkl_path)
+                    self.__dict__.update(experiments.__dict__)
+            except Exception as err:
+                print(f"Error loading experiments from pickle: {err}")
+                self.step = old_step
+                raise RuntimeError(f"Error loading experiments: {err}")
+            
+        print(f"{experiments=}")
+
         self.proceed_to_next_step()
 
     def save_dir(self):
