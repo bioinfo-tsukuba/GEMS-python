@@ -268,7 +268,6 @@ def main():
             else:
                 step = int(step)
             experiments.reload(step)
-            print(f"ステップ {experiments.step} まで実験をリロードしました。")
         except ValueError:
             print("無効なステップ番号です。リロードをスキップします。")
         except Exception as err:
