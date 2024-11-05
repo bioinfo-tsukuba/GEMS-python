@@ -1,3 +1,4 @@
+from datetime import datetime
 import importlib
 import textwrap
 import time
@@ -726,6 +727,10 @@ class Experiments:
         experiment_pickle_path = save_dir / "experiments.pkl"
         with open(experiment_pickle_path, "wb") as f:
             f.write(self.to_pickle())
+
+        date_and_time = datetime.now().astimezone().isoformat()
+        with open(save_dir / "date_and_time.txt", "w") as f:
+            f.write(date_and_time)
 
         # Save the task groups
         schedule_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
