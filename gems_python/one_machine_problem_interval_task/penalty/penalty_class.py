@@ -127,6 +127,7 @@ class CyclicalRestPenalty(PenaltyType):
     Example:
     CyclicalRestPenalty(cycle_start_time=0, cycle_duration=60, rest_time_ranges=[(15, 30)])
     This example defines a 60-minute cycle starting from 0 minute, with a rest period from 15 to 30 minutes.
+    In other words, the machine is not available from 15 to 30 minutes after the start of each cycle.
     """
     cycle_start_time: int
     cycle_duration: int
@@ -144,6 +145,24 @@ class CyclicalRestPenalty(PenaltyType):
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
         return 0
+    
+    def adjust_time_candidate_to_rest_range(self, time_candidate: int) -> int:
+        # Calculate the difference from the cycle start time
+        diff = time_candidate - self.cycle_start_time
+        if diff < 0:
+            return time_candidate
+        else:
+            # Find the remainder in the cycle
+            diff %= self.cycle_duration
+
+            # Check if the diff is within any rest period and adjust if necessary
+            for start, end in self.rest_time_ranges:
+                if start <= diff <= end:
+                    # Adjust time_candidate to the end of the rest period
+                    time_candidate += (end - diff - 1)
+                    break
+
+            return time_candidate
 
 
 @dataclass
@@ -172,3 +191,22 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
         return abs(scheduled_time - optimal_time) * self.penalty_coefficient
+    
+        
+    def adjust_time_candidate_to_rest_range(self, time_candidate: int) -> int:
+        # Calculate the difference from the cycle start time
+        diff = time_candidate - self.cycle_start_time
+        if diff < 0:
+            return time_candidate
+        else:
+            # Find the remainder in the cycle
+            diff %= self.cycle_duration
+
+            # Check if the diff is within any rest period and adjust if necessary
+            for start, end in self.rest_time_ranges:
+                if start <= diff <= end:
+                    # Adjust time_candidate to the end of the rest period
+                    time_candidate += (end - diff - 1)
+                    break
+
+            return time_candidate

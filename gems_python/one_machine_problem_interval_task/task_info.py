@@ -304,7 +304,7 @@ class TaskGroup:
                 #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
                 time_candidate = max(reference_time, group.optimal_start_time + diff)
                 if isinstance(group.penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
-                    pass
+                    time_candidate = group.penalty_type.adjust_time_candidate_to_rest_range(time_candidate)
                 group.schedule_tasks(time_candidate)
                 if cls.eval_machine_penalty(task_groups, scheduled_groups) == 0:
                     break
@@ -345,6 +345,8 @@ class TaskGroup:
                     scheduled_time += random.randint(-int(temp), int(temp))
                     scheduled_time = max(reference_time, scheduled_time)
                     #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
+                    if isinstance(self.state[a].penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
+                        scheduled_time = self.state[a].penalty_type.adjust_time_candidate_to_rest_range(scheduled_time)
                     self.state[a].schedule_tasks(scheduled_time)
 
             def energy(self):
