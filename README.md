@@ -7,6 +7,7 @@ This guide outlines the necessary steps to define and run a cell culture experim
 
 ## Prerequisites
 - poetry
+- python >= 3.10
 
 ## setup
 ```shell
