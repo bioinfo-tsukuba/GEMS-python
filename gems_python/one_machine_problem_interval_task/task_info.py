@@ -471,7 +471,7 @@ class TaskGroup:
         task_groups : List[TaskGroup]
             The list of TaskGroup instances to visualize.
         """
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig, ax = plt.subplots(figsize=(18, 6))
         
         # Define colors based on TaskGroupStatus
         status_colors = {

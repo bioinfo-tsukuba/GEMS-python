@@ -712,7 +712,7 @@ class Experiments:
     def generate_gantt_chart(self, save_dir: Path = None):
         if save_dir is None:
             save_dir = self.save_dir()
-        TaskGroup.generate_gantt_chart(self.task_groups, save_dir = self.save_dir())
+        TaskGroup.generate_gantt_chart(self.task_groups, save_dir = save_dir)
 
     def save_results(self, save_dir: Path = None):
         if save_dir is None:
