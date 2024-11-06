@@ -9,7 +9,7 @@ from gems_python.common.class_dumper import auto_dataclass as dataclass
 import json
 from typing import List, Tuple, Type
 
-from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty, PenaltyType
+from gems_python.one_machine_problem_interval_task.penalty.penalty_class import CyclicalRestPenalty, CyclicalRestPenaltyWithLinear, NonePenalty, PenaltyType
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -301,8 +301,10 @@ class TaskGroup:
                 # そうでない場合、スケジュール基準時刻を最適な開始時刻に設定
                 # スケジュール基準時刻より遅い範囲で、タスク群のスケジュールを試行（0, 1, -1, 2, -2, ...）
                 # ちょっと遅いが、とりあえず実装はこれでいいかも
-                # TODO: 実装を軽くするために、無駄なdiffの計算をなくす。すなわち、group.optimal_start_time + diff >= self.schedule_reference_timeを満たすdiffだけを試す
+                #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
                 time_candidate = max(reference_time, group.optimal_start_time + diff)
+                if isinstance(group.penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
+                    pass
                 group.schedule_tasks(time_candidate)
                 if cls.eval_machine_penalty(task_groups, scheduled_groups) == 0:
                     break
@@ -338,11 +340,12 @@ class TaskGroup:
                 temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
                 # PASS: ここで、タスクのスケジュールを変更する
                 for i in range(min(temp, len(self.state))):
-                  a = random.randint(0, len(self.state) - 1)
-                  scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
-                  scheduled_time += random.randint(-int(temp), int(temp))
-                  scheduled_time = max(reference_time, scheduled_time)
-                  self.state[a].schedule_tasks(scheduled_time)
+                    a = random.randint(0, len(self.state) - 1)
+                    scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
+                    scheduled_time += random.randint(-int(temp), int(temp))
+                    scheduled_time = max(reference_time, scheduled_time)
+                    #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
+                    self.state[a].schedule_tasks(scheduled_time)
 
             def energy(self):
                 """Calculates the total penalty for the current state."""
