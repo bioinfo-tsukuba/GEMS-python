@@ -315,6 +315,8 @@ class TaskGroup:
                 else:
                     diff *= -1
 
+        print(f"{cls.eval_schedule_penalty(task_groups)=}", f"{cls.eval_machine_penalty(task_groups)=}")
+
         return task_groups
     
 
@@ -376,6 +378,8 @@ class TaskGroup:
 
         # Run the annealing process
         state, _ = annealer.anneal()
+        
+        print(f"{cls.eval_schedule_penalty(task_groups)=}", f"{cls.eval_machine_penalty(task_groups)=}")
 
         return state
 
