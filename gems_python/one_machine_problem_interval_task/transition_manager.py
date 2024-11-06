@@ -621,6 +621,8 @@ class Experiments:
 
         match scheduling_method:
             case 's':
+                scheduled_task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time)
+            case 'f':
                 scheduled_task_groups = TaskGroup.schedule_task_groups(task_groups, reference_time)
             case _:
                 AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
