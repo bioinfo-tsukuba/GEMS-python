@@ -777,17 +777,18 @@ class Experiments:
             # Load the result
             with open(result, "r") as f:
                 result_data = json.load(f)
-            task_group_id = result_data["task_group_id"]
-            task_id = result_data["task_id"]
-            new_result_of_experiment = pl.read_csv(result_data["result_path"])
-            optimal_time_reference_time = result_data["optimal_time_reference_time"]
+            
             # Following fields are optional, add default values if not found
             task_response = result_data.get("task_response", "success")
             update_type = result_data.get("update_type", "a")
             scheduling_method = result_data.get("scheduling_method", "s")
-
+            
             match task_response:
                 case "success":
+                    task_group_id = result_data["task_group_id"]
+                    task_id = result_data["task_id"]
+                    new_result_of_experiment = pl.read_csv(result_data["result_path"])
+                    optimal_time_reference_time = result_data["optimal_time_reference_time"]
                     self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
                         task_group_id=task_group_id,
                         task_id=task_id,
