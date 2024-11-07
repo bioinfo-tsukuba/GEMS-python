@@ -766,6 +766,36 @@ class Experiments:
     def auto_load(self):
         """
         Automatically load an experiment result.
+        Expected files:
+        - experiment_result.json
+        - result.csv
+
+        Example of
+        experiment_result.json:
+        if task is successful:
+        {
+            "task_response": "success",
+            "task_group_id": 0,
+            "task_id": 0,
+            "optimal_time_reference_time": 0,
+            "result_path": "result.csv"
+        }
+
+        minimum required fields:
+        {
+            "task_group_id": 0,
+            "task_id": 0,
+            "optimal_time_reference_time": 0,
+            "result_path": "result.csv"
+        }
+
+        else:
+        {
+            "task_response": "error",
+            "task_group_id": 0,
+            "task_id": 0,
+            "optimal_time_reference_time": 0
+        }
         """
         # Check that results are available
         result = self.save_dir() / "experiment_result.json"
@@ -782,13 +812,13 @@ class Experiments:
             task_response = result_data.get("task_response", "success")
             update_type = result_data.get("update_type", "a")
             scheduling_method = result_data.get("scheduling_method", "s")
+            task_group_id = result_data["task_group_id"]
+            task_id = result_data["task_id"]
+            optimal_time_reference_time = result_data["optimal_time_reference_time"]
             
             match task_response:
                 case "success":
-                    task_group_id = result_data["task_group_id"]
-                    task_id = result_data["task_id"]
                     new_result_of_experiment = pl.read_csv(result_data["result_path"])
-                    optimal_time_reference_time = result_data["optimal_time_reference_time"]
                     self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
                         task_group_id=task_group_id,
                         task_id=task_id,
