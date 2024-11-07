@@ -780,20 +780,30 @@ class Experiments:
             task_group_id = result_data["task_group_id"]
             task_id = result_data["task_id"]
             new_result_of_experiment = pl.read_csv(result_data["result_path"])
-            update_type = result_data["update_type"]
-            scheduling_method = result_data["scheduling_method"]
             optimal_time_reference_time = result_data["optimal_time_reference_time"]
+            # Following fields are optional, add default values if not found
+            task_response = result_data.get("task_response", "success")
+            update_type = result_data.get("update_type", "a")
+            scheduling_method = result_data.get("scheduling_method", "s")
 
-            # Update the shared variable history
-            self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
-                task_group_id=task_group_id,
-                task_id=task_id,
-                new_result_of_experiment=new_result_of_experiment,
-                update_type=update_type,
-                scheduling_method=scheduling_method,
-                optimal_time_reference_time=optimal_time_reference_time
-            )
-            
+            match task_response:
+                case "success":
+                    self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+                        task_group_id=task_group_id,
+                        task_id=task_id,
+                        new_result_of_experiment=new_result_of_experiment,
+                        update_type=update_type,
+                        scheduling_method=scheduling_method,
+                        optimal_time_reference_time=optimal_time_reference_time
+                    )
+
+                case "error":
+                    print(f"Task failed: {task_group_id}, {task_id}")
+                    # Reschedule
+                    self.execute_scheduling(scheduling_method, reference_time=optimal_time_reference_time)
+                case _:
+                    print(f"Unexpected input: task_response {task_response}")
+                    self.execute_scheduling(scheduling_method, reference_time=optimal_time_reference_time)
             self.proceed_to_next_step()
             
     
