@@ -31,7 +31,7 @@ def recursive_to_dict(obj):
             value = getattr(obj, key)
             if pl.DataFrame == type(value):
                 result[key] = value.serialize(format="json")
-                print(f"{result[key]=}")
+                # print(f"{result[key]=}")
 
             elif hasattr(value, 'to_dict'):  # to_dictメソッドがあればそれを使う
                 result[key] = value.to_dict()
