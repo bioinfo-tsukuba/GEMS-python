@@ -1,5 +1,6 @@
 from datetime import datetime
 import importlib
+import warnings
 import textwrap
 import time
 from matplotlib import pyplot as plt
@@ -450,26 +451,55 @@ class Experiments:
 
         experiments_js_path = self.save_dir() / "experiments.json"
         experiments_pkl_path = self.save_dir() / "experiments.pkl"
+        experiments_json = None
+        experiments_pkl = None
         try:
             json_str = ""
             with open(experiments_js_path, "r") as f:
                 json_str = f.read()
-            experiments = Experiments.from_json(json_str)
-            self.__dict__.update(experiments.__dict__)
+            experiments_json = Experiments.from_json(json_str)
         except Exception as err:
             print(f"Error loading experiments from json: {err}")
-            try:
-                with open(experiments_pkl_path, "rb") as f:
-                    experiments = Experiments.from_pickle(experiments_pkl_path)
-                    self.__dict__.update(experiments.__dict__)
-            except Exception as err:
-                print(f"Error loading experiments from pickle: {err}")
-                self.step = old_step
-                raise RuntimeError(f"Error loading experiments: {err}")
-            
-        print(f"{experiments=}")
+        try:
+            with open(experiments_pkl_path, "rb") as f:
+                experiments_pkl = Experiments.from_pickle(experiments_pkl_path)
+        except Exception as err:
+            print(f"Error loading experiments from pickle: {err}")
+            self.step = old_step
 
-        self.proceed_to_next_step()
+        if experiments_json is None and experiments_pkl is None:
+            raise RuntimeError(f"Error loading experiments: {err}")
+        elif experiments_json is None:
+            experiments = experiments_pkl
+            print(f"Experiments loaded from pickle: {experiments_pkl_path} because json file could not be loaded.")
+        elif experiments_pkl is None:
+            experiments = experiments_json
+            print(f"Experiments loaded from json: {experiments_js_path} because pickle file could not be loaded.")
+        else:
+            if experiments_json.to_json() != experiments_pkl.to_json():
+                # Warn that the loaded experiments are different using warnings
+                warnings.warn("The loaded experiments from json and pickle are different. The experiments from json will be used.")
+                while True:
+                    ok = input("Do you want to use the experiments from json or pickle, or cancel the reload? (j/p/c): ").strip().lower()
+                    if ok == 'j':
+                        experiments = experiments_json
+                        print(f"Experiments loaded from json: {experiments_js_path}")
+                        break
+                    elif ok == 'p':
+                        experiments = experiments_pkl
+                        print(f"Experiments loaded from pickle: {experiments_pkl_path}")
+                        break
+                    elif ok == 'c':
+                        self.step = old_step
+                        print("Reload canceled.")
+                        raise RuntimeError("Reload canceled.")
+                    else:
+                        print("Invalid input. Please enter 'j', 'p', or 'c'.")
+            else:
+                experiments = experiments_json
+                print(f"Experiments loaded from json: {experiments_js_path}.\n Both json and pickle files are the same!")
+            
+        return experiments
 
     def save_dir(self):
         return self.parent_dir_path / f"step_{str(self.step).zfill(8)}"

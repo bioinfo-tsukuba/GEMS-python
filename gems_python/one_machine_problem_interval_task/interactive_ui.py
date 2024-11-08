@@ -219,7 +219,7 @@ class PluginCmd(cmd2.Cmd):
         """Reload experiments to a specific step."""
         try:
             step = int(step)
-            self.plugin_manager.experiments.reload(step)
+            self.plugin_manager.experiments = self.plugin_manager.experiments.reload(step)
             print(f"Experiments reloaded to step {step}.")
         except ValueError:
             print("Invalid step. Please provide a valid integer.")
@@ -267,7 +267,8 @@ def main():
                 step = None
             else:
                 step = int(step)
-            experiments.reload(step)
+            experiments = experiments.reload(step)
+            experiments.proceed_to_next_step()
         except ValueError:
             print("無効なステップ番号です。リロードをスキップします。")
         except Exception as err:
