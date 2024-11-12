@@ -174,6 +174,35 @@ class PluginManager:
         else:
             print("No experiments to show.")
 
+    
+    def mode_delete_experiment(self):
+        """
+        'delete_experiment' モードで実行されるメソッド。
+        'mode_delete_experiment.txt' ファイルからコマンドを読み取り、指定された実験を削除します。
+        コマンドは実験のUUIDである必要があります。
+        'mode_delete_experiment.txt' は読み取り後に自動的に削除されます。
+        """
+        # 引数が指定されていない場合はファイルから読み取る
+        command_file = self.mode_path / "mode_delete_experiment.txt"
+        try:
+            with open(command_file, "r") as file:
+                experiment_uuid = file.read().strip()
+                print(f"Delete experiment UUID: {experiment_uuid}")
+            # ファイルを読み取ったら削除
+            os.remove(command_file)
+            if experiment_uuid:
+                try:
+                    self.experiments.delete_experiment_with_experiment_uuid(experiment_uuid)
+                    print(f"Experiment with UUID {experiment_uuid} has been deleted.")
+                except Exception as e:
+                    print(f"Error deleting experiment with UUID {experiment_uuid}: {e}")
+            else:
+                print("No UUID provided for deletion.")
+
+        except FileNotFoundError:
+            print(f"Delete experiment command file {command_file} not found.")
+            return
+
 
     def mode_proceed(self):
         """
