@@ -1,3 +1,4 @@
+from datetime import datetime
 import time
 import os
 from pathlib import Path
@@ -24,6 +25,9 @@ class PluginManager:
         self.plugin_timestamps = {}  # ファイルの最終更新時刻を保持
         sys.path.append(str(self.module_path))
         self.mode = "stop"
+
+        # Automatically load all plugins when the PluginManager is created
+        self.load_all_plugins()
 
     def load_plugin(self, file_path):
         """特定のファイルパスからプラグインをロードまたはリロードします。"""
@@ -68,6 +72,7 @@ class PluginManager:
         print("PluginManagerが起動しました。モードを待機しています...")
         while True:
             mode = self.get_mode()
+            print(f"{datetime.now().astimezone()} - Current mode: {mode}")
 
             if mode == "help":
                 self.display_help()
@@ -84,6 +89,7 @@ class PluginManager:
                     print(f"Unknown mode: {mode}")
 
             # インターバルの間隔を待機
+            print(f"{interval}秒ごとにモードを確認します...")
             time.sleep(interval)
 
     def display_help(self):
@@ -97,6 +103,11 @@ class PluginManager:
                 # メソッドのdocstringから説明を取得
                 description = inspect.getdoc(method) or "説明なし"
                 print(f" - {mode_name}: {description}")
+
+    def proceed_to_next_step(self):
+        """次のステップに進みます。"""
+        print("Proceeding to next step...")
+        self.experiments.proceed_to_next_step()  
 
     # モードごとの処理を以下に定義します
 
@@ -113,6 +124,62 @@ class PluginManager:
         """
         print("Loading all plugins...")
         self.load_all_plugins()
+
+    
+    def mode_add_experiment(self):
+        """
+        'mode_add_experiment.txt' ファイルからコマンドを読み取り、実験を追加します。
+        コマンドは 'module.class' 形式で記述されている必要があります。
+        'mode_add_experiment.txt' は読み取り後に自動的に削除されます。
+        例: 'my_module.MyExperimentClass'
+        """
+        command_file = self.mode_path / "mode_add_experiment.txt"
+        try:
+            with open(command_file, "r") as file:
+                experiment_generator_function = file.read().strip()
+                print(f"Add experiment command: {experiment_generator_function}")
+            # ファイルを読み取ったら削除
+            os.remove(command_file)
+        except FileNotFoundError:
+            print(f"Add experiment command file {command_file} not found.")
+            return
+
+        parts = experiment_generator_function.split('.')
+        if len(parts) == 2:
+            module_name, experiment_generator_function = parts
+            if module_name in self.plugins:
+                module = self.plugins[module_name]
+                cls = getattr(module, experiment_generator_function, None)
+                if cls:
+                    try:
+                        experiment_instance = cls()
+                        self.experiments.add_experiment(experiment_instance)
+                        print(f"Class {experiment_generator_function} from module {module_name} added as an experiment.")
+                    except Exception as e:
+                        print(f"Error instantiating class {experiment_generator_function}: {e}")
+                else:
+                    print(f"Class {experiment_generator_function} not found in module {module_name}.")
+            else:
+                print(f"Module {module_name} is not loaded. Please load the module before adding experiments.")
+        else:
+            print("Invalid command format in mode_add_experiment.txt. Use 'module.class'.")
+
+    def mode_show_experiments(self):
+        """
+        実験クラスのリストを表示します。
+        """
+        # 実験クラスの表示メソッド
+        if hasattr(self.experiments, 'list'):
+            self.experiments.list()
+        else:
+            print("No experiments to show.")
+
+
+    def mode_proceed(self):
+        """
+        次のステップに進みます。
+        """
+        self.proceed_to_next_step()
 
     def mode_stop(self):
         """
