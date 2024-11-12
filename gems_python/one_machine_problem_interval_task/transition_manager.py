@@ -453,6 +453,7 @@ class Experiments:
         experiments_pkl_path = self.save_dir() / "experiments.pkl"
         experiments_json = None
         experiments_pkl = None
+        # TODO: Jsonを読み込んでも、Penaltyの再構成がうまく行っていない
         try:
             json_str = ""
             with open(experiments_js_path, "r") as f:
@@ -496,8 +497,8 @@ class Experiments:
                     else:
                         print("Invalid input. Please enter 'j', 'p', or 'c'.")
             else:
-                experiments = experiments_json
-                print(f"Experiments loaded from json: {experiments_js_path}.\n Both json and pickle files are the same!")
+                experiments = experiments_pkl
+                print(f"Experiments loaded from pickle because the json and pickle files are the same: {experiments_pkl_path}")
             
         return experiments
 
