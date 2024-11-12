@@ -571,7 +571,7 @@ class Experiments:
         List the experiment names and uuids.
         """
         for experiment in self.experiments:
-            print(f"Experiment name: {experiment.experiment_name}, Experiment uuid: {experiment.experiment_uuid}")
+            print(f"Experiment name: {experiment.experiment_name}, Experiment uuid: {experiment.experiment_uuid}\n{experiment}")
 
     # @deprecated("Use to_json instead")
     def save_all(self, save_dir: Path = None, under_parent_dir: bool = True):
