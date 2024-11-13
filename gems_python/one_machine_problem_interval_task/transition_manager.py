@@ -228,7 +228,7 @@ class Experiment:
         else:
             plt.show()
     
-    def show_experiment_directed_graph(self, hide_nodes: List[str] = ["ExpireState"]):
+    def show_experiment_directed_graph(self, save_path: Path = "./experiment.png", hide_nodes: List[str] = ["ExpireState"]):
         """
         Show the directed graph of the experiment.
         """
@@ -265,7 +265,11 @@ class Experiment:
             plt.text(0.05, 0.95, f'Nodes {hide_nodes} are hidden', transform=plt.gca().transAxes, 
                     fontsize=8, verticalalignment='top', bbox=dict(facecolor='red', alpha=0.5))
 
-        plt.show()
+        plt.axis('off')  # 軸を非表示に
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
 
     
     def save_all(self, save_dir: Path = None):
@@ -770,7 +774,15 @@ class Experiments:
         schedule_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
         schedule_df.write_csv(save_dir / "schedule.csv")
 
+        # Save the gantt chart
         self.generate_gantt_chart(save_dir=save_dir)
+
+        # Save each experiment
+        experiments_dir = save_dir / "experiments"
+        os.makedirs(experiments_dir, exist_ok=True)
+        for experiment in self.experiments:
+            experiment.show_experiment_directed_graph(save_path=experiments_dir / f"{experiment.experiment_name}_{experiment.experiment_uuid}.png")
+            experiment.shared_variable_history.write_csv(experiments_dir / f"{experiment.experiment_name}_{experiment.experiment_uuid}_shared_variable_history.csv")
 
     def proceed_to_next_step(self):
         self.step += 1
@@ -786,7 +798,6 @@ class Experiments:
 
         # Save the results
         self.save_results(save_dir=next_step_dir)
-
         self.save_results(save_dir=current_step_dir)
 
         # Save the path of the current step in the current directory
