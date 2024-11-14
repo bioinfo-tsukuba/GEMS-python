@@ -304,10 +304,10 @@ class TaskGroup:
                 # ちょっと遅いが、とりあえず実装はこれでいいかも
                 #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
                 time_candidate = max(reference_time, group.optimal_start_time + diff)
-                print(f"{datetime.fromtimestamp(time_candidate*60).astimezone()}")
+                # print(f"{datetime.fromtimestamp(time_candidate*60).astimezone()}")
                 if isinstance(group.penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
                     time_candidate = group.penalty_type.adjust_time_candidate_to_rest_range(time_candidate)
-                print(f" -> {datetime.fromtimestamp(60*(time_candidate)).astimezone()}")
+                # print(f" -> {datetime.fromtimestamp(60*(time_candidate)).astimezone()}")
                 group.schedule_tasks(time_candidate)
                 if cls.eval_machine_penalty(task_groups, scheduled_groups) == 0:
                     break
