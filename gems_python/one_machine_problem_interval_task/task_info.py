@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from dataclasses import field, asdict
 from pathlib import Path
@@ -123,10 +124,10 @@ class TaskGroup:
 
         # 最適な開始時刻に合わせて、タスクの開始時刻を設定
         current_time = start_time
-        for task in self.tasks:
-            current_time += task.interval
-            task.scheduled_time = current_time
-            current_time += task.processing_time
+        for i in range(len(self.tasks)):
+            current_time += self.tasks[i].interval
+            self.tasks[i].scheduled_time = current_time
+            current_time += self.tasks[i].processing_time
 
     def _allocate_task_id(self):
         """
@@ -303,8 +304,10 @@ class TaskGroup:
                 # ちょっと遅いが、とりあえず実装はこれでいいかも
                 #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
                 time_candidate = max(reference_time, group.optimal_start_time + diff)
+                print(f"{datetime.fromtimestamp(time_candidate*60).astimezone()}")
                 if isinstance(group.penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
                     time_candidate = group.penalty_type.adjust_time_candidate_to_rest_range(time_candidate)
+                print(f" -> {datetime.fromtimestamp(60*(time_candidate)).astimezone()}")
                 group.schedule_tasks(time_candidate)
                 if cls.eval_machine_penalty(task_groups, scheduled_groups) == 0:
                     break
@@ -323,6 +326,7 @@ class TaskGroup:
 
     @classmethod
     def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], reference_time: int) -> List['TaskGroup']:
+        print(f"{reference_time=}")
         """
 
         """
@@ -347,8 +351,10 @@ class TaskGroup:
                     scheduled_time += random.randint(-int(temp), int(temp))
                     scheduled_time = max(reference_time, scheduled_time)
                     #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
+                    # print(f"SIMBEF{datetime.fromtimestamp(60*(scheduled_time)).astimezone()}")
                     if isinstance(self.state[a].penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
                         scheduled_time = self.state[a].penalty_type.adjust_time_candidate_to_rest_range(scheduled_time)
+                    # print(f"SIMAFT -> {datetime.fromtimestamp(60*(scheduled_time)).astimezone()}")
                     self.state[a].schedule_tasks(scheduled_time)
 
             def energy(self):
@@ -357,7 +363,7 @@ class TaskGroup:
                 total_penalty = 0
                 for task_group in self.state:
                     total_penalty += task_group.penalty_type.calculate_penalty(
-                        task_group.tasks[0].scheduled_time, task_group.optimal_start_time
+                        task_group.tasks[0].scheduled_time - task_group.tasks[0].interval, task_group.optimal_start_time
                     )
 
                 # Overlapping penalty
@@ -368,6 +374,7 @@ class TaskGroup:
         # Initialize the tasks with some initial schedule (e.g., their optimal timings)
         time = 0
         task_groups = cls.schedule_task_groups(task_groups=task_groups, reference_time=reference_time)
+        task_groups_copy = task_groups.copy()
 
         # Create an instance of the annealer with the initial state
         annealer = TaskAnnealer(task_groups)
@@ -379,7 +386,9 @@ class TaskGroup:
         # Run the annealing process
         state, _ = annealer.anneal()
         
-        print(f"{cls.eval_schedule_penalty(task_groups)=}", f"{cls.eval_machine_penalty(task_groups)=}")
+        print(f"{cls.eval_schedule_penalty(state)=}", f"{cls.eval_machine_penalty(state)=}")
+        print(f"{cls.eval_schedule_penalty(task_groups_copy)=}", f"{cls.eval_machine_penalty(task_groups_copy)=}")
+
 
         return state
 
