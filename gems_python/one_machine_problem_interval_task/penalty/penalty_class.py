@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 import json
+import os
 from typing import List, Tuple
 
 from .config import PENALTY_MAXIMUM
@@ -137,39 +138,60 @@ class CyclicalRestPenalty(PenaltyType):
     def calculate_penalty(self, scheduled_time: int, optimal_time: int) -> int:
         schedule_dash = scheduled_time - self.cycle_start_time
         if schedule_dash < 0:
-            # Scheduled time is before the cycle start
+            # Scheduled time is before the cycle start            
             return 0
         schedule_dash_dash = schedule_dash % self.cycle_duration
-        schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+        schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
         for start, end in self.rest_time_ranges:
             if start <= schedule_dash_dash <= end:
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
+
         return 0
     
     def adjust_time_candidate_to_rest_range(self, time_candidate: int) -> int:
+        """
+        Adjusts the given time candidate so that it does not fall within any of the specified rest time ranges.
+
+        The function ensures that the adjusted time, when mapped to the cycle duration, does not intersect with any rest periods.
+        If the time falls within a rest range, it is adjusted forward until it falls outside of all rest ranges.
+
+        Args:
+            time_candidate (int): The initial time candidate to be adjusted.
+
+        Returns:
+            int: The adjusted time candidate that does not fall within any rest range.
+        """
         # Calculate the difference from the cycle start time
         schedule_dash = time_candidate - self.cycle_start_time
+
+        # If the time candidate is before the cycle start time, return it as-is
         if schedule_dash < 0:
             return time_candidate
         else:
-            # Find the remainder in the cycle
+            # Map the time to the cycle duration
             schedule_dash_dash = schedule_dash % self.cycle_duration
-            schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+            # Compute the base cycle offset
+            schedule_dash_base = (schedule_dash // self.cycle_duration) * self.cycle_duration
 
-            # Check if the diff is within any rest period and adjust if necessary
+            # Flag to check if the time has been adjusted outside all rest ranges
             ok = False
-            while ok == False:
-                ok = True
+
+            # Loop until the adjusted time is outside all rest ranges
+            while not ok:
+                ok = True  # Assume the time is valid initially
                 for start, end in self.rest_time_ranges:
-                    if start <= schedule_dash_dash % self.cycle_duration <= end:
-                        dif = (end - schedule_dash_dash % self.cycle_duration) 
-                        # Adjust time_candidate to the end of the rest period
-                        schedule_dash_dash = schedule_dash_dash + dif + 1
-                        ok = False
+                    # Check if the current time falls within a rest range
+                    if start <= (schedule_dash_dash % self.cycle_duration) <= end:
+                        # Calculate the adjustment needed to move out of the rest range
+                        dif = (end - schedule_dash_dash % self.cycle_duration)
+                        schedule_dash_dash += dif + 1  # Adjust the time and continue
+                        ok = False  # Set to False to check again
+                    else:
+                        pass
 
-            return (schedule_dash_base + schedule_dash_dash + self.cycle_start_time)
-
+            # Return the adjusted time, mapped back to the original time context
+            return schedule_dash_base + schedule_dash_dash + self.cycle_start_time
 
 @dataclass
 class CyclicalRestPenaltyWithLinear(PenaltyType):
@@ -190,39 +212,57 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
         schedule_dash = scheduled_time - self.cycle_start_time
         if schedule_dash < 0:
             # Scheduled time is before the cycle start
+            os.sleep(10)
             return 0
         schedule_dash_dash = schedule_dash % self.cycle_duration
-        schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+        schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
         for start, end in self.rest_time_ranges:
             if start <= schedule_dash_dash <= end:
+                os.sleep(10)
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
         return abs(scheduled_time - optimal_time) * self.penalty_coefficient
     
-        
     def adjust_time_candidate_to_rest_range(self, time_candidate: int) -> int:
+        """
+        Adjusts the given time candidate so that it does not fall within any of the specified rest time ranges.
+
+        The function ensures that the adjusted time, when mapped to the cycle duration, does not intersect with any rest periods.
+        If the time falls within a rest range, it is adjusted forward until it falls outside of all rest ranges.
+
+        Args:
+            time_candidate (int): The initial time candidate to be adjusted.
+
+        Returns:
+            int: The adjusted time candidate that does not fall within any rest range.
+        """
         # Calculate the difference from the cycle start time
         schedule_dash = time_candidate - self.cycle_start_time
+
+        # If the time candidate is before the cycle start time, return it as-is
         if schedule_dash < 0:
             return time_candidate
         else:
-            # Find the remainder in the cycle
+            # Map the time to the cycle duration
             schedule_dash_dash = schedule_dash % self.cycle_duration
-            schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+            # Compute the base cycle offset
+            schedule_dash_base = (schedule_dash // self.cycle_duration) * self.cycle_duration
 
-            # Check if the diff is within any rest period and adjust if necessary
+            # Flag to check if the time has been adjusted outside all rest ranges
             ok = False
-            while ok == False:
-                ok = True
+
+            # Loop until the adjusted time is outside all rest ranges
+            while not ok:
+                ok = True  # Assume the time is valid initially
                 for start, end in self.rest_time_ranges:
-                    if start <= schedule_dash_dash % self.cycle_duration <= end:
-                        dif = (end - schedule_dash_dash % self.cycle_duration) 
-                        # Adjust time_candidate to the end of the rest period
-                        schedule_dash_dash = schedule_dash_dash + dif + 1
-                        ok = False
-            
-            # print(f"ADBEF{time_candidate} -> {schedule_dash_base + schedule_dash_dash + self.cycle_start_time}")
-            # datetime min
-            # print(f"ADAFT{datetime.fromtimestamp(time_candidate*60).astimezone()} -> {datetime.fromtimestamp(60*(schedule_dash_base + schedule_dash_dash + self.cycle_start_time)).astimezone()}")
-            
-            return (schedule_dash_base + schedule_dash_dash + self.cycle_start_time)
+                    # Check if the current time falls within a rest range
+                    if start <= (schedule_dash_dash % self.cycle_duration) <= end:
+                        # Calculate the adjustment needed to move out of the rest range
+                        dif = (end - schedule_dash_dash % self.cycle_duration)
+                        schedule_dash_dash += dif + 1  # Adjust the time and continue
+                        ok = False  # Set to False to check again
+                    else:
+                        pass
+
+            # Return the adjusted time, mapped back to the original time context
+            return schedule_dash_base + schedule_dash_dash + self.cycle_start_time

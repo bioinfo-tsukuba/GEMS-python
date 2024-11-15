@@ -1,15 +1,241 @@
+from datetime import datetime
 import unittest
 import polars as pl
 import inspect
 import tempfile
 import os
 
-from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty
+from gems_python.one_machine_problem_interval_task.penalty.penalty_class import CyclicalRestPenaltyWithLinear, NonePenalty, CyclicalRestPenalty
 from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGroup
 from gems_python.one_machine_problem_interval_task.transition_manager import Experiments
 from tests.experiment_samples_one_interval_task.minimum import gen_minimum_experiments
 
 separate_line_length = 50
+UNIX_TIME_2024_11_14_00_00_00_JP_MIN = 1731510000//60
+
+class TestSchedule(unittest.TestCase):
+    def setUp(self):
+        pass
+    
+    def test_cyclical_rest_penalty(self):
+        task_group_1 = TaskGroup(
+            optimal_start_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN,
+            penalty_type=CyclicalRestPenaltyWithLinear(
+                cycle_start_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN,
+                cycle_duration=60 * 24,
+                rest_time_ranges=[(0, 10*60), (16*60, 24*60)],
+                penalty_coefficient=10,
+            ),
+            tasks=[
+                Task(processing_time=2, interval=0, experiment_operation="test_cyclical_rest_penaltyA"),
+                Task(processing_time=3, interval=15, experiment_operation="test_cyclical_rest_penaltyB"),
+                Task(processing_time=4, interval=20, experiment_operation="test_cyclical_rest_penaltyC")
+            ]
+        )
+
+        task_groups = [task_group_1]
+        schedule = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN)
+        print(f"{schedule=}")
+
+        scheduled_time = schedule[0].tasks[0].scheduled_time
+        schedule_JP = datetime.fromtimestamp(scheduled_time*60).astimezone()
+        print(f"{schedule_JP=}")
+
+
+        self.assertLess(datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 10*60)*60).astimezone(), datetime.fromtimestamp(scheduled_time*60).astimezone())
+        self.assertLess(datetime.fromtimestamp(scheduled_time*60).astimezone(), datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 16*60)*60).astimezone())
+
+    
+    def test_cyclical_rest_penalty2(self):
+        task_group_1 = TaskGroup(
+            optimal_start_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN - 10*60*24,
+            penalty_type=CyclicalRestPenaltyWithLinear(
+                cycle_start_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN,
+                cycle_duration=60 * 24,
+                rest_time_ranges=[(0, 10*60), (16*60, 24*60)],
+                penalty_coefficient=10,
+            ),
+            tasks=[
+                Task(processing_time=2, interval=0, experiment_operation="test_cyclical_rest_penalty2A"),
+                Task(processing_time=3, interval=15, experiment_operation="test_cyclical_rest_penalty2B"),
+                Task(processing_time=4, interval=20, experiment_operation="test_cyclical_rest_penalty2C")
+            ]
+        )
+
+        task_groups = [task_group_1]
+        schedule = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN)
+        print(f"{schedule=}")
+
+        scheduled_time = schedule[0].tasks[0].scheduled_time
+        schedule_JP = datetime.fromtimestamp(scheduled_time*60).astimezone()
+        print(f"{schedule_JP=}")
+
+
+        self.assertLess(datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 10*60)*60).astimezone(), datetime.fromtimestamp(scheduled_time*60).astimezone())
+        self.assertLess(datetime.fromtimestamp(scheduled_time*60).astimezone(), datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 16*60)*60).astimezone())
+
+
+    
+    def test_cyclical_rest_penalty2_(self):
+        task_group_1 = TaskGroup(
+            optimal_start_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN - 10*60*24,
+            penalty_type=CyclicalRestPenaltyWithLinear(
+                cycle_start_time=24*60-9*60,
+                cycle_duration=60 * 24,
+                rest_time_ranges=[(0, 10*60), (16*60, 24*60)],
+                penalty_coefficient=10,
+            ),
+            tasks=[
+                Task(processing_time=2, interval=0, experiment_operation="test_cyclical_rest_penalty2_A"),
+                Task(processing_time=3, interval=15, experiment_operation="test_cyclical_rest_penalty2_B"),
+                Task(processing_time=4, interval=20, experiment_operation="test_cyclical_rest_penalty2_C")
+            ]
+        )
+
+        task_groups = [task_group_1]
+        schedule = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN)
+        print(f"{schedule=}")
+
+        scheduled_time = schedule[0].tasks[0].scheduled_time
+        schedule_JP = datetime.fromtimestamp(scheduled_time*60).astimezone()
+        print(f"{schedule_JP=}")
+
+
+        self.assertLess(datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 10*60)*60).astimezone(), datetime.fromtimestamp(scheduled_time*60).astimezone())
+        self.assertLess(datetime.fromtimestamp(scheduled_time*60).astimezone(), datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 16*60)*60).astimezone())
+
+
+    def test_cyclical_rest_penalty3(self):
+        HEK_PROCESSING_TIME = {
+            "HEKExpire": 0,
+            "HEKPassage": 60, # < 60 min
+            "HEKGetImage": 10, # < 10 min
+            "HEKSampling": 40, # < 40 min
+            "HEKWaiting": 0
+        }
+        optimal_time = UNIX_TIME_2024_11_14_00_00_00_JP_MIN
+        optimal_start_time = int(optimal_time-HEK_PROCESSING_TIME["HEKSampling"]-HEK_PROCESSING_TIME["HEKGetImage"])
+        task_group1 = TaskGroup(
+            optimal_start_time=optimal_start_time,
+            penalty_type=CyclicalRestPenaltyWithLinear(
+                cycle_start_time = UNIX_TIME_2024_11_14_00_00_00_JP_MIN,
+                cycle_duration=60 * 24,
+                rest_time_ranges=[(0, 10*60), (16*60, 24*60)],
+                penalty_coefficient = 1000
+            ),
+            # cycle_start_time: int
+            # cycle_duration: int
+            # rest_time_ranges: List[Tuple[int, int]]
+            # penalty_coefficient: int
+            tasks=[
+                Task(
+                    processing_time=HEK_PROCESSING_TIME["HEKGetImage"],
+                    interval=1*60,
+                    experiment_operation="test_cyclical_rest_penalty3HEKGetImage"
+                ),
+                Task(
+                    processing_time=HEK_PROCESSING_TIME["HEKSampling"],
+                    experiment_operation="HEKSampling"
+                ),
+                Task(
+                    processing_time=0,
+                    interval=24*60*7,
+                    experiment_operation="HEKWaiting"
+                ),
+                Task(
+                    processing_time=0,
+                    interval=24*60*7,
+                    experiment_operation="HEKWaiting"
+                ),
+                Task(
+                    processing_time=0,
+                    interval=24*60*7,
+                    experiment_operation="HEKWaiting"
+                )
+            ]
+        )
+
+        task_groups = [task_group1]
+        schedule = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN)
+        print(f"{schedule=}")
+
+        scheduled_time = schedule[0].tasks[0].scheduled_time
+        schedule_JP = datetime.fromtimestamp(scheduled_time*60).astimezone()
+        print(f"{schedule_JP=}")
+
+        self.assertLess(datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 10*60)*60).astimezone(), datetime.fromtimestamp(scheduled_time*60).astimezone())
+        self.assertLess(datetime.fromtimestamp(scheduled_time*60).astimezone(), datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 16*60)*60).astimezone())
+
+        
+
+    def test_cyclical_rest_penalty4(self):
+        HEK_PROCESSING_TIME = {
+            "HEKExpire": 0,
+            "HEKPassage": 60, # < 60 min
+            "HEKGetImage": 10, # < 10 min
+            "HEKSampling": 40, # < 40 min
+            "HEKWaiting": 0
+        }
+        optimal_time = UNIX_TIME_2024_11_14_00_00_00_JP_MIN
+        optimal_start_time = int(optimal_time-HEK_PROCESSING_TIME["HEKSampling"]-HEK_PROCESSING_TIME["HEKGetImage"])
+        task_group1 = TaskGroup(
+            optimal_start_time=optimal_start_time,
+            penalty_type=CyclicalRestPenaltyWithLinear(
+                cycle_start_time = UNIX_TIME_2024_11_14_00_00_00_JP_MIN - 10*60*24,
+                cycle_duration=60 * 24,
+                rest_time_ranges=[(0, 10*60), (16*60, 24*60)],
+                penalty_coefficient = 1000
+            ),
+            # cycle_start_time: int
+            # cycle_duration: int
+            # rest_time_ranges: List[Tuple[int, int]]
+            # penalty_coefficient: int
+            tasks=[
+                Task(
+                    processing_time=HEK_PROCESSING_TIME["HEKGetImage"],
+                    interval=1*60,
+                    experiment_operation="test_cyclical_rest_penalty4HEKGetImage"
+                ),
+                Task(
+                    processing_time=HEK_PROCESSING_TIME["HEKSampling"],
+                    experiment_operation="HEKSampling"
+                ),
+                Task(
+                    processing_time=0,
+                    interval=24*60*7,
+                    experiment_operation="HEKWaiting"
+                ),
+                Task(
+                    processing_time=0,
+                    interval=24*60*7,
+                    experiment_operation="HEKWaiting"
+                ),
+                Task(
+                    processing_time=0,
+                    interval=24*60*7,
+                    experiment_operation="HEKWaiting"
+                )
+            ]
+        )
+
+        task_groups = [task_group1]
+        schedule = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time=UNIX_TIME_2024_11_14_00_00_00_JP_MIN)
+        print(f"{schedule=}")
+
+        scheduled_time = schedule[0].tasks[0].scheduled_time
+        schedule_JP = datetime.fromtimestamp(scheduled_time*60).astimezone()
+        print(f"{schedule_JP=}")
+
+
+        self.assertLess(datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 10*60)*60).astimezone(), datetime.fromtimestamp(scheduled_time*60).astimezone())
+        self.assertLess(datetime.fromtimestamp(scheduled_time*60).astimezone(), datetime.fromtimestamp((UNIX_TIME_2024_11_14_00_00_00_JP_MIN + 16*60)*60).astimezone())
+
+        
+
+
+
+
+
 
 class TestClass(unittest.TestCase):
     def setUp(self):
