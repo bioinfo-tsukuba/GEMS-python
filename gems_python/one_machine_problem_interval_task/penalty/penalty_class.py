@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 import json
+import os
 from typing import List, Tuple
 
 from .config import PENALTY_MAXIMUM
@@ -137,14 +138,15 @@ class CyclicalRestPenalty(PenaltyType):
     def calculate_penalty(self, scheduled_time: int, optimal_time: int) -> int:
         schedule_dash = scheduled_time - self.cycle_start_time
         if schedule_dash < 0:
-            # Scheduled time is before the cycle start
+            # Scheduled time is before the cycle start            
             return 0
         schedule_dash_dash = schedule_dash % self.cycle_duration
-        schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+        schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
         for start, end in self.rest_time_ranges:
             if start <= schedule_dash_dash <= end:
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
+
         return 0
     
     def adjust_time_candidate_to_rest_range(self, time_candidate: int) -> int:
@@ -155,7 +157,7 @@ class CyclicalRestPenalty(PenaltyType):
         else:
             # Find the remainder in the cycle
             schedule_dash_dash = schedule_dash % self.cycle_duration
-            schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+            schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
 
             # Check if the diff is within any rest period and adjust if necessary
             ok = False
@@ -167,7 +169,8 @@ class CyclicalRestPenalty(PenaltyType):
                         # Adjust time_candidate to the end of the rest period
                         schedule_dash_dash = schedule_dash_dash + dif + 1
                         ok = False
-
+                    else:
+                        pass
             return (schedule_dash_base + schedule_dash_dash + self.cycle_start_time)
 
 
@@ -190,11 +193,13 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
         schedule_dash = scheduled_time - self.cycle_start_time
         if schedule_dash < 0:
             # Scheduled time is before the cycle start
+            os.sleep(10)
             return 0
         schedule_dash_dash = schedule_dash % self.cycle_duration
-        schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+        schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
         for start, end in self.rest_time_ranges:
             if start <= schedule_dash_dash <= end:
+                os.sleep(10)
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
         return abs(scheduled_time - optimal_time) * self.penalty_coefficient
@@ -207,22 +212,35 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
             return time_candidate
         else:
             # Find the remainder in the cycle
+            print(f"self.cycle_start_time: {self.cycle_start_time}={datetime.fromtimestamp(self.cycle_start_time*60).astimezone()}")
+            print(f"time_candidate: {time_candidate}={datetime.fromtimestamp(time_candidate*60).astimezone()}")
+            print(f"schedule_dash delta: {datetime.fromtimestamp(time_candidate*60).astimezone() - datetime.fromtimestamp(self.cycle_start_time*60).astimezone()}")
             schedule_dash_dash = schedule_dash % self.cycle_duration
-            schedule_dash_base = (schedule_dash_dash //  self.cycle_duration) *  self.cycle_duration
+            schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
+
+            # print(f"schedule_dash: {schedule_dash}")
+            # print(f"schedule_dash_dash: {schedule_dash_dash}")
+            # print(f"schedule_dash_base: {schedule_dash_base}")
 
             # Check if the diff is within any rest period and adjust if necessary
             ok = False
             while ok == False:
                 ok = True
                 for start, end in self.rest_time_ranges:
-                    if start <= schedule_dash_dash % self.cycle_duration <= end:
+                    if start <= (schedule_dash_dash % self.cycle_duration) <= end:
+                        print(f"start: {start} <= {schedule_dash_dash % self.cycle_duration} <= {end}")
                         dif = (end - schedule_dash_dash % self.cycle_duration) 
                         # Adjust time_candidate to the end of the rest period
                         schedule_dash_dash = schedule_dash_dash + dif + 1
                         ok = False
+                    else:
+                        pass
+                    print(f"{end} < {schedule_dash_dash % self.cycle_duration} or {schedule_dash_dash % self.cycle_duration}  < {start}")
+
+                    # print(f"{schedule_dash_dash % self.cycle_duration} < {start} or \n{end} < {schedule_dash_dash % self.cycle_duration}")
             
             # print(f"ADBEF{time_candidate} -> {schedule_dash_base + schedule_dash_dash + self.cycle_start_time}")
             # datetime min
             # print(f"ADAFT{datetime.fromtimestamp(time_candidate*60).astimezone()} -> {datetime.fromtimestamp(60*(schedule_dash_base + schedule_dash_dash + self.cycle_start_time)).astimezone()}")
-            
+            print(f"{datetime.fromtimestamp(time_candidate*60).astimezone()} -> {datetime.fromtimestamp(60*(schedule_dash_base + schedule_dash_dash + self.cycle_start_time)).astimezone()}")
             return (schedule_dash_base + schedule_dash_dash + self.cycle_start_time)
