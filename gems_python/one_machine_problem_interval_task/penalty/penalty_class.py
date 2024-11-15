@@ -150,29 +150,48 @@ class CyclicalRestPenalty(PenaltyType):
         return 0
     
     def adjust_time_candidate_to_rest_range(self, time_candidate: int) -> int:
+        """
+        Adjusts the given time candidate so that it does not fall within any of the specified rest time ranges.
+
+        The function ensures that the adjusted time, when mapped to the cycle duration, does not intersect with any rest periods.
+        If the time falls within a rest range, it is adjusted forward until it falls outside of all rest ranges.
+
+        Args:
+            time_candidate (int): The initial time candidate to be adjusted.
+
+        Returns:
+            int: The adjusted time candidate that does not fall within any rest range.
+        """
         # Calculate the difference from the cycle start time
         schedule_dash = time_candidate - self.cycle_start_time
+
+        # If the time candidate is before the cycle start time, return it as-is
         if schedule_dash < 0:
             return time_candidate
         else:
-            # Find the remainder in the cycle
+            # Map the time to the cycle duration
             schedule_dash_dash = schedule_dash % self.cycle_duration
-            schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
+            # Compute the base cycle offset
+            schedule_dash_base = (schedule_dash // self.cycle_duration) * self.cycle_duration
 
-            # Check if the diff is within any rest period and adjust if necessary
+            # Flag to check if the time has been adjusted outside all rest ranges
             ok = False
-            while ok == False:
-                ok = True
+
+            # Loop until the adjusted time is outside all rest ranges
+            while not ok:
+                ok = True  # Assume the time is valid initially
                 for start, end in self.rest_time_ranges:
-                    if start <= schedule_dash_dash % self.cycle_duration <= end:
-                        dif = (end - schedule_dash_dash % self.cycle_duration) 
-                        # Adjust time_candidate to the end of the rest period
-                        schedule_dash_dash = schedule_dash_dash + dif + 1
-                        ok = False
+                    # Check if the current time falls within a rest range
+                    if start <= (schedule_dash_dash % self.cycle_duration) <= end:
+                        # Calculate the adjustment needed to move out of the rest range
+                        dif = (end - schedule_dash_dash % self.cycle_duration)
+                        schedule_dash_dash += dif + 1  # Adjust the time and continue
+                        ok = False  # Set to False to check again
                     else:
                         pass
-            return (schedule_dash_base + schedule_dash_dash + self.cycle_start_time)
 
+            # Return the adjusted time, mapped back to the original time context
+            return schedule_dash_base + schedule_dash_dash + self.cycle_start_time
 
 @dataclass
 class CyclicalRestPenaltyWithLinear(PenaltyType):
@@ -204,43 +223,46 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
         # Thank you for your hard work.
         return abs(scheduled_time - optimal_time) * self.penalty_coefficient
     
-        
     def adjust_time_candidate_to_rest_range(self, time_candidate: int) -> int:
+        """
+        Adjusts the given time candidate so that it does not fall within any of the specified rest time ranges.
+
+        The function ensures that the adjusted time, when mapped to the cycle duration, does not intersect with any rest periods.
+        If the time falls within a rest range, it is adjusted forward until it falls outside of all rest ranges.
+
+        Args:
+            time_candidate (int): The initial time candidate to be adjusted.
+
+        Returns:
+            int: The adjusted time candidate that does not fall within any rest range.
+        """
         # Calculate the difference from the cycle start time
         schedule_dash = time_candidate - self.cycle_start_time
+
+        # If the time candidate is before the cycle start time, return it as-is
         if schedule_dash < 0:
             return time_candidate
         else:
-            # Find the remainder in the cycle
-            print(f"self.cycle_start_time: {self.cycle_start_time}={datetime.fromtimestamp(self.cycle_start_time*60).astimezone()}")
-            print(f"time_candidate: {time_candidate}={datetime.fromtimestamp(time_candidate*60).astimezone()}")
-            print(f"schedule_dash delta: {datetime.fromtimestamp(time_candidate*60).astimezone() - datetime.fromtimestamp(self.cycle_start_time*60).astimezone()}")
+            # Map the time to the cycle duration
             schedule_dash_dash = schedule_dash % self.cycle_duration
-            schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
+            # Compute the base cycle offset
+            schedule_dash_base = (schedule_dash // self.cycle_duration) * self.cycle_duration
 
-            # print(f"schedule_dash: {schedule_dash}")
-            # print(f"schedule_dash_dash: {schedule_dash_dash}")
-            # print(f"schedule_dash_base: {schedule_dash_base}")
-
-            # Check if the diff is within any rest period and adjust if necessary
+            # Flag to check if the time has been adjusted outside all rest ranges
             ok = False
-            while ok == False:
-                ok = True
+
+            # Loop until the adjusted time is outside all rest ranges
+            while not ok:
+                ok = True  # Assume the time is valid initially
                 for start, end in self.rest_time_ranges:
+                    # Check if the current time falls within a rest range
                     if start <= (schedule_dash_dash % self.cycle_duration) <= end:
-                        print(f"start: {start} <= {schedule_dash_dash % self.cycle_duration} <= {end}")
-                        dif = (end - schedule_dash_dash % self.cycle_duration) 
-                        # Adjust time_candidate to the end of the rest period
-                        schedule_dash_dash = schedule_dash_dash + dif + 1
-                        ok = False
+                        # Calculate the adjustment needed to move out of the rest range
+                        dif = (end - schedule_dash_dash % self.cycle_duration)
+                        schedule_dash_dash += dif + 1  # Adjust the time and continue
+                        ok = False  # Set to False to check again
                     else:
                         pass
-                    print(f"{end} < {schedule_dash_dash % self.cycle_duration} or {schedule_dash_dash % self.cycle_duration}  < {start}")
 
-                    # print(f"{schedule_dash_dash % self.cycle_duration} < {start} or \n{end} < {schedule_dash_dash % self.cycle_duration}")
-            
-            # print(f"ADBEF{time_candidate} -> {schedule_dash_base + schedule_dash_dash + self.cycle_start_time}")
-            # datetime min
-            # print(f"ADAFT{datetime.fromtimestamp(time_candidate*60).astimezone()} -> {datetime.fromtimestamp(60*(schedule_dash_base + schedule_dash_dash + self.cycle_start_time)).astimezone()}")
-            print(f"{datetime.fromtimestamp(time_candidate*60).astimezone()} -> {datetime.fromtimestamp(60*(schedule_dash_base + schedule_dash_dash + self.cycle_start_time)).astimezone()}")
-            return (schedule_dash_base + schedule_dash_dash + self.cycle_start_time)
+            # Return the adjusted time, mapped back to the original time context
+            return schedule_dash_base + schedule_dash_dash + self.cycle_start_time
