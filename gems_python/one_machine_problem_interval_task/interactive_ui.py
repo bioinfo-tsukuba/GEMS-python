@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 from importlib import import_module, reload
 import inspect
+import json
 
 from gems_python.one_machine_problem_interval_task.transition_manager import Experiments
 
@@ -222,6 +223,43 @@ class PluginManager:
         """
         print("Exiting PluginManager...")
         sys.exit()
+
+    def mode_reschedule(self):
+        """
+        スケジュールを再設定します（自動的に次のステップに進みます）。
+        'mode_reschedule.json' ファイルからreference_timeを読み取り、スケジュールを再設定します。
+        (scheduling_methodはoptional, defaultは's')
+        e.g. 
+        ```reference_time.txt
+        {
+            "reference_time": 1731423600,
+            "scheduling_method": s
+        }
+        ```
+        """
+        print("Rescheduling...")
+        command_file = self.mode_path / "mode_reschedule.json"
+        try:
+            reference_time = None
+            scheduling_method = 's'
+            with open(command_file, "r") as file:
+                data = json.load(file)
+                reference_time = data.get("reference_time")
+                scheduling_method = data.get("scheduling_method", 's')
+                print(f"Reschedule reference time: {reference_time}, scheduling method: {scheduling_method}")
+            # ファイルを読み取ったら削除
+            os.remove(command_file)
+            if reference_time:
+                self.experiments.reschedule(reference_time, scheduling_method)
+                print(f"Experiments rescheduled with reference time {reference_time}.")
+            else:
+                print("No reference time provided for rescheduling.")
+        except FileNotFoundError:
+            print(f"Reschedule command file {command_file} not found.")
+            return
+        except Exception as e:
+            print(f"Error rescheduling experiments: {e}")
+        
 
     def mode_eof(self):
         """

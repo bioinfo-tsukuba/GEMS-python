@@ -636,6 +636,13 @@ class Experiments:
                 self.task_groups[task_group_index].task_group_id = new_id
                 used_ids.add(new_id)
 
+    def reschedule(self, scheduling_method: str = 's', reference_time: int = None):
+        """
+        Reschedule the tasks and proceed to the next step.
+        """
+        self.execute_scheduling(scheduling_method, reference_time)
+        self.proceed_to_next_step()
+
     def execute_scheduling(
             self,
             scheduling_method: str = 's',
