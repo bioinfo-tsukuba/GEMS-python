@@ -506,6 +506,30 @@ class Experiments:
                 print(f"Experiments loaded from pickle because the json and pickle files are the same: {experiments_pkl_path}")
             
         return experiments
+    
+    def copy_attributes(self, new_experiments: 'Experiments'):
+        # Keep     
+        old_experiments: List[Experiment] = self.experiments
+        old_parent_dir_path: Path = self.parent_dir_path
+        old_task_groups: List[TaskGroup] = self.task_groups
+        old_step: int = self.step
+        old_reference_time: int = self.reference_time
+        
+
+        try:
+            self.experiments = new_experiments.experiments
+            self.parent_dir_path = new_experiments.parent_dir_path
+            self.task_groups = new_experiments.task_groups
+            self.step = new_experiments.step
+            self.reference_time = new_experiments.reference_time
+            print(f"Attributes copied successfully.")
+        except Exception as err:
+            self.experiments = old_experiments
+            self.parent_dir_path = old_parent_dir_path
+            self.task_groups = old_task_groups
+            self.step = old_step
+            self.reference_time = old_reference_time
+            raise RuntimeError(f"Error copying attributes: {err}")
 
     def save_dir(self):
         return self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
@@ -640,6 +664,7 @@ class Experiments:
         """
         Reschedule the tasks and proceed to the next step.
         """
+        self.set_task_group_ids()
         self.execute_scheduling(scheduling_method, reference_time)
         self.proceed_to_next_step()
 

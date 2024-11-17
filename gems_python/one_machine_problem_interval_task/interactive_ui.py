@@ -284,12 +284,14 @@ def main():
                 step = None
             else:
                 step = int(step)
-            experiments = experiments.reload(step)
+            new_experiments = experiments.reload(step)
+            experiments.copy_attributes(new_experiments)
         except ValueError:
             print("無効なステップ番号です。リロードをスキップします。")
         except Exception as err:
             print(f"リロード中にエラーが発生しました: {err}. リロードをスキップします。")
 
+    
     plugin_manager = PluginManager(experiments)
     plugin_manager.run()
 
