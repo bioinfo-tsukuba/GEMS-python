@@ -790,8 +790,6 @@ class Experiments:
         next_step_dir = self.save_dir()
         current_step_dir = self.current_save_dir()
         # Once, delete current_step_dir
-        if current_step_dir.exists():
-            shutil.rmtree(current_step_dir)
         if not next_step_dir.exists():
             os.makedirs(next_step_dir, exist_ok=True)
             print(f"Next step directory created: {next_step_dir}")
