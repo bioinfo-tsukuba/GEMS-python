@@ -1,9 +1,7 @@
 from datetime import datetime
 import importlib
-import shutil
 import warnings
 import textwrap
-import time
 from matplotlib import pyplot as plt
 from matplotlib.patches import Arc, Arrow
 import networkx as nx
@@ -11,7 +9,7 @@ import ast
 import inspect
 from abc import ABC, abstractmethod
 import copy
-from dataclasses import asdict, field
+from dataclasses import field
 import json
 from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 import uuid
@@ -20,9 +18,8 @@ import polars as pl
 from pathlib import Path
 import os
 from gems_python.common.class_dumper import auto_dataclass as dataclass
-from typing_extensions import deprecated
 
-from gems_python.multi_machine_problem_interval_task.task_info import Machine, MachineList, Task, TaskGroup, TaskGroupStatus
+from gems_python.multi_machine_problem_interval_task.task_info import MachineList, Task, TaskGroup
 
 """MODULE: State
 """
