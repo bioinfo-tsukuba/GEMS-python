@@ -211,14 +211,11 @@ class CyclicalRestPenaltyWithLinear(PenaltyType):
     def calculate_penalty(self, scheduled_time: int, optimal_time: int) -> int:
         schedule_dash = scheduled_time - self.cycle_start_time
         if schedule_dash < 0:
-            # Scheduled time is before the cycle start
-            os.sleep(10)
             return 0
         schedule_dash_dash = schedule_dash % self.cycle_duration
         schedule_dash_base = (schedule_dash //  self.cycle_duration) *  self.cycle_duration
         for start, end in self.rest_time_ranges:
             if start <= schedule_dash_dash <= end:
-                os.sleep(10)
                 return PENALTY_MAXIMUM
         # Thank you for your hard work.
         return abs(scheduled_time - optimal_time) * self.penalty_coefficient
