@@ -200,9 +200,19 @@ class TaskGroup:
     def set_task_group_ids(cls, task_groups: List['TaskGroup']) -> List['TaskGroup']:
         """
         Set the task group IDs for a list of task groups.
-        """
-        for group_index in range(len(task_groups)):
-            task_groups[group_index].task_group_id = group_index
+        """    
+        used_ids = set()
+        new_id = 0
+        for task_group in task_groups:
+            if task_group.task_group_id is not None:
+                used_ids.add(task_group.task_group_id)
+
+        for task_group_index in range(len(task_groups)):
+            if task_groups[task_group_index].task_group_id is None:
+                while new_id in used_ids:
+                    new_id += 1
+                task_groups[task_group_index].task_group_id = new_id
+                used_ids.add(new_id)
 
         return task_groups
 
