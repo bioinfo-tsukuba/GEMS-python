@@ -619,22 +619,12 @@ class Experiments:
                 used_ids.add(new_id)
 
     def delete_task_with_task_id(self, task_id: int):
-        """
-        Assign the task group ids.
-        If the task group ids are not assigned, assign them.
-        """
-        used_ids = set()
-        new_id = 0
-        for task_group in self.task_groups:
-            if task_group.task_group_id is not None:
-                used_ids.add(task_group.task_group_id)
+        new_tasks = list()
+        for task in range(len(self.task_groups)):
+            if self.task_groups[task].task_group_id != task_id:
+                new_tasks.append(copy.deepcopy(self.task_groups[task]))
 
-        for task_group_index in range(len(self.task_groups)):
-            if self.task_groups[task_group_index].task_group_id is None:
-                while new_id in used_ids:
-                    new_id += 1
-                self.task_groups[task_group_index].task_group_id = new_id
-                used_ids.add(new_id)
+        self.task_groups = new_tasks
 
     def execute_scheduling(
             self,
