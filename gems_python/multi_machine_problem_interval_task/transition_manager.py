@@ -406,6 +406,12 @@ class Experiments:
     task_groups: List[TaskGroup] = field(default=None)
 
     def __post_init__(self):
+        if self.parent_dir_path.exists():
+            if not self.parent_dir_path.is_dir():
+                raise ValueError(f"parent_dir_path must be a directory: {self.parent_dir_path}")
+        else:
+            os.makedirs(self.parent_dir_path, exist_ok=True)
+            
         # TODO: TaskGroupに対応
         """
         Initialize the experiments.
