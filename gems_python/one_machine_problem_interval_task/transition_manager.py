@@ -531,7 +531,7 @@ class Experiments:
             
         self.experiments.append(experiment)
         self.task_groups.append(copy.deepcopy(experiment.current_task_group))
-        self.task_groups[-1].task_group_id = len(self.task_groups) - 1
+        self.set_task_group_ids()
         self.execute_scheduling()
         self.proceed_to_next_step()
 
