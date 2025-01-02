@@ -203,6 +203,94 @@ class PluginManager:
             print(f"Delete experiment command file {command_file} not found.")
             return
 
+    def mode_add_experiments(self):
+        """
+        'mode_add_experiments.txt' ファイルから複数のコマンドを読み取り、実験を追加します。
+        各コマンドは 'module.class' 形式で記述されています。
+        ファイルは読み取り後に自動的に削除されます。
+        例:
+        ```mode_add_experiments.txt
+            my_module.ExperimentClass1
+            other_module.ExperimentClass2
+        ```
+        """
+        command_file = self.mode_path / "mode_add_experiments.txt"
+        try:
+            with open(command_file, "r") as file:
+                lines = file.readlines()
+                # 空行やコメント行を除外
+                commands = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
+                if not commands:
+                    print(f"Add experiments command file {command_file} は空です。")
+                    return
+                print(f"追加する実験コマンド: {commands}")
+            # ファイルを読み取ったら削除
+            os.remove(command_file)
+        except FileNotFoundError:
+            print(f"追加実験コマンドファイル {command_file} が見つかりません。")
+            return
+        except Exception as e:
+            print(f"コマンドファイルの読み取り中にエラーが発生しました: {e}")
+            return
+
+        for command in commands:
+            parts = command.split('.')
+            if len(parts) == 2:
+                module_name, class_name = parts
+                if module_name in self.plugins:
+                    module = self.plugins[module_name]
+                    cls = getattr(module, class_name, None)
+                    if cls:
+                        try:
+                            experiment_instance = cls()
+                            self.experiments.add_experiment(experiment_instance)
+                            print(f"モジュール {module_name} のクラス {class_name} を実験として追加しました。")
+                        except Exception as e:
+                            print(f"クラス {class_name} のインスタンス化中にエラーが発生しました: {e}")
+                    else:
+                        print(f"モジュール {module_name} にクラス {class_name} が見つかりません。")
+                else:
+                    print(f"モジュール {module_name} がロードされていません。実験を追加する前にモジュールをロードしてください。")
+            else:
+                print(f"無効なコマンド形式: '{command}'。 'module.class' 形式を使用してください。")
+
+    def mode_delete_experiments(self):
+        """
+        'delete_experiments' モードで実行されるメソッド。
+        'mode_delete_experiments.txt' ファイルから複数のUUIDを読み取り、指定された実験を削除します。
+        各UUIDは改行区切りで記述されています。
+        ファイルは読み取り後に自動的に削除されます。
+        例:
+            uuid1
+            uuid2
+            uuid3
+        """
+        command_file = self.mode_path / "mode_delete_experiments.txt"
+        try:
+            with open(command_file, "r") as file:
+                lines = file.readlines()
+                # 空行やコメント行を除外
+                uuids = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
+                if not uuids:
+                    print(f"削除コマンドファイル {command_file} は空です。")
+                    return
+                print(f"削除する実験のUUID一覧: {uuids}")
+            # ファイルを読み取ったら削除
+            os.remove(command_file)
+        except FileNotFoundError:
+            print(f"削除コマンドファイル {command_file} が見つかりません。")
+            return
+        except Exception as e:
+            print(f"コマンドファイルの読み取り中にエラーが発生しました: {e}")
+            return
+
+        for uuid in uuids:
+            try:
+                self.experiments.delete_experiment_with_experiment_uuid(uuid)
+                print(f"UUID {uuid} の実験が削除されました。")
+            except Exception as e:
+                print(f"UUID {uuid} の実験を削除中にエラーが発生しました: {e}")
+
 
     def mode_proceed(self):
         """
