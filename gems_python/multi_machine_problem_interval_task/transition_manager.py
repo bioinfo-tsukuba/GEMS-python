@@ -576,6 +576,16 @@ class Experiments:
         for experiment in self.experiments:
             print(f"Experiment name: {experiment.experiment_name}, Experiment uuid: {experiment.experiment_uuid}\n{experiment}")
 
+    def show_machines(self):
+        """
+        Show the machine names and uuids.
+        """
+        print(f"{"*" * 10} Machines {"*" * 10}")        
+        for machine in self.machine_list.machines:
+            print(machine)
+        print(f"{"*" * 30}")
+
+
     # @deprecated("Use to_json instead")
     def save_all(self, save_dir: Path = None, under_parent_dir: bool = True):
         if under_parent_dir:
