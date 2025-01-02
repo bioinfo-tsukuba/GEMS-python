@@ -174,6 +174,16 @@ class PluginManager:
         else:
             print("No experiments to show.")
 
+    def mode_show_machines(self):
+        """
+        マシンのリストを表示します。
+        """
+        # マシンの表示メソッド
+        try: 
+            self.experiments.show_machines()
+        except Exception as e:
+            print(f"Error showing machines: {e}")
+
     
     def mode_delete_experiment(self):
         """
