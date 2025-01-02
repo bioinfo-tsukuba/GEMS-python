@@ -107,7 +107,7 @@ class PluginManager:
     def proceed_to_next_step(self):
         """次のステップに進みます。"""
         print("Proceeding to next step...")
-        self.experiments.proceed_to_next_step()  
+        self.experiments.proceed_to_next_step()
 
     # モードごとの処理を以下に定義します
 
@@ -125,7 +125,7 @@ class PluginManager:
         print("Loading all plugins...")
         self.load_all_plugins()
 
-    
+    # TODO: reschedule+proceed_nextstepを一回行うようにする
     def mode_add_experiment(self):
         """
         'mode_add_experiment.txt' ファイルからコマンドを読み取り、実験を追加します。
@@ -164,27 +164,6 @@ class PluginManager:
         else:
             print("Invalid command format in mode_add_experiment.txt. Use 'module.class'.")
 
-    def mode_show_experiments(self):
-        """
-        実験クラスのリストを表示します。
-        """
-        # 実験クラスの表示メソッド
-        if hasattr(self.experiments, 'list'):
-            self.experiments.list()
-        else:
-            print("No experiments to show.")
-
-    def mode_show_machines(self):
-        """
-        マシンのリストを表示します。
-        """
-        # マシンの表示メソッド
-        try: 
-            self.experiments.show_machines()
-        except Exception as e:
-            print(f"Error showing machines: {e}")
-
-    
     def mode_delete_experiment(self):
         """
         'delete_experiment' モードで実行されるメソッド。
@@ -212,7 +191,7 @@ class PluginManager:
         except FileNotFoundError:
             print(f"Delete experiment command file {command_file} not found.")
             return
-
+    # TODO: reschedule+proceed_nextstepを一回行うようにする
     def mode_add_experiments(self):
         """
         'mode_add_experiments.txt' ファイルから複数のコマンドを読み取り、実験を追加します。
@@ -263,7 +242,8 @@ class PluginManager:
                     print(f"モジュール {module_name} がロードされていません。実験を追加する前にモジュールをロードしてください。")
             else:
                 print(f"無効なコマンド形式: '{command}'。 'module.class' 形式を使用してください。")
-
+                
+    # TODO: reschedule+proceed_nextstepを一回行うようにする
     def mode_delete_experiments(self):
         """
         'delete_experiments' モードで実行されるメソッド。
@@ -301,6 +281,85 @@ class PluginManager:
             except Exception as e:
                 print(f"UUID {uuid} の実験を削除中にエラーが発生しました: {e}")
 
+    def mode_show_experiments(self):
+        """
+        実験クラスのリストを表示します。
+        """
+        # 実験クラスの表示メソッド
+        if hasattr(self.experiments, 'list'):
+            self.experiments.list()
+        else:
+            print("No experiments to show.")
+
+    def mode_add_machines(self):
+        """
+        'mode_add_machines.txt' ファイルからコマンドを読み取り、マシンを追加します。
+        コマンドは 'machine_type(,description) の形式で記述されている必要があります。
+        ```mode_add_machines.txt
+        0,Pippeting machine 1
+        0,Pippeting machine 2
+        1,Heating machine 1
+        ```
+        """
+        command_file = self.mode_path / "mode_add_machines.txt"
+        try:
+            with open(command_file, "r") as file:
+                lines = file.readlines()
+                # 空行やコメント行を除外
+                commands = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
+                if not commands:
+                    print(f"Add machines command file {command_file} は空です。")
+                    return
+                print(f"追加するマシンコマンド: {commands}")
+            # ファイルを読み取ったら削除
+            os.remove(command_file)
+
+            for command in commands:
+                parts = command.split(',')
+                if len(parts) == 2:
+                    machine_type, description = parts
+                    try:
+                        machine_type = int(machine_type)
+                        self.experiments.add_machine(machine_type, description)
+                        print(f"Machine {machine_type} added with description '{description}'.")
+                    except Exception as e:
+                        print(f"Error adding machine {machine_type}: {e}")
+                elif len(parts) == 1:
+                    machine_type = parts[0]
+                    try:
+                        machine_type = int(machine_type)
+                        self.experiments.add_machine(machine_type)
+                        print(f"Machine {machine_type} added.")
+                    except Exception as e:
+                        print(f"Error adding machine {machine_type}: {e}")
+                else:
+                    print(f"Invalid command format: '{command}'. Use 'machine_type,description'.")
+
+            
+
+        except FileNotFoundError:
+            print(f"Add machines command file {command_file} not found.")
+            return
+        except Exception as e:
+            print(f"Error reading command file: {e}")
+            return
+
+
+        
+
+
+    def mode_show_machines(self):
+        """
+        マシンのリストを表示します。
+        """
+        # マシンの表示メソッド
+        try: 
+            self.experiments.show_machines()
+        except Exception as e:
+            print(f"Error showing machines: {e}")
+
+    
+
 
     def mode_proceed(self):
         """
@@ -327,11 +386,12 @@ class PluginManager:
         """
         self.mode_exit()
 
+import tempfile
+
 def main():
     UNIX_2024_11_13_00_00_00_IN_JP = 1731423600
-    dir = input("Enter the directory path for experiments: ").strip()
-    if dir == '':
-        dir = "volatile"
+    
+    dir = tempfile.mkdtemp()
     experiments = Experiments(parent_dir_path=Path(dir), reference_time = UNIX_2024_11_13_00_00_00_IN_JP//60)
     plugin_manager = PluginManager(experiments)
 

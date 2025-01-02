@@ -4,7 +4,7 @@ from gems_python.multi_machine_problem_interval_task.transition_manager import E
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 import polars as pl
 from gems_python.multi_machine_problem_interval_task.task_info import TaskGroup, Task, Machine
-from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty
+from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import NonePenalty
 
 """
     processing_time: int  # タスクの処理時間
