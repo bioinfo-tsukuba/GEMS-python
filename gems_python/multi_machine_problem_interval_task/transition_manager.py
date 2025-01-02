@@ -788,19 +788,22 @@ class Experiments:
         - experiment_result.json
         - result.csv
 
+        Normally, 'Task' progresses like NOT_STARTED = "Not Started" -> "In Progress" -> "Completed"
+
         Example of
         experiment_result.json:
-        if task is successful:
+        if task is successfully started
         {
-            "task_response": "success",
+            "task_response": "In Progress",
             "task_group_id": 0,
             "task_id": 0,
-            "optimal_time_reference_time": 0,
-            "result_path": "result.csv"
+            "optimal_time_reference_time": 0, (Updated time, normally current time)
+            "result_path": "result.csv" (Path to the result file with header)
         }
 
-        minimum required fields:
+        else if task is successfully completed
         {
+            "task_response": "Completed",
             "task_group_id": 0,
             "task_id": 0,
             "optimal_time_reference_time": 0,
@@ -809,12 +812,14 @@ class Experiments:
 
         else:
         {
-            "task_response": "error",
+            "task_response": "Error",
             "task_group_id": 0,
             "task_id": 0,
             "optimal_time_reference_time": 0
         }
         """
+        # TODO: result typeの確認
+        # 
         # Check that results are available
         result = self.save_dir() / "experiment_result.json"
         if not result.exists():
@@ -824,10 +829,10 @@ class Experiments:
             print(f"Experiment result found: {result}")
             # Load the result
             with open(result, "r") as f:
-                result_data = json.load(f)
+                result_data:dict = json.load(f)
             
             # Following fields are optional, add default values if not found
-            task_response = result_data.get("task_response", "success")
+            task_response = result_data.get("task_response")
             update_type = result_data.get("update_type", "a")
             scheduling_method = result_data.get("scheduling_method", "s")
             task_group_id = result_data["task_group_id"]
