@@ -125,7 +125,7 @@ class PluginManager:
         print("Loading all plugins...")
         self.load_all_plugins()
 
-    # TODO: reschedule+proceed_nextstepを一回行うようにする
+    # TODO: reschedule+proceed_nextstepを一回行うようにする # 現状は毎回リスケジュールさせている
     def mode_add_experiment(self):
         """
         'mode_add_experiment.txt' ファイルからコマンドを読み取り、実験を追加します。
@@ -191,7 +191,7 @@ class PluginManager:
         except FileNotFoundError:
             print(f"Delete experiment command file {command_file} not found.")
             return
-    # TODO: reschedule+proceed_nextstepを一回行うようにする
+    # TODO: reschedule+proceed_nextstepを一回行うようにする # 現状は毎回リスケジュールさせている
     def mode_add_experiments(self):
         """
         'mode_add_experiments.txt' ファイルから複数のコマンドを読み取り、実験を追加します。
@@ -242,8 +242,8 @@ class PluginManager:
                     print(f"モジュール {module_name} がロードされていません。実験を追加する前にモジュールをロードしてください。")
             else:
                 print(f"無効なコマンド形式: '{command}'。 'module.class' 形式を使用してください。")
-                
-    # TODO: reschedule+proceed_nextstepを一回行うようにする
+
+    # TODO: reschedule+proceed_nextstepを一回行うようにする # 現状は毎回リスケジュールさせている
     def mode_delete_experiments(self):
         """
         'delete_experiments' モードで実行されるメソッド。
