@@ -590,6 +590,10 @@ class Experiments:
             self.machine_list.add_machine(Machine(machine_type=machine_type, description=description))
         else:
             raise ValueError("Machine or machine_type and machine_name must be specified.")
+        self.set_task_group_ids()
+        self.execute_scheduling()
+
+        self.proceed_to_next_step()
 
     def show_machines(self):
         """
