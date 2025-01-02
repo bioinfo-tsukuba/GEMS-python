@@ -19,7 +19,7 @@ from pathlib import Path
 import os
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 
-from gems_python.multi_machine_problem_interval_task.task_info import MachineList, Task, TaskGroup
+from gems_python.multi_machine_problem_interval_task.task_info import Machine, MachineList, Task, TaskGroup
 
 """MODULE: State
 """
@@ -575,6 +575,21 @@ class Experiments:
         """
         for experiment in self.experiments:
             print(f"Experiment name: {experiment.experiment_name}, Experiment uuid: {experiment.experiment_uuid}\n{experiment}")
+
+    def add_machine(self, machine: Union[Machine, None] = None,
+                    machine_type: Union[int, None] = None,
+                    description: Union[str, None] = "",
+                    ) -> Union[None, ValueError]:
+        """
+        Add a machine to the machine list.
+        """
+        if machine is not None:
+            self.machine_list.add_machine(machine)
+        elif machine_type is not None:
+            description += f" Added at {datetime.now().astimezone().isoformat()}"
+            self.machine_list.add_machine(Machine(machine_type=machine_type, description=description))
+        else:
+            raise ValueError("Machine or machine_type and machine_name must be specified.")
 
     def show_machines(self):
         """
