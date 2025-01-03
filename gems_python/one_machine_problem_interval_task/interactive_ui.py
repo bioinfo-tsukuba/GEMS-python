@@ -228,6 +228,17 @@ class PluginManager:
             os.remove(command_file)
         except FileNotFoundError:
             print(f"追加実験コマンドファイル {command_file} が見つかりません。")
+            # templateファイルを作成する
+            command_template_file = self.mode_path / "mode_add_experiments_template.txt"
+            command_template = f"# 'module.class' 形式で{command_file}に記述してください。\n"
+            command_template += "# 例:\n"
+            command_template += "# my_module.ExperimentClass1\n"
+            command_template += "# other_module.ExperimentClass2\n"
+            with open(command_template_file, "w") as file:
+                file.write(command_template)
+
+            print(f"Created template file {command_template_file}.")
+            print(command_template)
             return
         except Exception as e:
             print(f"コマンドファイルの読み取り中にエラーが発生しました: {e}")
@@ -285,7 +296,7 @@ class PluginManager:
             command_template += "# 例:\n"
             command_template += "# uuid1\n"
             command_template += "# uuid2\n"
-            with open(command_file, "w") as file:
+            with open(command_template_file, "w") as file:
                 file.write(command_template)
 
             print(f"Created template file {command_template_file}.")
