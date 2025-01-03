@@ -279,6 +279,17 @@ class PluginManager:
             os.remove(command_file)
         except FileNotFoundError:
             print(f"削除コマンドファイル {command_file} が見つかりません。")
+            # templateファイルを作成する
+            command_template_file = self.mode_path / "mode_delete_experiments_template.txt"
+            command_template = f"# UUIDを{command_file}に記述してください。\n"
+            command_template += "# 例:\n"
+            command_template += "# uuid1\n"
+            command_template += "# uuid2\n"
+            with open(command_file, "w") as file:
+                file.write(command_template)
+
+            print(f"Created template file {command_template_file}.")
+            print(command_template)
             return
         except Exception as e:
             print(f"コマンドファイルの読み取り中にエラーが発生しました: {e}")
