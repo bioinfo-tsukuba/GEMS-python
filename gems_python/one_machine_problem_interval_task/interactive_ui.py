@@ -229,7 +229,7 @@ class PluginManager:
         except FileNotFoundError:
             print(f"追加実験コマンドファイル {command_file} が見つかりません。")
             # templateファイルを作成する
-            command_template_file = self.mode_path / "mode_add_experiments_template.txt"
+            command_template_file = Path(str(command_file).replace(".txt", "_template.txt"))
             command_template = f"# 'module.class' 形式で{command_file}に記述してください。\n"
             command_template += "# 例:\n"
             command_template += "# my_module.ExperimentClass1\n"
@@ -291,7 +291,7 @@ class PluginManager:
         except FileNotFoundError:
             print(f"削除コマンドファイル {command_file} が見つかりません。")
             # templateファイルを作成する
-            command_template_file = self.mode_path / "mode_delete_experiments_template.txt"
+            command_template_file = Path(str(command_file).replace(".txt", "_template.txt"))
             command_template = f"# UUIDを{command_file}に記述してください。\n"
             command_template += "# 例:\n"
             command_template += "# uuid1\n"
