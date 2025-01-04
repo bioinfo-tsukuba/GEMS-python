@@ -595,6 +595,17 @@ class Experiments:
 
         self.proceed_to_next_step()
 
+    def delete_machine_with_machine_id(self, machine_id: str) -> Union[None, ValueError]:
+        """
+        Delete the machine with the input machine_id.
+        """
+        self.machine_list.delete_machine_with_machine_id(machine_id)
+        self.set_task_group_ids()
+        self.execute_scheduling()
+
+        self.proceed_to_next_step()
+
+
     def show_machines(self):
         """
         Show the machine names and uuids.
