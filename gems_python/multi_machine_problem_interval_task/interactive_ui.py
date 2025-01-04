@@ -9,7 +9,7 @@ import inspect
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
 
 class PluginManager:
-    def __init__(self, experiments, module_path: Path = "experimental_setting/", mode_path: Path = "mode"):
+    def __init__(self, experiments: Experiments, module_path: Path = "experimental_setting/", mode_path: Path = "mode"):
         self.plugins = {}
         self.experiments = experiments
         self.module_path = self.experiments.parent_dir_path / module_path
@@ -377,9 +377,56 @@ class PluginManager:
         except Exception as e:
             print(f"Error reading command file: {e}")
             return
-
-
         
+    def mode_delete_machines(self):
+        """
+        'mode_delete_machines.txt' ファイルからコマンドを読み取り、指定されたマシンを削除します。
+        コマンドは 'machine_id' の形式で記述されている必要があります。
+        ```mode_delete_machines.txt
+        0
+        1
+        2
+        ```
+        """
+        command_file = self.mode_path / "mode_delete_machines.txt"
+        try:
+            with open(command_file, "r") as file:
+                lines = file.readlines()
+                # 空行やコメント行を除外
+                machine_ids = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
+                if not machine_ids:
+                    print(f"Delete machines command file {command_file} は空です。")
+                    return
+                print(f"削除するマシンID一覧: {machine_ids}")
+            # ファイルを読み取ったら削除
+            os.remove(command_file)
+
+            for machine_id in machine_ids:
+                try:
+                    machine_id = int(machine_id)
+                    self.experiments.delete_machine(machine_id)
+                    print(f"Machine {machine_id} deleted.")
+                except Exception as e:
+                    print(f"Error deleting machine {machine_id}: {e}")
+
+        except FileNotFoundError:
+            print(f"Delete machines command file {command_file} not found.")
+            # templateファイルを作成する
+            command_template_file = Path(str(command_file).replace(".txt", "_template.txt"))
+            command_template = f"# 'machine_id' 形式で{command_file}に記述してください。\n"
+            command_template += "# 例:\n"
+            command_template += "# 0\n"
+            command_template += "# 1\n"
+            command_template += "# 2\n"
+            with open(command_template_file, "w") as file:
+                file.write(command_template)
+
+            print(f"Created template file {command_template_file}.")
+            print(command_template)
+            return
+        except Exception as e:
+            print(f"Error reading command file: {e}")
+            return
 
 
     def mode_show_machines(self):
