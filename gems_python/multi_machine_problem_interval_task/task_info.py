@@ -95,6 +95,23 @@ class MachineList:
             
         self.machines.append(new_machine)
 
+    def delete_machine_with_machine_id(self, machine_id: str):
+        """_summary_
+
+        Args:
+            machine_id (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        original_length = len(self.machines)
+        self.machines = [machine for machine in self.machines if machine.machine_id != machine_id]
+        if len(self.machines) == original_length:
+            print(f"machine_idが{machine_id}のmachineは存在しません")
+            return
+        
+        print(f"machine_idが{machine_id}のmachineを削除しました")
+
 
 
 
