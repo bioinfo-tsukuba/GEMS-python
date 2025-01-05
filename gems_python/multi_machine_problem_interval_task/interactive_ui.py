@@ -345,7 +345,7 @@ class PluginManager:
                     machine_type, description = parts
                     try:
                         machine_type = int(machine_type)
-                        self.experiments.add_machine(machine_type, description)
+                        self.experiments.add_machine(machine_type = machine_type, description = description)
                         print(f"Machine {machine_type} added with description '{description}'.")
                     except Exception as e:
                         print(f"Error adding machine {machine_type}: {e}")
@@ -353,7 +353,7 @@ class PluginManager:
                     machine_type = parts[0]
                     try:
                         machine_type = int(machine_type)
-                        self.experiments.add_machine(machine_type)
+                        self.experiments.add_machine(machine_type = machine_type)
                         print(f"Machine {machine_type} added.")
                     except Exception as e:
                         print(f"Error adding machine {machine_type}: {e}")

@@ -584,15 +584,19 @@ class Experiments:
         Add a machine to the machine list.
         """
         if machine is not None:
-            self.machine_list.add_machine(machine)
+            pass
         elif machine_type is not None:
             description += f" Added at {datetime.now().astimezone().isoformat()}"
-            self.machine_list.add_machine(Machine(machine_type=machine_type, description=description))
+            machine = Machine(machine_type=machine_type, description=description)
         else:
             raise ValueError("Machine or machine_type and machine_name must be specified.")
+        print(f"{machine=}")
+        self.machine_list.add_machine(machine)
+        print(f"{self.machine_list=}")
         self.set_task_group_ids()
+        print(f"{self.task_groups=}")
         self.execute_scheduling()
-
+        print(f"{self.task_groups=}")
         self.proceed_to_next_step()
 
     def delete_machine_with_machine_id(self, machine_id: str) -> Union[None, ValueError]:
@@ -669,13 +673,16 @@ class Experiments:
         task_groups = self.task_groups.copy()
         scheduled_task_groups = list()
 
-        match scheduling_method:
-            case 's':
-                scheduled_task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time)
-            case 'f':
-                scheduled_task_groups = TaskGroup.schedule_task_groups(task_groups, reference_time)
-            case _:
-                AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
+        try:
+            match scheduling_method:
+                case 's':
+                    scheduled_task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups = task_groups, machines = self.machine_list, reference_time = reference_time)
+                case 'f':
+                    scheduled_task_groups = TaskGroup.schedule_task_groups(task_groups = task_groups, machines = self.machine_list, reference_time = reference_time)
+                case _:
+                    AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
+        except Exception as err:
+            raise RuntimeError(f"Error scheduling the tasks with method {scheduling_method}: {err}")
 
         self.task_groups = scheduled_task_groups
 

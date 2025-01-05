@@ -69,7 +69,7 @@ class Task:
 @dataclass
 class Machine:
     machine_type: int
-    machine_id: str = field(default=str(uuid.uuid4()))
+    machine_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     description: str = field(default=str(None))
 
     def __post_init__(self):
@@ -426,7 +426,7 @@ class TaskGroup:
         return task_groups
 
     @classmethod
-    def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], reference_time: int) -> List['TaskGroup']:
+    def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], machines: MachineList, reference_time: int) -> List['TaskGroup']:
         # TODO: MachineListを使って、マシンのペナルティを計算する
         print(f"{reference_time=}")
         """
@@ -469,13 +469,13 @@ class TaskGroup:
                     )
 
                 # Overlapping penalty
-                overlap = cls.eval_machine_penalty(self.state)
+                overlap = cls.eval_machine_penalty(self.state, machines)
                 total_penalty += overlap * 100000
                 return total_penalty
 
         # Initialize the tasks with some initial schedule (e.g., their optimal timings)
         time = 0
-        task_groups = cls.schedule_task_groups(task_groups=task_groups, reference_time=reference_time)
+        task_groups = cls.schedule_task_groups(task_groups=task_groups, machines=machines, reference_time=reference_time)
         task_groups_copy = task_groups.copy()
 
         # Create an instance of the annealer with the initial state
@@ -488,8 +488,8 @@ class TaskGroup:
         # Run the annealing process
         state, _ = annealer.anneal()
         
-        print(f"{cls.eval_schedule_penalty(state)=}", f"{cls.eval_machine_penalty(state)=}")
-        print(f"{cls.eval_schedule_penalty(task_groups_copy)=}", f"{cls.eval_machine_penalty(task_groups_copy)=}")
+        print(f"{cls.eval_schedule_penalty(state)=}", f"{cls.eval_machine_penalty(state, machines)=}")
+        print(f"{cls.eval_schedule_penalty(task_groups_copy)=}", f"{cls.eval_machine_penalty(task_groups_copy, machines)=}")
 
 
         return state
