@@ -32,13 +32,33 @@ class TestInteractiveUI(unittest.TestCase):
 
 
 
+
+            machines = \
+r"""
+0,Pippeting machine 1
+0,Pippeting machine 2
+1,Heating machine 1
+2,Centrifuge machine 1
+
+"""
+            with open(f"{dir}/mode/mode_add_machines.txt", "w") as f:
+                f.write(machines)
+
+            mode = "add_machines"
+            with open(f"{dir}/mode/mode.txt", "w") as f:
+                f.write(mode)
+
+
             ex = "minimum.gen_standard_experiment"
             with open(f"{dir}/mode/mode_add_experiments.txt", "w") as f:
                 f.write(ex)
 
-            mode = "add_experiments"
-            with open(f"{dir}/mode/mode.txt", "w") as f:
-                f.write(mode)
+            with open(f"{dir}/mode/mode_add_experiments.txt", "w") as f:
+                f.write(ex)
+
+            # mode = "add_experiments"
+            # with open(f"{dir}/mode/mode.txt", "w") as f:
+            #     f.write(mode)
 
 
             # プラグインマネージャーの開始前にリロードの選択を促す
