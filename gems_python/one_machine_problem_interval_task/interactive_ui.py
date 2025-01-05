@@ -64,7 +64,10 @@ class PluginManager:
                 mode = file.read().strip().lower()
                 return mode
         except FileNotFoundError:
-            print(f"Mode file {mode_file} not found. 継続中のモード {self.mode} を使用します。")
+            # mode.txtを作成する
+            with open(mode_file, "w") as file:
+                file.write(self.mode)
+            print(f"Mode file {mode_file} not found. Created mode file with mode {self.mode}.")
             return self.mode
 
     def run(self, interval=5):
