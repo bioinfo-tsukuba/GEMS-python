@@ -26,6 +26,21 @@ class TestInteractiveUI(unittest.TestCase):
             experiments = Experiments(parent_dir_path=Path(dir), reference_time = current_unixtime)
             plugin_manager = PluginManager(experiments)
 
+            # Copy ./minimum.py to dir/experimental_setting/minimum.py
+            import shutil
+            shutil.copy(f"{current_dir}/minimum.py", f"{dir}/experimental_setting/minimum.py")
+
+
+
+            ex = "minimum.gen_standard_experiment"
+            with open(f"{dir}/mode/mode_add_experiments.txt", "w") as f:
+                f.write(ex)
+
+            mode = "add_experiments"
+            with open(f"{dir}/mode/mode.txt", "w") as f:
+                f.write(mode)
+
+
             # プラグインマネージャーの開始前にリロードの選択を促す
             reload_choice = 'y' #input("実験をリロードしますか？ (y/n): ").strip().lower()
             if reload_choice == 'y':
