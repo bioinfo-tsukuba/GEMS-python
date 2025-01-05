@@ -2,6 +2,8 @@ from enum import Enum
 from dataclasses import field, asdict
 import random
 import uuid
+from pathlib import Path
+import polars as pl
 import matplotlib
 
 from matplotlib import pyplot as plt
@@ -66,6 +68,13 @@ class Task:
                 return index
         return None
     
+    @property
+    def completed(self) -> bool:
+        """
+        Check if the task has been completed.
+        """
+        return self.task_status == TaskStatus.COMPLETED
+    
 @dataclass
 class Machine:
     machine_type: int
@@ -94,6 +103,7 @@ class MachineList:
                 return
             
         self.machines.append(new_machine)
+        print(f"Machine {new_machine} added.")
 
     def delete_machine_with_machine_id(self, machine_id: str):
         """_summary_
@@ -211,6 +221,125 @@ class TaskGroup:
             if earliest_task is None or task.scheduled_time < earliest_task.scheduled_time:
                 earliest_task = task
         return earliest_task
+    
+    @classmethod
+    def create_non_completed_tasks_df(cls, task_groups: List['TaskGroup']) -> pl.DataFrame:
+        # Extract non-completed tasks from each TaskGroup
+        non_completed_tasks = []
+        for tg in task_groups:
+            for task in tg.tasks:
+                if not task.completed:
+                    non_completed_tasks.append({
+                        "experiment_name": tg.experiment_name,
+                        "experiment_uuid": tg.experiment_uuid,
+                        "task_group_id": tg.task_group_id,
+                        "task_id": task.task_id,
+                        "processing_time": task.processing_time,
+                        "experiment_operation": task.experiment_operation,
+                        "scheduled_time": task.scheduled_time,
+                    })
+
+        # Sort by scheduled_time
+        non_completed_tasks = sorted(non_completed_tasks, key=lambda x: x["scheduled_time"])
+        
+        # Create and return the DataFrame using polars
+        return pl.DataFrame(non_completed_tasks)
+    
+    @classmethod
+    def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name:str = "gantt_chart"):
+
+        """
+        Generates a Gantt chart from a list of TaskGroups, reflecting their statuses.
+        
+        Parameters:
+        ----------
+        task_groups : List[TaskGroup]
+            The list of TaskGroup instances to visualize.
+        """
+        fig, ax = plt.subplots(figsize=(18, 6))
+        
+        # Define colors based on TaskGroupStatus
+        status_colors = {
+            'NOT_STARTED': 'gray',
+            'IN_PROGRESS': 'blue',
+            'COMPLETED': 'green',
+            'ERROR': 'red'
+        }
+        
+        # Y positions
+        yticks = []
+        yticklabels = []
+        
+        for idx, tg in enumerate(task_groups):
+            # Determine color based on status
+            status = tg.status.name
+            color = status_colors.get(status, 'black')  # Default to black if status not found
+            y = idx * 10  # Space out each TaskGroup vertically by 10 units
+            yticks.append(y + 5)
+            yticklabels.append(f"Group {tg.task_group_id} - {tg.experiment_name} ({tg.status.value})")
+            
+            # Plot optimal_start_time as a vertical dotted line
+            ax.axvline(x=tg.optimal_start_time, color='orange', linestyle='dotted', linewidth=1, label='Optimal Start Time' if idx == 0 else "")
+            
+            # Sort tasks based on scheduled_time
+            sorted_tasks = sorted(tg.tasks, key=lambda t: t.scheduled_time if t.scheduled_time is not None else 0)
+            
+            for t_idx, task in enumerate(sorted_tasks):
+                if task.scheduled_time is None:
+                    continue  # Skip tasks without a scheduled_time
+
+                if status == "IN_PROGRESS":
+                    if task.is_completed():
+                        color = status_colors.get('COMPLETED', color)
+                    else:
+                        color = status_colors.get('IN_PROGRESS', color)
+                
+                start = task.scheduled_time
+                duration = task.processing_time
+                ax.barh(y, duration, left=start, height=4, align='center', color=color, edgecolor='black')
+                ax.text(start + duration/2, y, f"Task {task.task_id}", va='center', ha='center', color='white', fontsize=8)
+                
+                # If not the first task, draw interval
+                if t_idx > 0:
+                    prev_task = sorted_tasks[t_idx - 1]
+                    prev_end = prev_task.scheduled_time + prev_task.processing_time
+                    interval = task.interval
+                    interval_start = prev_end
+                    interval_end = task.scheduled_time
+                    # Draw a curved dotted line representing the interval
+                    control_offset = 2  # Control point offset for the curve
+                    verts = [
+                        (interval_start, y + 2),  # Start point
+                        (interval_start + (interval_end - interval_start)/2, y + 2 + control_offset),  # Control point
+                        (interval_end, y + 2)  # End point
+                    ]
+                    codes = [mpath.Path.MOVETO, mpath.Path.CURVE3, mpath.Path.CURVE3]
+                    path = mpath.Path(verts, codes)
+                    patch = mpatches.PathPatch(path, facecolor='none', edgecolor='black', linestyle='dotted', linewidth=1)
+                    ax.add_patch(patch)
+        
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticklabels)
+        ax.set_xlabel('Time')
+        ax.set_title('Gantt Chart of Task Groups')
+        ax.grid(True, axis='x', linestyle='--', alpha=0.5)
+        
+        # Create custom legend
+        status_patches = [
+            mpatches.Patch(color=color, label=status.replace('_', ' ').title()) 
+            for status, color in status_colors.items()
+        ]
+        optimal_patch = mlines.Line2D([], [], color='orange', linestyle='dotted', label='Optimal Start Time')
+        ax.legend(handles=status_patches + [optimal_patch], bbox_to_anchor=(1.05, 1), loc='upper left')
+        
+        plt.tight_layout()
+
+
+        if save_dir is not None:
+            save_dir = Path(save_dir)
+            plt.savefig(save_dir / f"{file_name}.png")
+            plt.savefig(save_dir / f"{file_name}.pdf")
+            plt.savefig(save_dir / f"{file_name}.svg")
 
     # --以下のメソッドは、scheduling に関するものである。
 
@@ -447,6 +576,8 @@ class TaskGroup:
                 """
                 temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
                 # PASS: ここで、タスクのスケジュールを変更する
+                if len(self.state) == 0:
+                    return
                 for i in range(min(temp, len(self.state))):
                     a = random.randint(0, len(self.state) - 1)
                     scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
@@ -524,16 +655,17 @@ class TaskGroup:
 
         occupied_time.sort(key=lambda x: (x[0], x[1]))
         penalty = 0
-        privous_time = occupied_time[0][0]
-        for time, is_start, machine_type in occupied_time:
-            if is_start:
-                machine_occupied_dict[machine_type] += 1
-            else:
-                machine_occupied_dict[machine_type] -= 1
+        if len(occupied_time) > 0:
+            privious_time = occupied_time[0][0]
+            for time, is_start, machine_type in occupied_time:
+                if is_start:
+                    machine_occupied_dict[machine_type] += 1
+                else:
+                    machine_occupied_dict[machine_type] -= 1
 
-            if machine_occupied_dict[machine_type] > machine_available_dict[machine_type]:
-                penalty += max(1, time - privous_time)
-            privous_time = time
+                if machine_occupied_dict[machine_type] > machine_available_dict[machine_type]:
+                    penalty += max(1, time - privious_time)
+                privious_time = time
 
         for machine in machine_occupied_dict.values():
             assert machine == 0

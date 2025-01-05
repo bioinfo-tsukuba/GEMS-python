@@ -352,6 +352,8 @@ class TaskGroup:
                 """
                 temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
                 # PASS: ここで、タスクのスケジュールを変更する
+                if len(self.state) == 0:
+                    return
                 for i in range(min(temp, len(self.state))):
                     a = random.randint(0, len(self.state) - 1)
                     scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
@@ -417,16 +419,16 @@ class TaskGroup:
         occupied_time.sort(key=lambda x: (x[0], x[1]))
         penalty = 0
         count = 0
-        privous_time = occupied_time[0][0]
+        privious_time = occupied_time[0][0]
         for time, is_start in occupied_time:
             if count >= 2:
-                penalty += (time - privous_time)*(count - 1)
+                penalty += (time - privious_time)*(count - 1)
 
             if is_start:
                 count += 1
             else:
                 count -= 1
-            privous_time = time
+            privious_time = time
 
         assert count == 0
 
