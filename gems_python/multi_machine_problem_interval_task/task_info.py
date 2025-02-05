@@ -289,7 +289,7 @@ class TaskGroup:
                     continue  # Skip tasks without a scheduled_time
 
                 if status == "IN_PROGRESS":
-                    if task.is_completed():
+                    if task.task_status == TaskStatus.COMPLETED:
                         color = status_colors.get('COMPLETED', color)
                     else:
                         color = status_colors.get('IN_PROGRESS', color)
