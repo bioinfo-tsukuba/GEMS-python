@@ -725,7 +725,7 @@ class Experiments:
             # Transition and generate a new task group
             new_task_group = self.experiments[experiment_index].execute_one_step()
             # Add the new task group and reschedule
-            self.task_groups = TaskGroup.add_task_group(self.task_groups, new_task_group)
+            self.task_groups = TaskGroup.add_task_group(self.task_groups, self.machine_list, new_task_group)
 
         self.set_task_group_ids()
 
