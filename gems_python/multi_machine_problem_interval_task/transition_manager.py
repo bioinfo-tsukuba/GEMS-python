@@ -845,7 +845,6 @@ class Experiments:
             "task_group_id": 0,
             "task_id": 0,
             "optimal_time_reference_time": 0, (Updated time, normally current time)
-            "result_path": "result.csv" (Path to the result file with header)
         }
 
         else if task is successfully completed
@@ -865,7 +864,7 @@ class Experiments:
             "optimal_time_reference_time": 0
         }
         """
-        # TODO: result typeの確認
+        # TODO-DONE: result typeの確認
         # 
         # Check that results are available
         result = self.save_dir() / "experiment_result.json"
@@ -887,7 +886,13 @@ class Experiments:
             optimal_time_reference_time = result_data["optimal_time_reference_time"]
             
             match task_response:
-                case "success":
+                case "In Progress":
+                    # TODO-DONE 適切な処理
+                    try:
+                        TaskGroup.start_task(self.task_groups, task_group_id, task_id)
+                    except Exception as err:
+                        print(f"Error starting task: {err}")
+                case "Completed":
                     new_result_of_experiment = pl.read_csv(result_data["result_path"])
                     self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
                         task_group_id=task_group_id,
@@ -897,8 +902,8 @@ class Experiments:
                         scheduling_method=scheduling_method,
                         optimal_time_reference_time=optimal_time_reference_time
                     )
-
-                case "error":
+                case "Error":
+                    # TODO: 適切な処理
                     print(f"Task failed: {task_group_id}, {task_id}")
                     # Reschedule
                     self.execute_scheduling(scheduling_method, reference_time=optimal_time_reference_time)
