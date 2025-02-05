@@ -442,7 +442,7 @@ class TaskGroup:
 
         # タスクを開始としてマーク
         task_groups[group_index].tasks[task_index].task_status = TaskStatus.IN_PROGRESS
-        print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
+        print(f"タスク群 {group_id} のタスク {task_id} が開始しました")
 
         # タスク群のステータスを更新
         task_groups[group_index].status_update()
