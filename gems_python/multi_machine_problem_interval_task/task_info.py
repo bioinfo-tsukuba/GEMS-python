@@ -237,6 +237,7 @@ class TaskGroup:
                         "processing_time": task.processing_time,
                         "experiment_operation": task.experiment_operation,
                         "scheduled_time": task.scheduled_time,
+                        "task_status": task.task_status.name,
                     })
 
         # Sort by scheduled_time
