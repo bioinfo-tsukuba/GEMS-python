@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 import polars as pl
 import matplotlib
+import sys
 
 from matplotlib import pyplot as plt
 import matplotlib.pyplot as plt
@@ -182,7 +183,7 @@ class TaskGroup:
             start_time = self.optimal_start_time
         # タスクのスケジュールを計算
         if self.status != TaskGroupStatus.NOT_STARTED:
-            print(f"タスク群 {self.task_group_id} はすでに進行しています。")
+            print(f"タスク群 {self.task_group_id} はすでに進行しています。", file=sys.stderr)
             return
 
         # 最適な開始時刻に合わせて、タスクの開始時刻を設定
