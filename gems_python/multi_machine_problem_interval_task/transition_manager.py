@@ -131,7 +131,7 @@ class Experiment:
     experiment_name: str
     states: List[State]
     current_state_name: str
-    shared_variable_history: pl.DataFrame
+    shared_variable_history: pl.DataFrame = field(default_factory=pl.DataFrame)
     current_task_group: TaskGroup = field(default=None)
     current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))

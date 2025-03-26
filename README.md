@@ -41,7 +41,7 @@ To define an experiment using the `interactive_ui.py` script with the updated di
   ```python
   from gems_python.multi_machine_problem_interval_task.transition_manager import Experiment, Experiments, State
 
-  class SampleState1(State):
+  class StandardState1(State):
       def task_generator(self, df):
           # Task generation logic here
           pass
@@ -53,7 +53,13 @@ To define an experiment using the `interactive_ui.py` script with the updated di
       return Experiment(
           experiment_name=experiment_name,
           states=[StandardState1()],
-          current_state_name="StandardState1"
+          current_state_name="StandardState1",
+          shared_variable_history=
+            pl.DataFrame({
+                "time": [0],
+                "temperature": [0],
+                "pressure": [0]
+            })
       )
   ```
 
@@ -61,11 +67,11 @@ To define an experiment using the `interactive_ui.py` script with the updated di
 - The `mode/mode.txt` file determines the current operational mode.
 - Example `mode.txt`:
   ```
-  add_experiment
+  add_experiments
   ```
 
 ### 4. **Add Experiments**
-- Create a file named `mode_add_experiment.txt` in the `mode/` directory:
+- Create a file named `mode_add_experiments.txt` in the `mode/` directory:
   ```
   sample_setting.gen_sample_experiment
   ```
