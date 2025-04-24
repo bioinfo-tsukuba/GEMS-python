@@ -15,6 +15,9 @@ networkx = "^3.3"
 scipy = "^1.14.0"
 typing-extensions = "^4.12.2"
 cmd2 = "^2.5.0"
+pyqt5 = "^5.15.11"
+nodegraphqt = "^0.6.38"
+setuptools = "^79.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
