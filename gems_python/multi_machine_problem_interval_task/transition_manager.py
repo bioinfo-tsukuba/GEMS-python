@@ -945,116 +945,96 @@ class Experiments:
     # ========================= 
     # Simulation (dummy outputs) 
     # ========================= 
-    def simulate_one( 
-        self, 
-        scheduling_method: str = "s", 
-        optimal_time_reference_time: int | None = None, 
-        save_each_step: bool = False, 
-    ) -> dict: 
-        """ 
-        Simulate the completion of the earliest scheduled task by feeding a state's dummy_output 
-        into the normal update/transition/reschedule pipeline. 
-        Returns a small summary dict for logging/inspection. 
-        """ 
-        # Keep reference time up to date if provided 
-        if optimal_time_reference_time is not None: 
-            self.reference_time = optimal_time_reference_time 
- 
-        # Ensure task_group_ids are up to date & there is a schedule 
-        self.set_task_group_ids() 
-        self.execute_scheduling(scheduling_method=scheduling_method, reference_time=self.reference_time) 
- 
-        # No task to simulate 
-        if len(self.task_groups) == 0: 
-            return {"status": "no_tasks"} 
- 
-        # Pick earliest task across all task groups 
-        try: 
-            earliest_task, earliest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups) 
-        except Exception as err: 
-            return {"status": "error", "error": f"failed_to_pick_task: {err!r}"} 
- 
-        if earliest_task is None: 
-            return {"status": "no_tasks"} 
- 
-        group_index = TaskGroup.find_task_group(self.task_groups, earliest_group_id) 
-        tg = self.task_groups[group_index] 
- 
-        # Find owning experiment 
-        exp_index = 0 
-        for i, e in enumerate(self.experiments): 
-            if e.experiment_uuid == tg.experiment_uuid: 
-                exp_index = i 
-                break 
-        exp = self.experiments[exp_index] 
- 
-        # Identify current state and produce dummy result 
-        state_index = exp.get_current_state_index_from_current_state_name() 
-        state = exp.states[state_index] 
-        before_state_name = exp.current_state_name 
-        try: 
-            dummy_df = state.dummy_output( 
-                exp.shared_variable_history.clone(), 
-                task_group_id=earliest_group_id, 
-                task_id=earliest_task.task_id, 
-            ) 
-            if not isinstance(dummy_df, pl.DataFrame): 
-                raise TypeError("dummy_output must return a pl.DataFrame") 
-        except Exception as err: 
-            return {"status": "error", "error": f"dummy_output_failed: {err!r}", "state": before_state_name} 
- 
-        # Feed into the normal path: update shared variables -> transition -> reschedule 
-        try: 
-            _next_tg, _next_task = self.update_shared_variable_history_and_states_and_generate_task_and_reschedule( 
-                task_group_id=earliest_group_id, 
-                task_id=earliest_task.task_id, 
-                new_result_of_experiment=dummy_df, 
-                update_type="a", 
-                scheduling_method=scheduling_method, 
-                optimal_time_reference_time=self.reference_time, 
-            ) 
-        except Exception as err: 
-            return {"status": "error", "error": f"simulation_update_failed: {err!r}"} 
- 
-        after_state_name = exp.current_state_name 
- 
-        # Save artefacts if requested (as a normal step advancement), else keep in-memory only 
-        if save_each_step: 
-            self.proceed_to_next_step() 
- 
-        return { 
-            "status": "ok", 
-            "experiment_name": exp.experiment_name, 
-            "experiment_uuid": exp.experiment_uuid, 
-            "from_state": before_state_name, 
-            "to_state": after_state_name, 
-            "simulated_task_group_id": earliest_group_id, 
-            "simulated_task_id": earliest_task.task_id, 
-            "step_after": self.step, 
-        } 
- 
-    def simulate( 
-        self, 
-        max_steps: int = 10, 
-        scheduling_method: str = "s", 
-        optimal_time_reference_time: int | None = None, 
-        save_each_step: bool = False, 
-        stop_when_no_tasks: bool = True, 
-    ) -> list[dict]: 
-        """ 
-        Run multiple simulation steps. Stops when: 
-          - max_steps is reached, or 
-          - there are no schedulable tasks (if stop_when_no_tasks=True). 
-        Returns a list of summary dicts for each step. 
-        """ 
-        results: list[dict] = [] 
-        for _ in range(max_steps): 
-            res = self.simulate_one( 
-                scheduling_method=scheduling_method, 
-                optimal_time_reference_time=optimal_time_reference_time, 
-                save_each_step=save_each_step, 
-            ) 
-            results.append(res) 
-            if res.get("status") != "ok" and stop_when_no_tasks: 
-                break 
+    def simulate_one(
+        self,
+        scheduling_method: str = "s",
+        optimal_time_reference_time: int | None = None,
+        save_each_step: bool = False,
+    ) -> dict:
+        if optimal_time_reference_time is not None:
+            self.reference_time = optimal_time_reference_time
+
+        self.set_task_group_ids()
+        self.execute_scheduling(scheduling_method=scheduling_method, reference_time=self.reference_time)
+
+        if len(self.task_groups) == 0:
+            return {"status": "no_tasks"}
+
+        try:
+            earliest_task, earliest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
+        except Exception as err:
+            return {"status": "error", "error": f"failed_to_pick_task: {err!r}"}
+
+        if earliest_task is None:
+            return {"status": "no_tasks"}
+
+        group_index = TaskGroup.find_task_group(self.task_groups, earliest_group_id)
+        tg = self.task_groups[group_index]
+
+        # 対応する Experiment を見つける
+        exp_index = next(i for i, e in enumerate(self.experiments) if e.experiment_uuid == tg.experiment_uuid)
+        exp = self.experiments[exp_index]
+
+        # 現在の State からダミー出力を生成
+        state_index = exp.get_current_state_index_from_current_state_name()
+        state = exp.states[state_index]
+        before_state_name = exp.current_state_name
+        try:
+            dummy_df = state.dummy_output(
+                exp.shared_variable_history.clone(),
+                task_group_id=earliest_group_id,
+                task_id=earliest_task.task_id,
+            )
+            if not isinstance(dummy_df, pl.DataFrame):
+                raise TypeError("dummy_output must return a pl.DataFrame")
+        except Exception as err:
+            return {"status": "error", "error": f"dummy_output_failed: {err!r}", "state": before_state_name}
+
+        # 本番と同経路で更新→遷移→再スケジュール
+        try:
+            _next_tg, _next_task = self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+                task_group_id=earliest_group_id,
+                task_id=earliest_task.task_id,
+                new_result_of_experiment=dummy_df,
+                update_type="a",
+                scheduling_method=scheduling_method,
+                optimal_time_reference_time=self.reference_time,
+            )
+        except Exception as err:
+            return {"status": "error", "error": f"simulation_update_failed: {err!r}"}
+
+        after_state_name = exp.current_state_name
+
+        if save_each_step:
+            self.proceed_to_next_step()
+
+        return {
+            "status": "ok",
+            "experiment_name": exp.experiment_name,
+            "experiment_uuid": exp.experiment_uuid,
+            "from_state": before_state_name,
+            "to_state": after_state_name,
+            "simulated_task_group_id": earliest_group_id,
+            "simulated_task_id": earliest_task.task_id,
+            "step_after": self.step,
+        }
+
+    def simulate(
+        self,
+        max_steps: int = 10,
+        scheduling_method: str = "s",
+        optimal_time_reference_time: int | None = None,
+        save_each_step: bool = False,
+        stop_when_no_tasks: bool = True,
+    ) -> List[dict]:
+        results: list[dict] = []
+        for _ in range(max_steps):
+            res = self.simulate_one(
+                scheduling_method=scheduling_method,
+                optimal_time_reference_time=optimal_time_reference_time,
+                save_each_step=save_each_step,
+            )
+            results.append(res)
+            if res.get("status") != "ok" and stop_when_no_tasks:
+                break
         return results
