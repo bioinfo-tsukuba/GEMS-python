@@ -21,6 +21,34 @@ poetry install
 python -m unittest
 ```
 
+## シミュレーション機能の利用方法
+
+セルカルチャー実験の状態遷移を事前に検証したい場合は、`Experiments.simulate` と `Experiments.simulate_one` を利用してダミー結果によるシミュレーションを行います。以下の手順に従って準備してください。
+
+1. **各 State に `dummy_output` を実装する**  
+   `State` を継承したクラスでは、既存の `task_generator` と `transition_function` に加えて `dummy_output` を実装します。返り値は `polars.DataFrame` で、カラム構成は遷移関数が参照する値（例: `confluence`, `measurement` など）を必ず含めます。シミュレーション時はこのデータが実験結果として扱われます。
+2. **`Experiment` と `Experiments` を組み立てる**  
+   実験ごとに `Experiment` を生成し、必要な `MachineList` を登録したうえで `Experiments` に渡します。実データ保存を行いたい場合は `parent_dir_path` を既存の保存ディレクトリに合わせて指定してください。
+3. **シミュレーションを実行する**  
+   簡易検証なら `simulate_one` で1ステップだけ進め、連続検証なら `simulate(max_steps=ステップ数)` を実行します。戻り値は各ステップの状態・タスク情報を含む辞書のリストです。保存を伴う検証を行う場合は `save_each_step=True` を指定し、実運用と同様にステップディレクトリが作成されることを確認してください。
+
+最小構成のサンプルとして `tests/test_simulate.py` では 3 状態のダミー実験を、`tests/HEK_two_state_growth_sim.py` では HEK 細胞の２状態（Passage / Observation）を想定した成長シミュレーションを用意しています。初めて利用する場合はこれらをコピーしてカスタマイズするとスムーズです。
+
+### 例: テストスクリプトの実行
+
+```shell
+# ダミー状態遷移サンプルの実行
+poetry run python tests/test_simulate.py
+
+# HEK 二状態フローのサンプル実行
+poetry run python tests/HEK_two_state_growth_sim.py
+
+# 既存のユニットテストをまとめて走らせる場合
+poetry run python -m unittest discover -s tests -p "test_*.py"
+```
+
+各スクリプトは標準出力にステップごとの状態遷移ログを表示します。期待する遷移や推定値が得られているかを確認し、必要に応じて `dummy_output` の内容や閾値パラメータを調整してください。
+
 ## Steps to Define an Experiment
 
 To define an experiment using the `interactive_ui.py` script with the updated directory and settings, follow these steps:
