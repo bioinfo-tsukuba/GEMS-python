@@ -164,10 +164,5 @@ if __name__ == "__main__":
     # ガント・スケジュールなどは既存メソッドで生成可
     # exps.experiments[0].show_experiment_directed_graph(save_path="demo_graph_one_machine.png")
 
-    # 仮結果で 10 ステップ回す（save_each_step=Falseならディスク書き込み無し）
-    logs = exps.simulate(max_steps=10, save_each_step=False)
-    for i, r in enumerate(logs, 1):
-        print(f"[step {i}] {r}")
-
     # 保存も行いたい場合は save_each_step=True を指定
-    # exps.simulate(max_steps=3, save_each_step=True)
+    exps.simulate(max_steps=3, save_each_step=True)
