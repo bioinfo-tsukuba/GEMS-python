@@ -15,6 +15,7 @@ networkx = "^3.3"
 scipy = "^1.14.0"
 typing-extensions = "^4.12.2"
 cmd2 = "^2.5.0"
+sphinx = "^8.2.3"
 
 
 [tool.poetry.group.dev.dependencies]
