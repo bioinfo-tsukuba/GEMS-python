@@ -31,21 +31,26 @@ class TaskStatus(Enum):
 @dataclass
 class Task:
     """
-    A class to represent a task with scheduling and status management.
-    Attributes:
+    Representation of a single scheduled task.
+
+    Parameters
     ----------
-    processing_time : int
-        The processing time of the task.
-    interval : int
-        The interval between the task and the previous task. There is no interval for the first task.
-    experiment_operation : str
-        The experiment operation associated with the task.
-    completed : bool
-        Whether the task has been completed.
-    scheduled_time : int
-        The start time of the task. Defaults to None.
-    task_id : int
-        The unique identifier for the task. Defaults to None.
+    processing_time:
+        Execution time for the task in minutes.
+    experiment_operation:
+        Human-readable description of the experimental operation.
+    optimal_machine_type:
+        Preferred machine type for allocation during multi-machine scheduling.
+    interval:
+        Idle interval before the task starts. Set to ``0`` for the first task.
+    task_status:
+        Current execution status, defaults to :class:`TaskStatus.NOT_STARTED`.
+    allocated_machine_id:
+        Machine identifier assigned during scheduling, if any.
+    scheduled_time:
+        Planned start time calculated by the scheduler.
+    task_id:
+        Unique identifier, auto-assigned when the task group is created.
     """
     processing_time: int  # タスクの処理時間
     experiment_operation: str
@@ -249,14 +254,17 @@ class TaskGroup:
     
     @classmethod
     def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name:str = "gantt_chart"):
-
         """
         Generates a Gantt chart from a list of TaskGroups, reflecting their statuses.
-        
-        Parameters:
+
+        Parameters
         ----------
-        task_groups : List[TaskGroup]
-            The list of TaskGroup instances to visualize.
+        task_groups : list[TaskGroup]
+            Task groups to visualise.
+        save_dir : Path, optional
+            Output directory used to store the generated figure. Defaults to ``current_save_dir``.
+        file_name : str, optional
+            Base filename for the saved image. Defaults to ``"gantt_chart"``.
         """
         fig, ax = plt.subplots(figsize=(18, 6))
         
@@ -709,12 +717,12 @@ def generate_gantt_chart(task_groups: List['TaskGroup'], machine_list: 'MachineL
     Optimal start times are shown as vertical dotted lines.
     Intervals between tasks within the same TaskGroup are shown as curved dotted lines.
 
-    Parameters:
+    Parameters
     ----------
-    task_groups : List[TaskGroup]
-        The list of TaskGroup instances to visualize.
+    task_groups : list[TaskGroup]
+        Task groups to visualise across the machine timeline.
     machine_list : MachineList
-        The list of Machines available.
+        Collection of machines used to derive the Y-axis layout.
     """
     fig, ax = plt.subplots(figsize=(14, 8))
     

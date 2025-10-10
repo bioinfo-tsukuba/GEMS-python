@@ -9,6 +9,36 @@ import inspect
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
 
 class PluginManager:
+    """
+    Orchestrate experiment lifecycles via filesystem-driven modes and plugins.
+
+    Parameters
+    ----------
+    experiments :
+        :class:`Experiments` instance whose persistence directory anchors the
+        ``experimental_setting/`` and ``mode/`` subdirectories.
+    module_path :
+        Relative path (under ``parent_dir_path``) that stores plugin modules.
+        Each ``*.py`` file should expose factory functions returning an
+        :class:`~gems_python.multi_machine_problem_interval_task.transition_manager.Experiment`.
+    mode_path :
+        Relative path containing control files such as ``mode.txt`` and
+        ``mode_add_experiment.txt``.
+
+    Workflow
+    --------
+    1. Seed experiment artefacts with
+       ``Experiments.simulate(..., save_each_step=True)`` and
+       :meth:`Experiments.proceed_to_next_step`.
+    2. Drop a plugin module (for example ``experimental_setting/demo_plugin.py``)
+       that imports the experiment factory you created during simulation.
+    3. Edit ``mode/mode.txt`` to ``add_experiment`` and write the fully qualified
+       factory name (``demo_plugin.demo_plugin``) into
+       ``mode/mode_add_experiment.txt``. The manager reads the files on the next
+       loop and registers the experiment.
+    4. Switch ``mode.txt`` to ``loop`` to resume automated execution, or use the
+       other ``mode_*`` hooks described in the quick start README.
+    """
     def __init__(self, experiments: Experiments, module_path: Path = "experimental_setting/", mode_path: Path = "mode"):
         self.plugins = {}
         self.experiments = experiments

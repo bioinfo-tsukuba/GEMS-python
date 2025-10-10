@@ -1,158 +1,168 @@
-# What is GEMS?
+# GEMS Python
 
-# How to Use
+GEMS Python is a workflow toolkit for building, simulating, and scheduling
+laboratory or shop-floor experiments. It provides reusable state-machine
+primitives, task scheduling utilities, and a plugin-driven command-line
+interface that help you orchestrate interval-based processes on both
+single-machine and multi-machine setups.
 
-This guide outlines the necessary steps to define and run a cell culture experiment simulation using Rust. It focuses on setting up the experiment without providing direct code examples.
+## Core Packages
 
-## Prerequisites
+- `gems_python.one_machine_problem_interval_task` — finite-state orchestration
+  for a single resource, including simulation helpers and linear penalty models.
+- `gems_python.multi_machine_problem_interval_task` — extends the same model to
+  multiple machines, adding resource allocation utilities and a plugin manager
+  for interactive control.
 
-- poetry
-- python >= 3.10
+Detailed API documentation is generated with Sphinx under `docs/`.
 
-## setup
+## Installation
 
-```shell
+Use Poetry (recommended):
+
+```bash
 poetry install
+poetry shell
 ```
 
-## Test
+Or install with pip:
 
-```shell
-python -m unittest
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-## シミュレーション機能の利用方法
+## Quick Start Workflow
 
-セルカルチャー実験の状態遷移を事前に検証したい場合は、`Experiments.simulate` と `Experiments.simulate_one` を利用してダミー結果によるシミュレーションを行います。以下の手順に従って準備してください。
+1. **Simulate a one-machine experiment**
+   - Review `tests/test_simulate_one.py` for a minimal example that defines
+     three custom states (`InitState`, `MeasureState`, `FinishState`).
+   - Run the simulation directly:
+     ```bash
+     python tests/test_simulate_one.py
+     ```
+     This builds an `Experiments` collection and executes
+     `Experiments.simulate(max_steps=3, save_each_step=True)`, emitting task
+     history snapshots to the working directory.
 
-1. **各 State に `dummy_output` を実装する**  
-   `State` を継承したクラスでは、既存の `task_generator` と `transition_function` に加えて `dummy_output` を実装します。返り値は `polars.DataFrame` で、カラム構成は遷移関数が参照する値（例: `confluence`, `measurement` など）を必ず含めます。シミュレーション時はこのデータが実験結果として扱われます。
-2. **`Experiment` と `Experiments` を組み立てる**  
-   実験ごとに `Experiment` を生成し、必要な `MachineList` を登録したうえで `Experiments` に渡します。実データ保存を行いたい場合は `parent_dir_path` を既存の保存ディレクトリに合わせて指定してください。
-3. **シミュレーションを実行する**  
-   簡易検証なら `simulate_one` で1ステップだけ進め、連続検証なら `simulate(max_steps=ステップ数)` を実行します。戻り値は各ステップの状態・タスク情報を含む辞書のリストです。保存を伴う検証を行う場合は `save_each_step=True` を指定し、実運用と同様にステップディレクトリが作成されることを確認してください。
+2. **Launch the multi-machine plugin manager**
+   - Prepare an experiment directory (for example `examples/multi_machine_demo/`)
+     that contains your saved experiment steps and optional `experimental_setting/`
+     plugins.
+   - Start the interactive loop:
+     ```bash
+     python main.py
+     ```
+   - Use the generated `mode/mode.txt` file to switch between automation modes
+     (for example `loop`, `add_experiment`, or `delete_experiment`). The
+     `PluginManager` automatically scans `experimental_setting/*.py` for new
+     experiment generators.
 
-最小構成のサンプルとして `tests/test_simulate.py` では 3 状態のダミー実験を、`tests/HEK_two_state_growth_sim.py` では HEK 細胞の２状態（Passage / Observation）を想定した成長シミュレーションを用意しています。初めて利用する場合はこれらをコピーしてカスタマイズするとスムーズです。
+3. **Refine experiment logic**
+   - Extend `State` subclasses inside your project or plugin modules. Implement
+     `task_generator`, `transition_function`, and optionally override
+     `dummy_output` to support offline simulation.
+   - Combine `TaskGroup` penalties (linear, cyclical rest, etc.) to fine-tune
+     scheduling behaviour.
 
-### 例: テストスクリプトの実行
+## Build the Documentation
 
-```shell
-# ダミー状態遷移サンプルの実行
-poetry run python tests/test_simulate.py
+The repository ships with a Sphinx project that publishes detailed reference
+pages for both interval-task packages.
 
-# HEK 二状態フローのサンプル実行
-poetry run python tests/HEK_two_state_growth_sim.py
-
-# 既存のユニットテストをまとめて走らせる場合
-poetry run python -m unittest discover -s tests -p "test_*.py"
+```bash
+sphinx-build -b html docs/source docs/build/html
+open docs/build/html/index.html  # Windows: start, Linux: xdg-open
 ```
 
-各スクリプトは標準出力にステップごとの状態遷移ログを表示します。期待する遷移や推定値が得られているかを確認し、必要に応じて `dummy_output` の内容や閾値パラメータを調整してください。
+The `quickstart` section in the generated site mirrors the steps above and links
+to API reference material powered by `autodoc` and `napoleon`.
 
-## Steps to Define an Experiment
+## Detailed Example
 
-To define an experiment using the `interactive_ui.py` script with the updated directory and settings, follow these steps:
+The walkthrough below demonstrates how to blend a one-machine simulation with a
+multi-machine session.
 
-### 1. **Set Up the Project Directory**
-- Ensure that your working directory has the following structure:
-  ```
-  sample_experiment/
-  ├── experimental_setting/
-  │   └── sample_setting.py
-  └── mode/
-      └── mode.txt
-  ```
+1. **Create a sandbox experiment**
+   - Copy `tests/test_simulate_one.py` to `examples/demo_states.py`.
+   - Adjust the state logic and penalties to match your workflow, then run:
+     ```bash
+     python examples/demo_states.py
+     ```
+     This seeds a directory such as `experiments_dir_demo_one_machine/` with
+     simulation artefacts.
 
-### 2. **Create Experiment Modules**
-- The `ot2_setting.py` file should define at least one class representing an experiment and its state.
-- Example structure in `ot2_setting.py`:
-  ```python
-  from gems_python.multi_machine_problem_interval_task.transition_manager import Experiment, Experiments, State
+2. **Turn the states into a plugin**
+   - Inside `experimental_setting/`, create `demo_plugin.py`:
+     ```python
+     from examples.demo_states import build_experiment
+     
+     def demo_plugin():
+         return build_experiment()
+     ```
+   - Restart `main.py` so the `PluginManager` auto-loads the plugin.
 
-  class StandardState1(State):
-      def task_generator(self, df):
-          # Task generation logic here
-          pass
+3. **Drive the multi-machine workflow**
+   - Set `mode/mode.txt` to `add_experiment`, supplying `demo_plugin.demo_plugin`
+     via `mode/mode_add_experiment.txt` to register the experiment.
+   - Switch the mode to `loop` to let the scheduler advance using the saved
+     artefacts.
+   - Inspect the regenerated schedule CSV, Gantt chart, and experiment snapshots
+     under the step directory reported in the console.
 
-      def transition_function(self, df):
-          return "StandardState1"
+## Defining States and Experiments
 
-  def gen_sample_experiment(experiment_name="sample_experiment"):
-      return Experiment(
-          experiment_name=experiment_name,
-          states=[StandardState1()],
-          current_state_name="StandardState1",
-          shared_variable_history=
-            pl.DataFrame({
-                "time": [0],
-                "temperature": [0],
-                "pressure": [0]
-            })
-      )
-  ```
+Both interval-task packages share the same building blocks: custom `State`
+subclasses, `TaskGroup` definitions, and a reusable factory that produces an
+`Experiment`.
 
-### 3. **Configure Mode Settings**
-- The `mode/mode.txt` file determines the current operational mode.
-- Example `mode.txt`:
-  ```
-  add_experiments
-  ```
+1. **Implement State subclasses**
+   - Inherit from `State` and implement:
+     - `task_generator(self, df: pl.DataFrame) -> TaskGroup` — compose a task
+       group with penalties, tasks, and scheduling hints.
+     - `transition_function(self, df: pl.DataFrame) -> str` — determine the next
+       state's name based on the shared variable history.
+     - Optionally override `dummy_output` to emit simulated results during
+       offline testing.
+   - Populate each `TaskGroup` with `Task` instances that declare
+     `processing_time`, `interval`, and `experiment_operation`. Select a penalty
+     class (for example `LinearPenalty`) that matches your scheduling goals.
 
-### 4. **Add Experiments**
-- Create a file named `mode_add_experiments.txt` in the `mode/` directory:
-  ```
-  sample_setting.gen_sample_experiment
-  ```
-- The script will automatically read this file and add the experiment. The file is deleted after successful loading.
+2. **Construct the experiment factory**
+   - Return an `Experiment` with:
+     - `experiment_name`: descriptive label that appears in persistence outputs.
+     - `states`: ordered list of the state instances you created.
+     - `current_state_name`: initial state's class name.
+     - `shared_variable_history`: usually `pl.DataFrame()` when starting fresh.
+   - Wrap the logic in helpers such as `build_experiment()` and
+     `build_experiments()` so tests, scripts, and plugins can import them.
 
-### 5. **Run the Script**
-- From your project root directory, run the script:
-  ```bash
-  python gems_python/multi_machine_problem_interval_task/interactive_ui.py
-  ```
+3. **Bundle into Experiments**
+   - Instantiate `Experiments(experiments=[build_experiment()], parent_dir_path=...)`
+     to manage persistence and multi-experiment scheduling.
+   - Use `simulate(..., save_each_step=True)` during local testing, then call
+     `proceed_to_next_step()` to materialise the directory structure expected by
+     the plugin manager.
 
-### 6. **Manage Modes**
-- Available modes:
-  - `module_load`: Reload all plugins.
-  - `add_experiment`: Add a single experiment.
-  - `delete_experiment`: Delete an experiment by UUID.
-  - `show_experiments`: List all loaded experiments.
-  - `add_machines`: Add machine configurations.
-  - `delete_machines`: Delete specified machines.
-  - `proceed`: Move to the next experiment step.
-  - `stop`: Pause execution.
-  - `exit`: Stop the program.
+Refer to `tests/test_simulate_one.py` for a comprehensive template that you can
+adapt to new workflows.
 
-### 7. **Adding Machines**
-- Create `mode_add_machines.txt` in the `mode/` directory:
-  ```
-  0,OT-2
-  1,Human
-  ```
+## Project Layout
 
-### 8. **Deleting Machines**
-- Specify machine IDs in `mode_delete_machines.txt`:
-  ```
-  0
-  1
-  ```
+- `gems_python/one_machine_problem_interval_task/` — single-machine transitions,
+  tasks, and penalties.
+- `gems_python/multi_machine_problem_interval_task/` — multi-machine extensions,
+  including machine abstractions and CLI utilities.
+- `docs/` — Sphinx sources (`index.rst`, `quickstart.rst`, and API stubs).
+- `tests/` — sample simulations and regression tests.
+- `main.py` — entry point for the multi-machine plugin manager.
 
-### 9. **Checking Available Modes**
-- Set `mode.txt` to `help` to display all available modes:
-  ```
-  help
-  ```
+## Next Steps
 
-### 10. **Proceeding Through Experiments**
-- Update `mode.txt` to `proceed` to move to the next state:
-  ```
-  proceed
-  ```
-
-### 11. **Stopping and Exiting**
-- To pause execution, write `stop` in `mode.txt`.
-- To terminate, write `exit` or `eof` in `mode.txt`.
-
----
-
-By following these steps with the given directory and experiment settings, you can successfully define, manage, and execute OT-2 experiments using the provided interactive UI.
+- Adapt the example states in `tests/test_simulate_one.py` to match your
+  workflow, then iterate with `Experiments.simulate`.
+- Customize `experimental_setting/` plugins to enrol new experiments in the
+  multi-machine manager.
+- Expand docstrings and rebuild the Sphinx site to keep the published API up to
+  date.

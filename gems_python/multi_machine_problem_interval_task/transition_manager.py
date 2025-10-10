@@ -28,13 +28,22 @@ from gems_python.multi_machine_problem_interval_task.task_info import Machine, M
 T = TypeVar('T', bound='State')
 
 class State(ABC):
-    """State class.
-    This class is used as just an superclass for the State class.
-    Defining "State", you should inherit this class and implement the methods.
-    Note:
-    When inheriting this class, you should implement the following methods:
-    - transition_function
-    - task_generator
+    """
+    Template for experiment states used by the interval-scheduling framework.
+
+    To introduce a new state:
+
+    * Subclass :class:`State` and implement :meth:`task_generator` to return a
+      :class:`~gems_python.multi_machine_problem_interval_task.task_info.TaskGroup`
+      with the required tasks, penalties, and metadata.
+    * Implement :meth:`transition_function` so the state can select the next
+      state's name based on the shared variable history (:class:`polars.DataFrame`).
+    * Optionally override :meth:`dummy_output` to emit synthetic measurements
+      when running simulations without real hardware feedback.
+
+    The worked example in ``tests/test_simulate_one.py`` demonstrates how the
+    ``InitState``/``MeasureState``/``FinishState`` trio fits together. Mirror
+    that structure when expanding your workflow.
     """
 
     def __init__(self):
@@ -128,16 +137,24 @@ class State(ABC):
 @dataclass
 class Experiment:
     """
-    Experiment class.
+    Container for a single experiment workflow.
 
-    Attributes:
-        experiment_name (str): The name of the experiment.
-        states (List[State]): The states of the experiment.
-        current_state_name (str): The name of the current state.
-        shared_variable_history (pl.DataFrame): The shared variable history of the experiment.
-        current_task (TaskGroup) (You can manually assign it or Automatically generated): The current task of the experiment.
-        current_state_index (int) (Automatically generated): The index of the current state.
-        experiment_uuid (str) (Automatically generated): The UUID of the experiment.
+    Parameters
+    ----------
+    experiment_name:
+        Human-readable name of the experiment.
+    states:
+        Ordered list of :class:`State` instances that define the workflow.
+    current_state_name:
+        Name of the state that is currently active.
+    shared_variable_history:
+        Polars DataFrame that stores shared variables emitted during execution.
+    current_task_group:
+        Task group that is currently in progress. Assigned automatically.
+    current_state_index:
+        Derived index of the active state. Managed internally.
+    experiment_uuid:
+        Unique identifier generated for persistence and lookups.
     """
     experiment_name: str
     states: List[State]
@@ -410,10 +427,54 @@ class Experiment:
 
 @dataclass
 class Experiments:
-    
     """
-    Experiments class.
-    This class is used as a data class for the experiments.
+    Coordinate a collection of :class:`Experiment` instances and persist their progress.
+
+    Parameters
+    ----------
+    experiments:
+        List of active experiments, typically produced by a factory such as
+        ``tests.test_simulate_one.build_experiment``.
+    parent_dir_path:
+        Root directory where simulation artefacts, schedule CSVs, and experiment
+        snapshots are stored. The default ``"experiments_dir"`` is compatible
+        with :class:`gems_python.multi_machine_problem_interval_task.interactive_ui.PluginManager`.
+    machine_list:
+        Shared :class:`MachineList` used during multi-machine scheduling.
+    task_groups:
+        Internal cache of task groups mirrored from the experiments.
+    step:
+        Current persistence step. Each call to :meth:`proceed_to_next_step`
+        increments this counter and writes a new ``step_{n}`` directory.
+    reference_time:
+        Baseline timestamp (minutes) used to align schedules.
+
+    Notes
+    -----
+    The directory layout produced here is the same structure that the
+    ``PluginManager`` expects when you run ``python main.py``. That allows you
+    to seed an experiment offline via ``Experiments.simulate`` and then continue
+    manipulating it interactively.
+
+    Examples
+    --------
+    Create a sandbox experiment, save its first step, and hand it off to the
+    plugin manager::
+
+        from pathlib import Path
+        from tests.test_simulate_one import build_experiment
+        from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+        from gems_python.multi_machine_problem_interval_task.interactive_ui import PluginManager
+
+        exp = build_experiment()
+        experiments = Experiments(
+            experiments=[exp],
+            parent_dir_path=Path("examples/multi_machine_demo")
+        )
+        experiments.simulate(max_steps=1, save_each_step=True)
+        experiments.proceed_to_next_step()  # writes step_001 artefacts
+        plugin = PluginManager(experiments)
+        # Populate experimental_setting/demo_plugin.py and use mode files to register it
     """
 
     experiments: List[Experiment] = field(default_factory=list)
@@ -841,39 +902,40 @@ class Experiments:
 
     def auto_load(self):
         """
-        Automatically load an experiment result.
-        Expected files:
-        - experiment_result.json
-        - result.csv
+        Automatically load experiment results saved on disk.
 
-        Normally, 'Task' progresses like NOT_STARTED = "Not Started" -> "In Progress" -> "Completed"
+        Expected files
+        --------------
+        ``experiment_result.json``
+            Metadata emitted by the external executor.
+        ``result.csv``
+            Measurement results associated with the completed task.
 
-        Example of
-        experiment_result.json:
-        if task is successfully started
-        {
-            "task_response": "In Progress",
-            "task_group_id": 0,
-            "task_id": 0,
-            "optimal_time_reference_time": 0, (Updated time, normally current time)
-        }
+        Normal task status progression::
 
-        else if task is successfully completed
-        {
-            "task_response": "Completed",
-            "task_group_id": 0,
-            "task_id": 0,
-            "optimal_time_reference_time": 0,
-            "result_path": "result.csv"
-        }
+            NOT_STARTED -> In Progress -> Completed
 
-        else:
-        {
-            "task_response": "Error",
-            "task_group_id": 0,
-            "task_id": 0,
-            "optimal_time_reference_time": 0
-        }
+        Example payload (task started)::
+
+            {
+                "task_response": "In Progress",
+                "task_group_id": 0,
+                "task_id": 0,
+                "optimal_time_reference_time": 0
+            }
+
+        Example payload (task completed)::
+
+            {
+                "task_response": "Completed",
+                "task_group_id": 0,
+                "task_id": 0,
+                "optimal_time_reference_time": 0,
+                "result_path": "result.csv"
+            }
+
+        Failure payloads set ``task_response`` to ``"Error"`` and keep the same
+        keys.
         """
         # TODO-DONE: result typeの確認
         # 

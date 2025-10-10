@@ -24,21 +24,22 @@ matplotlib.use('Agg')  # 非インタラクティブバックエンドに設定
 @dataclass
 class Task:
     """
-    A class to represent a task with scheduling and status management.
-    Attributes:
+    Representation of a single task in a one-machine workflow.
+
+    Parameters
     ----------
-    processing_time : int
-        The processing time of the task.
-    interval : int
-        The interval between the task and the previous task. There is no interval for the first task.
-    experiment_operation : str
-        The experiment operation associated with the task.
-    completed : bool
-        Whether the task has been completed.
-    scheduled_time : int
-        The start time of the task. Defaults to None.
-    task_id : int
-        The unique identifier for the task. Defaults to None.
+    processing_time:
+        Execution duration for the task in minutes.
+    experiment_operation:
+        Descriptive label for the operation performed.
+    interval:
+        Idle time before the task starts. Defaults to ``0`` for the first task.
+    completed:
+        Boolean flag indicating whether the task finished successfully.
+    scheduled_time:
+        Planned start time assigned by the scheduler.
+    task_id:
+        Unique identifier populated when the task group is initialised.
     """
     processing_time: int  # タスクの処理時間
     experiment_operation: str
@@ -488,15 +489,19 @@ class TaskGroup:
         return pl.DataFrame(non_completed_tasks)
     
     @classmethod
-    def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name:str = "gantt_chart"):
-
+    def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name: str = "gantt_chart"):
         """
-        Generates a Gantt chart from a list of TaskGroups, reflecting their statuses.
-        
-        Parameters:
+        Generate a Gantt chart that reflects each task group's status timeline.
+
+        Parameters
         ----------
-        task_groups : List[TaskGroup]
-            The list of TaskGroup instances to visualize.
+        task_groups : list[TaskGroup]
+            Task groups to visualise.
+        save_dir : Path, optional
+            Directory used to write the output image. Defaults to ``None`` (use
+            the current save directory).
+        file_name : str, optional
+            Base filename for the generated chart. Defaults to ``"gantt_chart"``.
         """
         fig, ax = plt.subplots(figsize=(18, 6))
         
