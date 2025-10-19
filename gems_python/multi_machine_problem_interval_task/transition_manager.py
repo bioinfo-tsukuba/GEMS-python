@@ -855,7 +855,7 @@ class Experiments:
             "task_response": "In Progress",
             "task_group_id": 0,
             "task_id": 0,
-            "optimal_time_reference_time": 0, (Updated time, normally current time)
+            "optimal_time_reference_time": 0 (Updated time, normally current time)
         }
 
         else if task is successfully completed
