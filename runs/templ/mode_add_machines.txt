@@ -1,0 +1,3 @@
+0,Pippeting machine 1
+0,Pippeting machine 2
+1,Heating machine 1

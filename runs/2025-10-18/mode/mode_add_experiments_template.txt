@@ -1,0 +1,4 @@
+# 'module.class' 形式でruns/2025-10-18/mode/mode_add_experiments.txtに記述してください。
+# 例:
+# my_module.ExperimentClass1
+# other_module.ExperimentClass2
