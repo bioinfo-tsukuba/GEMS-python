@@ -1,5 +1,0 @@
-# 'machine_type,description' 形式でruns/2025-10-18/mode/mode_add_machines.txtに記述してください。
-# 例:
-# 0,Pippeting machine 1
-# 0,Pippeting machine 2
-# 1,Heating machine 1
