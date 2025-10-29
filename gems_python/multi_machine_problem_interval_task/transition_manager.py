@@ -855,15 +855,16 @@ class Experiments:
             "task_response": "In Progress",
             "task_group_id": 0,
             "task_id": 0,
-            "optimal_time_reference_time": 0 (Updated time, normally current time)
+            "schedule_reference_time": 0 (Updated time, normally current time)
         }
+        Note: "schedule_reference_time" can be replaced with "optimal_time_reference_time" for backward compatibility.
 
         else if task is successfully completed
         {
             "task_response": "Completed",
             "task_group_id": 0,
             "task_id": 0,
-            "optimal_time_reference_time": 0,
+            "schedule_reference_time": 0,
             "result_path": "result.csv"
         }
 
@@ -872,7 +873,7 @@ class Experiments:
             "task_response": "Error",
             "task_group_id": 0,
             "task_id": 0,
-            "optimal_time_reference_time": 0
+            "schedule_reference_time": 0
         }
         """
         # TODO-DONE: result typeの確認
@@ -894,8 +895,9 @@ class Experiments:
             scheduling_method = result_data.get("scheduling_method", "s")
             task_group_id = result_data["task_group_id"]
             task_id = result_data["task_id"]
-            optimal_time_reference_time = result_data["optimal_time_reference_time"]
-            
+            optimal_time_reference_time = result_data.get("schedule_reference_time")
+            if optimal_time_reference_time is None:
+                optimal_time_reference_time = result_data.get("optimal_time_reference_time")
             match task_response:
                 case "In Progress":
                     # TODO-DONE 適切な処理
