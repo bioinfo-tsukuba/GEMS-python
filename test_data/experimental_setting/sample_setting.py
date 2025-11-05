@@ -7,13 +7,13 @@ from gems_python.multi_machine_problem_interval_task.task_info import TaskGroup,
 from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import NonePenalty
 
 """
-    processing_time: int  # タスクの処理時間
+    processing_time: int  # Task processing time
     experiment_operation: str
-    optimal_machine_type: int # タスクの最適なマシンタイプ
-    interval: int = field(default=0)        # タスク間のインターバル、最初のタスクにはインターバルはない
-    task_status: TaskStatus = TaskStatus.NOT_STARTED  # タスクのステータス
-    allocated_machine_id: int = field(default=None)  # タスクが割り当てられたマシンのID
-    scheduled_time: int = field(default=None)  # タスクの開始時刻
+    optimal_machine_type: int  # Optimal machine type for the task
+    interval: int = field(default=0)  # Interval between tasks; the first task has no interval
+    task_status: TaskStatus = TaskStatus.NOT_STARTED  # Task status
+    allocated_machine_id: int = field(default=None)  # ID of the machine allocated to the task
+    scheduled_time: int = field(default=None)  # Task start time
     task_id: int = field(default=None)
 """
 class MinimumState(State):
