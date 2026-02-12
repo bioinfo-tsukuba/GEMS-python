@@ -13,20 +13,20 @@ def main():
     experiments = Experiments(parent_dir_path=Path(dir), reference_time = datetime.now().timestamp()//60)
     plugin_manager = PluginManager(experiments)
 
-    # プラグインマネージャーの開始前にリロードの選択を促す
-    reload_choice = 'y' #input("実験をリロードしますか？ (y/n): ").strip().lower()
+    # Ask whether to reload experiments before starting the plugin manager.
+    reload_choice = 'y' #input("Do you want to reload experiments? (y/n): ").strip().lower()
     if reload_choice == 'y':
         try:
-            step = '' #input("リロードするステップを入力してください。空白の場合は自動的に最大ステップまでリロードします。: ").strip()
+            step = '' #input("Enter the step to reload. Leave blank to reload up to the latest step automatically: ").strip()
             if step == '':
                 step = None
             else:
                 step = int(step)
             experiments = experiments.reload(step)
         except ValueError:
-            print("無効なステップ番号です。リロードをスキップします。")
+            print("Invalid step number. Skipping reload.")
         except Exception as err:
-            print(f"リロード中にエラーが発生しました: {err}. リロードをスキップします。")
+            print(f"Error occurred during reload: {err}. Skipping reload.")
 
     
     def set_task_group_ids(experiments):
