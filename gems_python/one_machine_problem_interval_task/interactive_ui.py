@@ -30,7 +30,7 @@ class PluginManager:
         self.load_all_plugins()
 
     def load_plugin(self, file_path):
-        """特定のファイルパスからプラグインをロードまたはリロードします。"""
+        """Load or reload a plugin from a specific file path."""
         module_name = file_path.stem
         if module_name not in self.plugins:
             print(f'{module_name} loading.')
@@ -48,7 +48,7 @@ class PluginManager:
                 print(f"Error reloading module {module_name}: {e}")
 
     def load_all_plugins(self):
-        """指定ディレクトリ内のすべてのPythonプラグインをスキャンしてロードします。"""
+        """Scan the target directory and load all Python plugins."""
         for file_path in Path(self.module_path).glob('*.py'):
             last_modified = os.path.getmtime(file_path)
             if file_path not in self.plugin_timestamps or self.plugin_timestamps[file_path] < last_modified:
@@ -57,7 +57,7 @@ class PluginManager:
                 self.plugin_timestamps[file_path] = last_modified
 
     def get_mode(self):
-        """mode.txt を読み込んで現在のモードを取得します。"""
+        """Read mode.txt and return the current mode."""
         mode_file = self.mode_path / "mode.txt"
         try:
             with open(mode_file, "r") as file:
@@ -71,8 +71,8 @@ class PluginManager:
             return self.mode
 
     def run(self, interval=5):
-        """N秒ごとにモードに応じて処理を実行するメインループです。"""
-        print("PluginManagerが起動しました。モードを待機しています...")
+        """Main loop that executes processing based on the mode every N seconds."""
+        print("PluginManager started. Waiting for mode changes...")
         while True:
             mode = self.get_mode()
             print(f"{datetime.now().astimezone()} - Current mode: {mode}")
@@ -85,30 +85,30 @@ class PluginManager:
                 mode_method = getattr(self, mode_method_name, None)
 
                 if callable(mode_method):
-                    print(f"モード '{mode}' を実行中...")
+                    print(f"Running mode '{mode}'...")
                     mode_method()
                     self.mode = mode  # 有効なモードの場合のみ現在のモードを更新
                 else:
                     print(f"Unknown mode: {mode}")
 
             # インターバルの間隔を待機
-            print(f"{interval}秒ごとにモードを確認します...")
+            print(f"Checking mode every {interval} seconds...")
             time.sleep(interval)
 
     def display_help(self):
-        """利用可能なすべてのモードとその説明を表示します。"""
-        print("利用可能なモードと説明:")
+        """Display all available modes and their descriptions."""
+        print("Available modes and descriptions:")
         # クラス内のすべてのメソッドを調べ、'mode_'で始まるものを探す
         for name, method in inspect.getmembers(self, predicate=inspect.ismethod):
             if name.startswith("mode_"):
                 # メソッド名から 'mode_' を取り除いてモード名を取得
                 mode_name = name[5:]
                 # メソッドのdocstringから説明を取得
-                description = inspect.getdoc(method) or "説明なし"
+                description = inspect.getdoc(method) or "No description"
                 print(f" - {mode_name}: {description}")
 
     def proceed_to_next_step(self):
-        """次のステップに進みます。"""
+        """Proceed to the next step."""
         print("Proceeding to next step...")
         self.experiments.proceed_to_next_step()  
 
@@ -116,14 +116,14 @@ class PluginManager:
 
     def mode_loop(self):
         """
-        自動ロードを実行します。
+        Run auto-load.
         """
         print("Running auto_load...")
         self.experiments.auto_load()
 
     def mode_module_load(self):
         """
-        すべてのプラグインをロードまたはリロードします。
+        Load or reload all plugins.
         """
         print("Loading all plugins...")
         self.load_all_plugins()
@@ -131,10 +131,10 @@ class PluginManager:
     
     def mode_add_experiment(self):
         """
-        'mode_add_experiment.txt' ファイルからコマンドを読み取り、実験を追加します。
-        コマンドは 'module.class' 形式で記述されている必要があります。
-        'mode_add_experiment.txt' は読み取り後に自動的に削除されます。
-        例: 'my_module.MyExperimentClass'
+        Read a command from 'mode_add_experiment.txt' and add an experiment.
+        The command must be in 'module.class' format.
+        'mode_add_experiment.txt' is deleted automatically after reading.
+        Example: 'my_module.MyExperimentClass'
         """
         command_file = self.mode_path / "mode_add_experiment.txt"
         try:
@@ -169,7 +169,7 @@ class PluginManager:
 
     def mode_show_experiments(self):
         """
-        実験クラスのリストを表示します。
+        Show the list of experiments.
         """
         # 実験クラスの表示メソッド
         if hasattr(self.experiments, 'list'):
@@ -180,10 +180,10 @@ class PluginManager:
     
     def mode_delete_experiment(self):
         """
-        'delete_experiment' モードで実行されるメソッド。
-        'mode_delete_experiment.txt' ファイルからコマンドを読み取り、指定された実験を削除します。
-        コマンドは実験のUUIDである必要があります。
-        'mode_delete_experiment.txt' は読み取り後に自動的に削除されます。
+        Method for 'delete_experiment' mode.
+        Read a command from 'mode_delete_experiment.txt' and delete the target experiment.
+        The command must be an experiment UUID.
+        'mode_delete_experiment.txt' is deleted automatically after reading.
         """
         # 引数が指定されていない場合はファイルから読み取る
         command_file = self.mode_path / "mode_delete_experiment.txt"
@@ -208,10 +208,10 @@ class PluginManager:
 
     def mode_add_experiments(self):
         """
-        'mode_add_experiments.txt' ファイルから複数のコマンドを読み取り、実験を追加します。
-        各コマンドは 'module.class' 形式で記述されています。
-        ファイルは読み取り後に自動的に削除されます。
-        例:
+        Read multiple commands from 'mode_add_experiments.txt' and add experiments.
+        Each command must be in 'module.class' format.
+        The file is deleted automatically after reading.
+        Example:
         ```mode_add_experiments.txt
             my_module.ExperimentClass1
             other_module.ExperimentClass2
@@ -224,17 +224,17 @@ class PluginManager:
                 # 空行やコメント行を除外
                 commands = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
                 if not commands:
-                    print(f"Add experiments command file {command_file} は空です。")
+                    print(f"Add experiments command file {command_file} is empty.")
                     return
-                print(f"追加する実験コマンド: {commands}")
+                print(f"Experiment commands to add: {commands}")
             # ファイルを読み取ったら削除
             os.remove(command_file)
         except FileNotFoundError:
-            print(f"追加実験コマンドファイル {command_file} が見つかりません。")
+            print(f"Add experiments command file {command_file} not found.")
             # templateファイルを作成する
             command_template_file = Path(str(command_file).replace(".txt", "_template.txt"))
-            command_template = f"# 'module.class' 形式で{command_file}に記述してください。\n"
-            command_template += "# 例:\n"
+            command_template = f"# Write commands in 'module.class' format to {command_file}.\n"
+            command_template += "# Example:\n"
             command_template += "# my_module.ExperimentClass1\n"
             command_template += "# other_module.ExperimentClass2\n"
             with open(command_template_file, "w") as file:
@@ -244,7 +244,7 @@ class PluginManager:
             print(command_template)
             return
         except Exception as e:
-            print(f"コマンドファイルの読み取り中にエラーが発生しました: {e}")
+            print(f"Error reading command file: {e}")
             return
 
         for command in commands:
@@ -258,23 +258,23 @@ class PluginManager:
                         try:
                             experiment_instance = cls()
                             self.experiments.add_experiment(experiment_instance)
-                            print(f"モジュール {module_name} のクラス {class_name} を実験として追加しました。")
+                            print(f"Added class {class_name} from module {module_name} as an experiment.")
                         except Exception as e:
-                            print(f"クラス {class_name} のインスタンス化中にエラーが発生しました: {e}")
+                            print(f"Error instantiating class {class_name}: {e}")
                     else:
-                        print(f"モジュール {module_name} にクラス {class_name} が見つかりません。")
+                        print(f"Class {class_name} not found in module {module_name}.")
                 else:
-                    print(f"モジュール {module_name} がロードされていません。実験を追加する前にモジュールをロードしてください。")
+                    print(f"Module {module_name} is not loaded. Load the module before adding experiments.")
             else:
-                print(f"無効なコマンド形式: '{command}'。 'module.class' 形式を使用してください。")
+                print(f"Invalid command format: '{command}'. Use 'module.class'.")
 
     def mode_delete_experiments(self):
         """
-        'delete_experiments' モードで実行されるメソッド。
-        'mode_delete_experiments.txt' ファイルから複数のUUIDを読み取り、指定された実験を削除します。
-        各UUIDは改行区切りで記述されています。
-        ファイルは読み取り後に自動的に削除されます。
-        例:
+        Method for 'delete_experiments' mode.
+        Read multiple UUIDs from 'mode_delete_experiments.txt' and delete target experiments.
+        Each UUID must be written on a new line.
+        The file is deleted automatically after reading.
+        Example:
             uuid1
             uuid2
             uuid3
@@ -286,17 +286,17 @@ class PluginManager:
                 # 空行やコメント行を除外
                 uuids = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
                 if not uuids:
-                    print(f"削除コマンドファイル {command_file} は空です。")
+                    print(f"Delete experiments command file {command_file} is empty.")
                     return
-                print(f"削除する実験のUUID一覧: {uuids}")
+                print(f"Experiment UUIDs to delete: {uuids}")
             # ファイルを読み取ったら削除
             os.remove(command_file)
         except FileNotFoundError:
-            print(f"削除コマンドファイル {command_file} が見つかりません。")
+            print(f"Delete experiments command file {command_file} not found.")
             # templateファイルを作成する
             command_template_file = Path(str(command_file).replace(".txt", "_template.txt"))
-            command_template = f"# UUIDを{command_file}に記述してください。\n"
-            command_template += "# 例:\n"
+            command_template = f"# Write UUIDs to {command_file}.\n"
+            command_template += "# Example:\n"
             command_template += "# uuid1\n"
             command_template += "# uuid2\n"
             with open(command_template_file, "w") as file:
@@ -306,39 +306,39 @@ class PluginManager:
             print(command_template)
             return
         except Exception as e:
-            print(f"コマンドファイルの読み取り中にエラーが発生しました: {e}")
+            print(f"Error reading command file: {e}")
             return
 
         for uuid in uuids:
             try:
                 self.experiments.delete_experiment_with_experiment_uuid(uuid)
-                print(f"UUID {uuid} の実験が削除されました。")
+                print(f"Deleted experiment with UUID {uuid}.")
             except Exception as e:
-                print(f"UUID {uuid} の実験を削除中にエラーが発生しました: {e}")
+                print(f"Error deleting experiment with UUID {uuid}: {e}")
 
 
     def mode_proceed(self):
         """
-        次のステップに進みます。
+        Proceed to the next step.
         """
         self.proceed_to_next_step()
 
     def mode_stop(self):
         """
-        処理を停止し、休息状態になります。
+        Stop processing and stay idle.
         """
         print("Rest...zzz")
 
     def mode_exit(self):
         """
-        プラグインマネージャーを終了します。
+        Exit the plugin manager.
         """
         print("Exiting PluginManager...")
         sys.exit()
 
     def mode_eof(self):
         """
-        プラグインマネージャーを終了します。
+        Exit the plugin manager.
         """
         self.mode_exit()
 
@@ -350,20 +350,20 @@ def main():
     experiments = Experiments(parent_dir_path=Path(dir), reference_time = UNIX_2024_11_13_00_00_00_IN_JP//60)
     plugin_manager = PluginManager(experiments)
 
-    # プラグインマネージャーの開始前にリロードの選択を促す
-    reload_choice = 'y' #input("実験をリロードしますか？ (y/n): ").strip().lower()
+    # Ask whether to reload experiments before starting the plugin manager.
+    reload_choice = 'y' #input("Do you want to reload experiments? (y/n): ").strip().lower()
     if reload_choice == 'y':
         try:
-            step = '' #input("リロードするステップを入力してください。空白の場合は自動的に最大ステップまでリロードします。: ").strip()
+            step = '' #input("Enter the step to reload. Leave blank to reload up to the latest step automatically: ").strip()
             if step == '':
                 step = None
             else:
                 step = int(step)
             experiments = experiments.reload(step)
         except ValueError:
-            print("無効なステップ番号です。リロードをスキップします。")
+            print("Invalid step number. Skipping reload.")
         except Exception as err:
-            print(f"リロード中にエラーが発生しました: {err}. リロードをスキップします。")
+            print(f"Error occurred during reload: {err}. Skipping reload.")
 
     plugin_manager = PluginManager(experiments)
     plugin_manager.run()

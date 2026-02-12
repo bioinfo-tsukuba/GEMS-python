@@ -100,7 +100,7 @@ class MachineList:
         """
         for machine in self.machines:
             if new_machine.machine_id == machine.machine_id:
-                print(f"既に machine_idが{new_machine.machine_id}のmachineは存在しています")
+                print(f"A machine with machine_id={new_machine.machine_id} already exists.")
                 return
             
         self.machines.append(new_machine)
@@ -118,10 +118,10 @@ class MachineList:
         original_length = len(self.machines)
         self.machines = [machine for machine in self.machines if machine.machine_id != machine_id]
         if len(self.machines) == original_length:
-            print(f"machine_idが{machine_id}のmachineは存在しません")
+            print(f"No machine found with machine_id={machine_id}.")
             return
         
-        print(f"machine_idが{machine_id}のmachineを削除しました")
+        print(f"Deleted machine with machine_id={machine_id}.")
 
 
 
@@ -183,7 +183,7 @@ class TaskGroup:
             start_time = self.optimal_start_time
         # タスクのスケジュールを計算
         if self.status != TaskGroupStatus.NOT_STARTED:
-            print(f"タスク群 {self.task_group_id} はすでに進行しています。", file=sys.stderr)
+            print(f"Task group {self.task_group_id} is already in progress.", file=sys.stderr)
             return
 
         # 最適な開始時刻に合わせて、タスクの開始時刻を設定
@@ -405,11 +405,11 @@ class TaskGroup:
         """
         group_index = cls.find_task_group(task_groups, group_id)
         if group_index is None:
-            print(f"タスク群 {group_id} が存在しません。")
+            print(f"Task group {group_id} does not exist.")
             return
         
         task_groups.pop(group_index)
-        print(f"タスク群 {group_id} を削除しました。")
+        print(f"Deleted task group {group_id}.")
         return task_groups
     
     @classmethod
@@ -423,12 +423,12 @@ class TaskGroup:
         """
         group_index = cls.find_task_group(task_groups, group_id)
         if group_index is None:
-            print(f"タスク群 {group_id}が存在しません。")
+            print(f"Task group {group_id} does not exist.")
             return
 
         task_index = Task.find_task(task_groups[group_index].tasks, task_id)
         if task_index is None:
-            print(f"タスク群 {group_id}にタスク {task_id}が存在しません。")
+            print(f"Task {task_id} does not exist in task group {group_id}.")
             return
         
         return group_index, task_index
@@ -439,12 +439,12 @@ class TaskGroup:
 
         task = task_groups[group_index].tasks[task_index]
         if task.task_status != TaskStatus.NOT_STARTED:
-            print(f"タスク群 {group_id} のタスク {task_id} は既に開始しています。（状態:{task.task_status}）")
+            print(f"Task {task_id} in task group {group_id} has already started. (status: {task.task_status})")
             return
 
         # タスクを開始としてマーク
         task_groups[group_index].tasks[task_index].task_status = TaskStatus.IN_PROGRESS
-        print(f"タスク群 {group_id} のタスク {task_id} が開始しました")
+        print(f"Started task {task_id} in task group {group_id}.")
 
         # タスク群のステータスを更新
         task_groups[group_index].status_update()
@@ -467,19 +467,19 @@ class TaskGroup:
 
         task = task_groups[group_index].tasks[task_index]
         if task.task_status == TaskStatus.COMPLETED:
-            print(f"タスク群 {group_id} のタスク {task_id} は既に終了しています。（状態:{task.task_status}）")
+            print(f"Task {task_id} in task group {group_id} has already completed. (status: {task.task_status})")
             return
 
         # タスクを開始としてマーク
         task_groups[group_index].tasks[task_index].task_status = TaskStatus.COMPLETED
-        print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
+        print(f"Completed task {task_id} in task group {group_id}.")
 
         # タスク群のステータスを更新
         task_groups[group_index].status_update()
 
         # 全てのタスクが終了しているかをチェック
         if task_groups[group_index].is_completed():
-            print(f"タスク群 {group_id} が全て終了しました")
+            print(f"All tasks in task group {group_id} are completed.")
 
         return task_groups
 
