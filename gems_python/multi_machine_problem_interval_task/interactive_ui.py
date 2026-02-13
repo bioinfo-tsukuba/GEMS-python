@@ -103,6 +103,9 @@ class PluginManager:
             if name.startswith("mode_"):
                 # メソッド名から 'mode_' を取り除いてモード名を取得
                 mode_name = name[5:]
+                # 先頭が '_' のモードは隠しコマンドとしてヘルプに表示しない
+                if mode_name.startswith("_"):
+                    continue
                 # メソッドのdocstringから説明を取得
                 description = inspect.getdoc(method) or "No description"
                 print(f" - {mode_name}: {description}")
@@ -454,6 +457,68 @@ class PluginManager:
         Stop processing and stay idle.
         """
         print("Rest...zzz")
+
+    def mode__aa(self):
+        """
+        Hidden command.
+        """
+        aa_lines = [
+            "  _____     ____",
+            " /      \\  |  o |",
+            "|        |/ ___\\|",
+            "|_________/     ",
+            "|_|_| |_|_|",
+        ]
+        big_aa_lines = [
+            "                             ___-------___",
+            "                         _-~~             ~~-_",
+            "                      _-~                    /~-_",
+            "   /^\\__/^\\         /~  \\                   /    \\",
+            " /|  O|| O|        /      \\_______________/        \\",
+            "| |___||__|      /       /                \\          \\",
+            "|          \\    /      /                    \\          \\",
+            "|   (_______) /______/                        \\_________ \\",
+            "|         / /         \\                      /            \\",
+            " \\         \\^\\\\         \\                  /               \\     /",
+            "   \\         ||           \\______________/      _-_       //\\__//",
+            "     \\       ||------_-~~-_ ------------- \\ --/~   ~\\    || __/",
+            "       ~-----||====/~     |==================|       |/~~~~~",
+            "        (_(__/  ./     /                    \\_\\      \\.",
+            "               (_(___/                         \\_____)_)",
+        ]
+
+        try:
+            term_width = os.get_terminal_size().columns
+        except OSError:
+            term_width = 80
+
+        aa_width = max(len(line) for line in aa_lines)
+
+        try:
+            print("\033[?25l", end="", flush=True)  # カーソル非表示
+            for x in range(-aa_width, term_width + 1):
+                print("\033[2J\033[H", end="")
+                for line in aa_lines:
+                    if x >= 0:
+                        visible = (" " * x) + line
+                    else:
+                        cut = -x
+                        visible = line[cut:] if cut < len(line) else ""
+                    print(visible[:term_width].ljust(term_width))
+                time.sleep(0.05)
+            big_aa_width = max(len(line) for line in big_aa_lines)
+            for x in range(-big_aa_width, 1):
+                print("\033[2J\033[H", end="")
+                for line in big_aa_lines:
+                    if x >= 0:
+                        visible = (" " * x) + line
+                    else:
+                        cut = -x
+                        visible = line[cut:] if cut < len(line) else ""
+                    print(visible[:term_width].ljust(term_width))
+                time.sleep(0.03)
+        finally:
+            print("\033[?25h", end="", flush=True)  # カーソル再表示
 
     def mode_exit(self):
         """
