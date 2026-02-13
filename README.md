@@ -1,5 +1,7 @@
 # GEMS
 
+![GEMS logo](assets/logo.png)
+
 ## Overview
 GEMS is a Python toolkit for orchestrating, simulating, and supervising multi-machine laboratory experiments such as cell culture workflows. The project offers two primary entry points:
 
