@@ -149,3 +149,23 @@ help
 - Write `proceed` to `mode/mode.txt` to move to the next state.
 - Write `stop` to pause the workflow.
 - Write `exit` or `eof` to terminate the UI.
+
+## GUI Experiment Builder (MVP)
+The repository now includes a GUI for experiment creation and management.
+
+### Launch
+Run the GUI from the project root:
+
+```bash
+python main_gui.py
+```
+
+### Included MVP Features
+The following items are available in the current GUI implementation:
+
+1. Experiment creation wizard
+2. Visual state-transition editor
+3. Input validation before creation
+4. Simulation actions (`simulate_one` and `simulate`)
+5. Machine management screen (add / delete / list)
+6. Experiment list with status filter and keyword search
