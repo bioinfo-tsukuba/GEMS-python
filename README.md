@@ -2,6 +2,12 @@
 
 ![GEMS logo](assets/logo.png)
 
+> **推奨 / Recommended scheduler: Google OR-Tools (`"o"`, the default).**
+> In 168 feasible comparisons across 64 synthetic scheduling patterns,
+> OR-Tools had a lower (better) timing-penalty score in 110, tied in 58, and
+> had a higher score in 0. See the
+> [evaluation conditions and limitations](docs/benchmarks/scheduler_pattern_study_2026-10-28/summary.md).
+
 ## Overview
 GEMS is a Python toolkit for orchestrating, simulating, and supervising multi-machine laboratory experiments such as cell culture workflows. The project offers two primary entry points:
 
@@ -25,6 +31,11 @@ The local package version is **0.1.4**. Poetry uses `pyproject.toml` and
 `poetry.lock` as the dependency source of truth.
 
 ## Scheduling
+
+For normal use, leave `scheduling_method` unset to use the recommended
+OR-Tools scheduler. Select `"s"` explicitly when comparing with the legacy
+simulated annealer; in the synthetic evaluation, 24 of its 192 runs had
+overlapping tasks assigned to the same physical machine ID.
 
 The three task variants use Google OR-Tools CP-SAT when `scheduling_method` is
 omitted or set to `"o"`. Use `"s"` to select simulated annealing explicitly.
