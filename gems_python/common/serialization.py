@@ -406,7 +406,9 @@ def _legacy_object(cls, saved, path):
             indices = [i for i, s in enumerate(restored["states"]) if s.state_name == restored["current_state_name"]]
             if not indices:
                 raise SerializationError(f"{path}.current_state_name: no matching State")
-            restored["current_state_index"] = indices[-1]
+            if len(indices) != 1:
+                raise SerializationError(f"{path}.current_state_name: ambiguous legacy State index")
+            restored["current_state_index"] = indices[0]
         restored.setdefault("dataframe_backend", dataframes.backend_of(restored["shared_variable_history"]))
     return _restore(cls, restored, path)
 

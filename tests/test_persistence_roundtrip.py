@@ -231,6 +231,11 @@ class TestPersistenceRoundtrip(unittest.TestCase):
                 if name == "simple":
                     self.assertEqual(restored.current_task.scheduled_time, 17)
                     self.assertEqual(restored.current_task.task_id, 9)
+                    ambiguous = copy.deepcopy(payload)
+                    ambiguous.pop("current_state_index", None)
+                    ambiguous["states"].append(copy.deepcopy(ambiguous["states"][0]))
+                    with self.assertRaisesRegex(SerializationError, "ambiguous legacy State index"):
+                        cls.from_dict(ambiguous)
                 else:
                     self.assertEqual((restored.step, restored.reference_time), (3, 47))
                     self.assertEqual(restored.task_groups[0].tasks[0].scheduled_time, 17)
@@ -302,6 +307,14 @@ class TestPersistenceRoundtrip(unittest.TestCase):
                 save_snapshot(source, directory)
                 self.assertTrue(equivalent(source, source.reload()))
                 self.assertEqual(before, source.to_json())
+                (directory / "experiments.json").unlink()
+                with self.assertWarns(RuntimeWarning):
+                    self.assertTrue(equivalent(source, source.reload()))
+                save_snapshot(source, directory)
+                (directory / "experiments.pkl").unlink()
+                with self.assertWarns(RuntimeWarning):
+                    self.assertTrue(equivalent(source, source.reload()))
+                save_snapshot(source, directory)
                 other = copy.deepcopy(source)
                 other.experiments[0].experiment_name = "different"
                 other.to_pickle(directory / "experiments.pkl")
@@ -327,6 +340,18 @@ class TestPersistenceRoundtrip(unittest.TestCase):
                 self.assertEqual(before, source.to_json())
                 with self.assertRaisesRegex(ValueError, "source must"):
                     source.reload(source="unknown")
+                if module is not simple:
+                    source.step = 3
+                    saved = copy.deepcopy(source)
+                    save_snapshot(saved, source.save_dir())
+                    source.step = 9
+                    before = source.to_json()
+                    self.assertTrue(equivalent(saved, source.reload(step=3)))
+                    self.assertTrue(equivalent(saved, source.reload()))
+                    self.assertEqual(before, source.to_json())
+                    with self.assertRaises(RuntimeError):
+                        source.reload(step=100)
+                    self.assertEqual(before, source.to_json())
 
     def test_save_all_adds_full_collection_and_plots_do_not_modify_tasks(self):
         with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()):
