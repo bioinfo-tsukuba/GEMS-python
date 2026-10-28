@@ -172,3 +172,5 @@ cython_debug/
 volatile*/
 
 .DS_Store
+# Local agent instructions
+/AGENTS.md
