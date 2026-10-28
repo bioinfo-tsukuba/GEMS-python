@@ -94,8 +94,9 @@ research [2], without claiming the synthetic response models a real reaction.
   the sequential method did so in 5 of 10 runs. The exact schedules, seeds,
   and diagrams are preserved in the comparison report. This is a finding in
   the existing optional methods, not a new CP-SAT failure.
-- The focused scheduler and simulator tests passed. The disposable-checkout
-  full suite reported 58 tests with the same 10 errors as on 2026-10-27:
+- The 16 focused scheduler and simulator tests passed. The final
+  disposable-checkout full suite reported 60 tests with the same 10 errors
+  as on 2026-10-27:
   missing HEK arguments (3), UUID JSON (1), interactive input (1),
-  old Matplotlib API (4), and tuple-unpacking (1). The new focused
-  comparison-metric test was added after this full-suite run.
+  old Matplotlib API (4), and tuple-unpacking (1). `poetry check --lock`
+  completed with only pre-existing metadata deprecation warnings.

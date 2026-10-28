@@ -215,34 +215,42 @@ class SolverStatusHandler(logging.Handler):
             self.status = match.group(1)
 
 
+def run_manager(manager, variant, method, seed):
+    """Run scheduling only and evaluate its result using the same independent metrics."""
+    if seed is not None:
+        random.seed(seed)
+    status_handler = SolverStatusHandler()
+    previous_level = LOGGER.level
+    LOGGER.addHandler(status_handler)
+    LOGGER.setLevel(logging.INFO)
+    output = io.StringIO()
+    start = time.perf_counter()
+    error = None
+    try:
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            manager.execute_scheduling(method)
+        metrics = evaluate(manager, variant)
+    except Exception as exc:
+        metrics = {}
+        error = f"{type(exc).__name__}: {exc}"
+    finally:
+        elapsed = time.perf_counter() - start
+        LOGGER.removeHandler(status_handler)
+        LOGGER.setLevel(previous_level)
+    return {
+        "variant": variant, "method": method, "seed": seed,
+        "seconds": round(elapsed, 6),
+        "status": error or (status_handler.status if method == "o" else "FINISHED"),
+        **metrics,
+    }
+
+
 def run_case(variant, kind, method, seed):
     with tempfile.TemporaryDirectory(prefix="gems-scheduler-") as directory:
         manager = make_case(variant, kind, Path(directory))
-        if seed is not None:
-            random.seed(seed)
-        status_handler = SolverStatusHandler()
-        previous_level = LOGGER.level
-        LOGGER.addHandler(status_handler)
-        LOGGER.setLevel(logging.INFO)
-        output = io.StringIO()
-        start = time.perf_counter()
-        error = None
-        try:
-            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
-                manager.execute_scheduling(method)
-            metrics = evaluate(manager, variant)
-        except Exception as exc:
-            metrics = {}
-            error = f"{type(exc).__name__}: {exc}"
-        finally:
-            elapsed = time.perf_counter() - start
-            LOGGER.removeHandler(status_handler)
-            LOGGER.setLevel(previous_level)
         return {
-            "variant": variant, "penalty": kind, "method": method, "seed": seed,
-            "seconds": round(elapsed, 6),
-            "status": error or (status_handler.status if method == "o" else "FINISHED"),
-            **metrics,
+            "penalty": kind,
+            **run_manager(manager, variant, method, seed),
         }
 
 
