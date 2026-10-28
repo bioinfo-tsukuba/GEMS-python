@@ -7,7 +7,7 @@ pointing to a writable directory:
 
 ```bash
 poetry check --lock
-poetry run python -m unittest tests.test_cp_sat_scheduler tests.test_experiment_simulators -q
+poetry run python -m unittest tests.test_cp_sat_scheduler tests.test_experiment_simulators tests.test_scheduler_pattern_study tests.test_dataframe_backends -q
 poetry run python -m unittest discover -s tests -p 'test_*.py'
 ```
 
@@ -50,6 +50,28 @@ the repository at `/tmp/gems-pattern-study-final-20261028`; the tracked script
 recreates them and can recalculate the report from its JSON output.
 
 ## Synthetic experiment scenarios
+
+The Pandas/Polars extension uses the same experiment formulas and OR-Tools only.
+Run `scripts/compare_dataframe_backends.py --output <new-directory>` for raw
+paired histories, events, schedule snapshots and solver records. Nine cases
+cover 162 steps per backend: 16 cell-culture steps, 27 grid-search steps,
+27 random-search steps for each seed 0/7/42, two concurrent completions,
+12 single-machine interval steps, 12 steps through the legacy dummy-output
+path, and 12 simple-task updates.
+
+Compare identical input SHA-256 hashes, normalized nulls, exact values and
+row/column order, transitions, task IDs, start/end times, machine assignments,
+penalties and solver status/objectives. Small acceptance cases must be
+`OPTIMAL`; wall time is excluded from equality. Single/dummy/simple cases
+exercise their existing update APIs rather than adding a new simple-task
+simulation interface.
+
+Boundary checks cover automatic/explicit backend selection, sparse and empty
+histories, numeric promotion, missing values, UTC datetimes, append/overwrite,
+incompatible schemas without premature task completion, mixed experiments,
+CSV ingestion, JSON/pickle round trips, legacy history formats, and rescheduling
+after restore. See the [verification record](benchmarks/dataframe_backends_2026-10-28/verification.md)
+for the environment, commands, failures/fixes and remaining limitations.
 
 **Cell culture:** start at confluence 0.12, use logistic growth with rate
 0.035 per hour and carrying capacity 1, observe every 360 minutes, and passage

@@ -53,11 +53,73 @@ forbid a task from running through a rest range. Scheduling times and cycle
 parameters use integer minutes in the same absolute time scale.
 
 
+## Pandas and Polars histories
+
+All three `Experiment` variants accept either a `pandas.DataFrame` or a
+`polars.DataFrame`. The trailing `dataframe_backend` option accepts `"auto"`
+(default), `"pandas"`, or `"polars"`. Automatic selection follows the supplied
+history's type; without a history, it creates an empty Pandas DataFrame.
+An explicit backend converts the supplied history before generating tasks.
+Existing positional arguments retain their order.
+
+```python
+import pandas as pd
+import polars as pl
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiment
+
+# MyState implements task_generator and transition_function.
+pandas_experiment = Experiment(
+    "pandas_run", [MyState()], "MyState",
+    shared_variable_history=pd.DataFrame({"time": [0], "measurement": [0.12]}),
+)
+polars_experiment = Experiment(
+    "polars_run", [MyPolarsState()], "MyPolarsState",
+    dataframe_backend="polars",
+)
+```
+
+Each experiment keeps its selected backend. State methods and observation
+providers receive that type, and results from the other backend are converted
+before updating the history. Pandas and Polars experiments may coexist in one
+`Experiments` manager. Existing Polars-specific states should receive a Polars
+history or specify `dataframe_backend="polars"`; their expressions are not
+translated automatically. For example, Pandas uses `df["time"].iloc[-1]`
+where Polars uses `df["time"][-1]`.
+
+Histories are ordered rows with uniquely named string columns. Append preserves
+row order, keeps existing columns first, adds new columns, fills absent values
+with null, and promotes compatible numeric types. Incompatible types raise an
+error before completing a task. Overwrite also preserves the experiment's
+backend. Pandas indexes are reset on conversion/append and omitted from CSV;
+put meaningful indexes in columns. Pandas histories built by conversion/append
+can use Arrow-backed nullable column types.
+
+`TaskGroup.create_non_completed_tasks_df(groups, dataframe_backend="polars")`
+selects the schedule table type; omitting the option now returns Pandas.
+Pandas and PyArrow are direct dependencies, installed through the lock file.
+JSON stores backend/version metadata and Arrow IPC data to preserve floating
+values and supported column types. Existing Polars history JSON and legacy
+column dictionaries remain readable. CSV is index-free and infers column types
+when read; use JSON or pickle when exact types must be retained. Arbitrary
+Python object columns and every backend-specific type are outside the verified
+conversion contract.
+
+The reproducible [backend comparison](docs/benchmarks/dataframe_backends_2026-10-28/verification.md)
+checks OR-Tools virtual experiments with both libraries:
+
+```bash
+poetry run python -m unittest tests.test_dataframe_backends -q
+MPLBACKEND=Agg poetry run python scripts/compare_dataframe_backends.py \
+  --output /tmp/gems-dataframe-comparison
+```
+
+The comparison refuses to reuse an existing output directory.
+
 ## Simulating Experiments with Dummy Outputs
 Use `Experiments.simulate` or `Experiments.simulate_one` to validate state transitions with mock data before running physical experiments.
 
 1. **Implement `dummy_output` for every state**  
-   Each class that inherits from `State` must implement `dummy_output` in addition to its existing `task_generator` and `transition_function`. Return a `polars.DataFrame` whose columns include every field referenced by the transition logic (for example, `confluence`, `measurement`). During simulation, this DataFrame stands in for the experimental measurements.
+   Each class that inherits from `State` must implement `dummy_output` in addition to its existing `task_generator` and `transition_function`. Return a Pandas or Polars DataFrame whose columns include every field referenced by the transition logic (for example, `confluence`, `measurement`). During simulation, this DataFrame stands in for the experimental measurements.
 
 2. **Assemble `Experiment` and `Experiments` objects**  
    Build an `Experiment` for each protocol, register the required `MachineList`, and hand the experiments to an `Experiments` instance. Set `parent_dir_path` to a writable directory if you plan to persist intermediate results.
@@ -84,7 +146,7 @@ Reusable, deterministic examples for cell passage/observation and synthetic
 reaction-condition search live in `tests/simulators/`. They inject observations
 through the optional `observation_provider` argument to `simulate_one` and
 `simulate`; the provider receives `(state, history, task_group, task,
-event_time)` and returns a `polars.DataFrame`. `event_time` is the scheduled
+event_time)` and returns a Pandas or Polars DataFrame. `event_time` is the scheduled
 completion time in integer minutes, and the scheduler advances its reference
 time to that value. When tasks run concurrently, the provider receives
 results in completion order. Calls without a provider continue to use
