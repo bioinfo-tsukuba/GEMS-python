@@ -1,11 +1,12 @@
 """Checks for the paired scheduler study's case coverage and aggregation."""
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from scripts.study_scheduler_patterns import (
-    aggregate, all_cases, input_fingerprint, make_case,
+    aggregate, all_cases, input_fingerprint, load_case_results, make_case,
 )
 
 
@@ -54,6 +55,23 @@ class TestSchedulerPatternStudy(unittest.TestCase):
         self.assertEqual(result["sa_better"], 1)
         self.assertEqual(result["median_gap"], 0)
         self.assertEqual(result["p90_gap"], 3)
+        self.assertEqual(result["cases_with_feasible_sa"], 1)
+        self.assertEqual(result["case_sa_better"], 1)
+
+    def test_reanalysis_rejects_changed_inputs(self):
+        cp = {
+            "case_id": "case1", "method": "o", "seed": None,
+            "input_sha256": "original",
+        }
+        sa = {
+            "case_id": "case1", "method": "s", "seed": 0,
+            "input_sha256": "changed",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "runs.json"
+            path.write_text(json.dumps([cp, sa]))
+            with self.assertRaisesRegex(ValueError, "Input mismatch"):
+                load_case_results(path)
 
 
 if __name__ == "__main__":

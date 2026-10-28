@@ -41,6 +41,14 @@ check the 390 formula/CP-SAT pairs and all 15 OR-Tools public-API cases.
 The comparison calls the existing `"s"` and `"f"` implementations without
 changing their annealing parameters.
 
+A separate [64-pattern scheduler-only study](benchmarks/scheduler_pattern_study_2026-10-28/summary.md)
+varies task/group count, preferred-start density, penalty composition, and
+machine count. Its three seeded annealing repetitions per case give 256 total
+scheduling calls. The script checks identical input fingerprints and reports
+only feasible pairs in score comparisons. The raw runs were retained outside
+the repository at `/tmp/gems-pattern-study-final-20261028`; the tracked script
+recreates them and can recalculate the report from its JSON output.
+
 ## Synthetic experiment scenarios
 
 **Cell culture:** start at confluence 0.12, use logistic growth with rate
@@ -94,9 +102,16 @@ research [2], without claiming the synthetic response models a real reaction.
   the sequential method did so in 5 of 10 runs. The exact schedules, seeds,
   and diagrams are preserved in the comparison report. This is a finding in
   the existing optional methods, not a new CP-SAT failure.
-- The 16 focused scheduler and simulator tests passed. The final
-  disposable-checkout full suite reported 60 tests with the same 10 errors
+- The 19 focused scheduler, simulator, and pattern-study tests passed. The
+  disposable-checkout full suite reported 63 tests with the same 10 errors
   as on 2026-10-27:
   missing HEK arguments (3), UUID JSON (1), interactive input (1),
   old Matplotlib API (4), and tuple-unpacking (1). `poetry check --lock`
   completed with only pre-existing metadata deprecation warnings.
+- In the 64-pattern study, all 64 OR-Tools calls were `OPTIMAL`. Annealing
+  produced 168/192 schedules with no physical-machine ID overlap. Across
+  these 168 feasible pairs, OR-Tools had a lower timing penalty in 110, the
+  scores tied in 58, and annealing had a lower score in 0. Per-case
+  best-of-three feasible annealing scores were lower in 0 of 56 comparable
+  cases; 8 cases had no feasible annealing result. The comparison script and
+  summary document the fixed inputs, seeds, solver configuration, and plots.

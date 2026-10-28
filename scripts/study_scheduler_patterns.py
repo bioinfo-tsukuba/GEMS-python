@@ -209,6 +209,12 @@ def aggregate(case_results):
     gaps = [
         sa["timing_penalty"] - cp["timing_penalty"] for cp, sa in matched
     ]
+    best_case_gaps = [
+        min(sa["timing_penalty"] for sa in results if is_feasible(sa))
+        - cp["timing_penalty"]
+        for cp, results in case_results
+        if is_feasible(cp) and any(is_feasible(sa) for sa in results)
+    ]
     return {
         "cases": len(case_results),
         "cp_optimal": sum(row["status"] == "OPTIMAL" for row in cp_rows),
@@ -219,6 +225,10 @@ def aggregate(case_results):
         "cp_better": sum(gap > 0 for gap in gaps),
         "equal_score": sum(gap == 0 for gap in gaps),
         "sa_better": sum(gap < 0 for gap in gaps),
+        "cases_with_feasible_sa": len(best_case_gaps),
+        "case_cp_better": sum(gap > 0 for gap in best_case_gaps),
+        "case_equal_score": sum(gap == 0 for gap in best_case_gaps),
+        "case_sa_better": sum(gap < 0 for gap in best_case_gaps),
         "median_gap": statistics.median(gaps) if gaps else None,
         "p90_gap": percentile(gaps, 0.9),
         "median_cp_seconds": (
@@ -263,12 +273,45 @@ def summary_table(case_results, field, heading):
 
 def write_summary(output_dir, case_results, seeds):
     result = aggregate(case_results)
+    clustered = aggregate([
+        pair for pair in case_results if pair[0]["density"] == "clustered"
+    ])
+    spread = aggregate([
+        pair for pair in case_results if pair[0]["density"] == "spread"
+    ])
+    multi_one = aggregate([
+        pair for pair in case_results
+        if pair[0]["variant"] == "multi_interval" and pair[0]["machine_count"] == 1
+    ])
+    multi_two = aggregate([
+        pair for pair in case_results
+        if pair[0]["variant"] == "multi_interval" and pair[0]["machine_count"] == 2
+    ])
     lines = [
         "# Scheduler-only pattern study",
         "",
         "この文書は `scripts/study_scheduler_patterns.py` が集計した結果です。",
         "旧方式は公開APIの焼きなまし `s`、新方式は OR-Tools `o`。",
         "スケジューリングのみを実行し、シミュレーターは呼んでいません。",
+        "",
+        "## 再実行",
+        "",
+        "```bash",
+        "MPLCONFIGDIR=/tmp/gems-mpl poetry run python scripts/study_scheduler_patterns.py \\",
+        f"  --output-dir /tmp/gems-pattern-study-recheck --seeds {' '.join(map(str, seeds))}",
+        "```",
+        "",
+        "スクリプトがCSV/JSONとこの要約・図を新しい出力先に生成する。",
+        "保存済みの実行別JSONから集計だけを再計算する場合:",
+        "",
+        "```bash",
+        "MPLCONFIGDIR=/tmp/gems-mpl poetry run python scripts/study_scheduler_patterns.py \\",
+        "  --from-runs /tmp/gems-pattern-study-recheck/runs.json \\",
+        "  --output-dir /tmp/gems-pattern-study-reanalysis",
+        "```",
+        "",
+        "[実行可能な対のスコア散布図](paired_scores.png) と"
+        "[実行可能率・実行時間の図](feasibility_runtime.png)。",
         "",
         "## 実行条件",
         "",
@@ -310,10 +353,17 @@ def write_summary(output_dir, case_results, seeds):
         f"- 実行可能な{len([1 for cp, rs in case_results for sa in rs if is_feasible(cp) and is_feasible(sa)])}対の"
         f"うち、CP低点 {result['cp_better']}、同点 {result['equal_score']}、"
         f"SA低点 {result['sa_better']}。",
+        f"- ケース単位で焼きなまし{len(seeds)}シード中の"
+        "実行可能な最良値と比べると、"
+        f"{result['cases_with_feasible_sa']}ケースでCP低点 "
+        f"{result['case_cp_better']}、同点 {result['case_equal_score']}、"
+        f"SA低点 {result['case_sa_better']}。残り"
+        f"{result['cases'] - result['cases_with_feasible_sa']}ケースは"
+        "焼きなましの実行可能解がない。",
         f"- スコア差中央値 {format_number(result['median_gap'])}、"
         f"90%点 {format_number(result['p90_gap'])}。",
-        f"- 壁時計時間中央値: CP {format_number(result['median_cp_seconds'])}秒、"
-        f"焼きなまし {format_number(result['median_sa_seconds'])}秒。",
+        f"- 壁時計時間中央値: CP {result['median_cp_seconds']:.6f}秒、"
+        f"焼きなまし {result['median_sa_seconds']:.6f}秒。",
         "",
         summary_table(case_results, "variant", "系統別"),
         "",
@@ -323,12 +373,24 @@ def write_summary(output_dir, case_results, seeds):
         "",
         summary_table(case_results, "count", "タスク・グループ数別"),
         "",
-        "複数機械型だけの機械台数別:",
-        "",
         summary_table(
             [pair for pair in case_results if pair[0]["variant"] == "multi_interval"],
             "machine_count", "機械台数別",
         ),
+        "",
+        "## 条件別の観測",
+        "",
+        f"- 集中条件は実行可能な{clustered['cp_better'] + clustered['equal_score'] + clustered['sa_better']}対のうち"
+        f"CP低点{clustered['cp_better']}対、分散条件は"
+        f"{spread['cp_better'] + spread['equal_score'] + spread['sa_better']}対のうち"
+        f"CP低点{spread['cp_better']}対だった。",
+        f"- 複数機械型の焼きなまし実行可能率は、同型機1台で"
+        f"{multi_one['sa_feasible']}/{multi_one['sa_runs']}、2台で"
+        f"{multi_two['sa_feasible']}/{multi_two['sa_runs']}だった。",
+        "- 全体のスコア差90%点には、開始時刻が休止範囲に入るごとに"
+        "100万点となる"
+        "循環休止ペナルティが影響する。線形型・範囲型は上の構成別表で"
+        "別に確認する。",
         "",
         "## 読み方と制約",
         "",
@@ -344,6 +406,26 @@ def write_summary(output_dir, case_results, seeds):
         "",
     ]
     (output_dir / "summary.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def load_case_results(path):
+    rows = json.loads(path.read_text())
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("Expected a nonempty list of scheduler runs")
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[row["case_id"]].append(row)
+    case_results = []
+    for case_id, group in grouped.items():
+        cp = [row for row in group if row["method"] == "o"]
+        sa = [row for row in group if row["method"] == "s"]
+        if len(cp) != 1 or not sa or len({row["seed"] for row in sa}) != len(sa):
+            raise ValueError(f"Invalid method/seed records for {case_id}")
+        if len({row["input_sha256"] for row in group}) != 1:
+            raise ValueError(f"Input mismatch for {case_id}")
+        case_results.append((cp[0], sorted(sa, key=lambda row: row["seed"])))
+    seeds = sorted({row["seed"] for row in rows if row["method"] == "s"})
+    return case_results, seeds
 
 
 def make_plots(output_dir, case_results):
@@ -425,7 +507,18 @@ def main():
     parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     parser.add_argument("--variants", choices=VARIANTS, nargs="+", default=VARIANTS)
     parser.add_argument("--case-limit", type=int, default=None)
+    parser.add_argument(
+        "--from-runs", type=Path, default=None,
+        help="Regenerate summary and plots from a prior runs.json without scheduling",
+    )
     args = parser.parse_args()
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    if args.from_runs is not None:
+        case_results, seeds = load_case_results(args.from_runs)
+        write_summary(args.output_dir, case_results, seeds)
+        make_plots(args.output_dir, case_results)
+        print(f"Reanalyzed {len(case_results)} cases from {args.from_runs}")
+        return
     if len(set(args.seeds)) != len(args.seeds):
         parser.error("seeds must be distinct")
     cases = all_cases(args.variants)
@@ -433,8 +526,6 @@ def main():
         if args.case_limit < 1:
             parser.error("--case-limit must be positive")
         cases = cases[:args.case_limit]
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-
     case_results = []
     rows = []
     for index, case in enumerate(cases, start=1):
