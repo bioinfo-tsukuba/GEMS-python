@@ -11,7 +11,7 @@ GEMS is a Python toolkit for orchestrating, simulating, and supervising multi-ma
 This document describes how to set up the environment, run tests, simulate experiments, and work with the interactive UI.
 
 ## Prerequisites
-- Python 3.10 or later
+- Python 3.14.4 (the repository's `.python-version`)
 - [Poetry](https://python-poetry.org/) for dependency management
 
 ## Installation
@@ -20,6 +20,26 @@ Install the project dependencies into the Poetry-managed virtual environment:
 ```bash
 poetry install
 ```
+
+The local package version is **0.1.4**. Poetry uses `pyproject.toml` and
+`poetry.lock` as the dependency source of truth.
+
+## Scheduling
+
+The three task variants use Google OR-Tools CP-SAT when `scheduling_method` is
+omitted or set to `"o"`. Use `"s"` to select simulated annealing explicitly.
+The interval-task variants also retain `"f"` for sequential scheduling.
+OR-Tools forbids overlapping use of the same machine, minimizes the existing
+timing penalties, and searches for up to five seconds per scheduling call. A
+feasible schedule may be returned before optimality is proven; the solver
+status, objective, and best bound are recorded through Python logging at
+`INFO` level. Missing resources or a failure to find a feasible schedule
+raise an error.
+
+Cyclical rest is a **group-start penalty**: if the start falls in an inclusive
+rest range of its cycle, the configured maximum penalty applies. It does not
+forbid a task from running through a rest range. Scheduling times and cycle
+parameters use integer minutes in the same absolute time scale.
 
 
 ## Simulating Experiments with Dummy Outputs
@@ -48,6 +68,18 @@ poetry run python -m unittest discover -s tests -p "test_*.py"
 ```
 
 Inspect the logged transitions in the console output and adjust `dummy_output` values or threshold parameters until the simulated behavior matches expectations.
+
+Reusable, deterministic examples for cell passage/observation and synthetic
+reaction-condition search live in `tests/simulators/`. They inject observations
+through the optional `observation_provider` argument to `simulate_one` and
+`simulate`; the provider receives `(state, history, task_group, task,
+event_time)` and returns a `polars.DataFrame`. `event_time` is the scheduled
+completion time in integer minutes, and the scheduler advances its reference
+time to that value. When tasks run concurrently, the provider receives
+results in completion order. Calls without a provider continue to use
+`dummy_output`.
+See [the test plan](docs/test_plan.md) for commands, assumptions, and the
+research used to select these test scenarios.
 
 ## Interactive UI Workflow
 The interactive UI loads experiments and machine definitions from files under your working directory. Follow the steps below to manage experiments with `interactive_ui.py`.
