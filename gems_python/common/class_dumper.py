@@ -1,12 +1,14 @@
 from enum import Enum
+from importlib import import_module
 import inspect
-import io
 import json
 from dataclasses import dataclass, asdict, fields, is_dataclass
 from pathlib import Path
 import pickle
-from typing import List, Dict, get_type_hints
+from typing import List, Dict, get_type_hints, get_args
 import polars as pl
+import pandas as pd
+from gems_python.common import dataframes
 
 
 # Enumをシリアライズするためのヘルパー
@@ -29,9 +31,12 @@ def recursive_to_dict(obj):
         for field in fields(obj):
             key = field.name
             value = getattr(obj, key)
-            if pl.DataFrame == type(value):
-                result[key] = value.serialize(format="json")
-                # print(f"{result[key]=}")
+            if dataframes.is_dataframe(value):
+                result[key] = dataframes.serialize(value)
+            elif key == "penalty_type" and hasattr(value, "calculate_penalty"):
+                # The declared type is abstract; preserve the concrete penalty.
+                result[key] = json.loads(value.to_json())
+                result[key]["_penalty_module"] = type(value).__module__
 
             elif hasattr(value, 'to_dict'):  # to_dictメソッドがあればそれを使う
                 result[key] = value.to_dict()
@@ -72,8 +77,15 @@ def recursive_from_dict(cls, data):
                 continue
 
             # DataFrame の場合の処理
-            if field_type == pl.DataFrame:
-                init_args[key] = pl.DataFrame.deserialize(io.BytesIO(value.encode()), format="json")
+            if field_type in (pl.DataFrame, pd.DataFrame, dataframes.DataFrame) or any(
+                t in (pl.DataFrame, pd.DataFrame) for t in get_args(field_type)
+            ):
+                init_args[key] = dataframes.deserialize(value)
+            elif key == "penalty_type" and isinstance(value, dict) and "penalty_type" in value:
+                penalty_base = get_args(field_type)[0] if get_args(field_type) else field_type
+                if "_penalty_module" in value:
+                    penalty_base = import_module(value["_penalty_module"]).PenaltyType
+                init_args[key] = penalty_base.from_json(json.dumps(value))
             elif hasattr(field_type, 'from_dict'):
                 init_args[key] = field_type.from_dict(value)
             

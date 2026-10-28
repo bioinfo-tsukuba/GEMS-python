@@ -3,7 +3,8 @@ from dataclasses import field, asdict
 import random
 import uuid
 from pathlib import Path
-import polars as pl
+from gems_python.common import dataframes
+from gems_python.common.dataframes import DataFrame
 import matplotlib
 import sys
 
@@ -224,7 +225,7 @@ class TaskGroup:
         return earliest_task
     
     @classmethod
-    def create_non_completed_tasks_df(cls, task_groups: List['TaskGroup']) -> pl.DataFrame:
+    def create_non_completed_tasks_df(cls, task_groups: List['TaskGroup'], dataframe_backend: str = 'auto') -> DataFrame:
         # Extract non-completed tasks from each TaskGroup
         non_completed_tasks = []
         for tg in task_groups:
@@ -244,8 +245,8 @@ class TaskGroup:
         # Sort by scheduled_time
         non_completed_tasks = sorted(non_completed_tasks, key=lambda x: x["scheduled_time"])
         
-        # Create and return the DataFrame using polars
-        return pl.DataFrame(non_completed_tasks)
+        # Create the requested table type; omitted backend defaults to Pandas.
+        return dataframes.make_frame(non_completed_tasks, backend=dataframe_backend)
     
     @classmethod
     def generate_gantt_chart(cls, task_groups: List['TaskGroup'], save_dir: Path = None, file_name:str = "gantt_chart"):

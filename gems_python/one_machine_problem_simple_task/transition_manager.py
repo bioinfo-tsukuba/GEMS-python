@@ -8,13 +8,16 @@ from abc import ABC, abstractmethod
 import copy
 from dataclasses import asdict, dataclass, field
 import json
+import importlib
 from typing import List, Type, Union
 import uuid
 import numpy as np
-import polars as pl
+from gems_python.common import dataframes
+from gems_python.common.dataframes import DataFrame
 from pathlib import Path
 import os
 from gems_python.common.cp_sat_scheduler import schedule_simple_tasks
+from gems_python.common.class_dumper import recursive_from_dict, recursive_to_dict
 
 from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask, OneMachineTaskLocalInformation        
 
@@ -70,11 +73,11 @@ class State(ABC):
     
 
     @abstractmethod
-    def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
+    def task_generator(self, df: DataFrame) -> OneMachineTaskLocalInformation:
         pass
 
     @abstractmethod
-    def transition_function(self, df: pl.DataFrame) -> str:
+    def transition_function(self, df: DataFrame) -> str:
         """
         This function must return one of the state name in the 'states', state list of the parent experiment
         """
@@ -93,7 +96,7 @@ class Experiment:
         experiment_name (str): The name of the experiment.
         states (List[State]): The states of the experiment.
         current_state_name (str): The name of the current state.
-        shared_variable_history (pl.DataFrame): The shared variable history of the experiment.
+        shared_variable_history (DataFrame): The shared variable history of the experiment.
         current_task (OneMachineTask) (You can manually assign it or Automatically generated): The current task of the experiment.
         current_state_index (int) (Automatically generated): The index of the current state.
         experiment_uuid (str) (Automatically generated): The UUID of the experiment.
@@ -101,10 +104,11 @@ class Experiment:
     experiment_name: str
     states: List[Type[State]]
     current_state_name: str
-    shared_variable_history: pl.DataFrame
+    shared_variable_history: DataFrame = field(default=None)
     current_task: OneMachineTask = field(default=None)
     current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
+    dataframe_backend: str = "auto"
 
 
     def to_dict(self) -> dict:
@@ -113,8 +117,13 @@ class Experiment:
         :return: Dictionary representation of the experiment object.
         """
         data = asdict(self)
-        data['states'] = [state.__class__.__name__ for state in self.states]  # Store class names instead of class objects
-        data['shared_variable_history'] = self.shared_variable_history.to_dict(as_series=False)
+        data['states'] = [
+            {"_class": f"{type(state).__module__}.{type(state).__name__}",
+             "data": recursive_to_dict(state)}
+            for state in self.states
+        ]
+        data['shared_variable_history'] = dataframes.serialize(self.shared_variable_history)
+        data['current_task'] = recursive_to_dict(self.current_task)
         
         return data
 
@@ -125,8 +134,20 @@ class Experiment:
         :param data: Dictionary containing the experiment data.
         :return: Experiment object.
         """
-        data['states'] = [globals()[state_name] for state_name in data['states']]
-        data['shared_variable_history'] = pl.DataFrame(data['shared_variable_history'])
+        data = dict(data)
+        data.pop('current_state_index', None)
+        states = []
+        for state in data['states']:
+            if isinstance(state, str):
+                states.append(globals()[state]())
+            else:
+                module, name = state['_class'].rsplit('.', 1)
+                state_class = getattr(importlib.import_module(module), name)
+                states.append(recursive_from_dict(state_class, state['data']))
+        data['states'] = states
+        data['shared_variable_history'] = dataframes.deserialize(data['shared_variable_history'])
+        if data.get('current_task') is not None:
+            data['current_task'] = recursive_from_dict(OneMachineTask, data['current_task'])
         return cls(**data)
 
     def to_json(self) -> str:
@@ -287,7 +308,7 @@ class Experiment:
             f.write(self.to_json())
 
         # Save shared_variable_history
-        self.shared_variable_history.write_csv(save_path / f"{self.experiment_name}_{self.experiment_uuid}_shared_variable_history.csv")
+        dataframes.write_csv(self.shared_variable_history, save_path / f"{self.experiment_name}_{self.experiment_uuid}_shared_variable_history.csv")
         
         # for state in self.states:
         #     state.save_all(save_path)
@@ -296,11 +317,17 @@ class Experiment:
         """
         Initialize the experiment.
         """
+        self.dataframe_backend = dataframes.resolve_backend(self.dataframe_backend, self.shared_variable_history)
+        self.shared_variable_history = (
+            dataframes.make_frame(backend=self.dataframe_backend)
+            if self.shared_variable_history is None
+            else dataframes.convert(self.shared_variable_history, self.dataframe_backend)
+        )
         self.update_current_state_name_and_index(self.current_state_name)
         if self.current_task is None:
             self.current_task = self.generate_task_of_the_state()
 
-        # if self.shared_variable_history != pl.DataFrame:
+        # if self.shared_variable_history != DataFrame:
         #     pl.read_csv(self.shared_variable_history)
 
     def update_current_state_name_and_index(self, new_state_name: str):
@@ -373,7 +400,7 @@ class Experiment:
         # Generate a task
         state_index = self.current_state_index
         try:
-            task_local_information = self.states[state_index].task_generator(self.shared_variable_history.clone())
+            task_local_information = self.states[state_index].task_generator(dataframes.copy_frame(self.shared_variable_history))
             task = OneMachineTask(
                 optimal_time=task_local_information.optimal_time,
                 processing_time=task_local_information.processing_time,
@@ -546,7 +573,7 @@ class Experiments:
     def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
             self,
             task_id: int,
-            new_result_of_experiment: pl.DataFrame,
+            new_result_of_experiment: DataFrame,
             update_type: str = 'a',
             scheduling_method = 'o',
             optimal_time_reference_time: int = 0
@@ -565,19 +592,13 @@ class Experiments:
             if self.experiments[index].experiment_uuid == experiment_uuid:
                 experiment_index = index
 
-        # Clean up the last task
+        # Validate/convert before completing tasks so a rejected result is retryable.
+        experiment = self.experiments[experiment_index]
+        new_history = dataframes.update(
+            experiment.shared_variable_history, new_result_of_experiment, update_type
+        )
         self.delete_task_with_task_id(task_id)
-
-        # Update the shared variable history(dataframe) of the experiment of the task
-        match update_type:
-            case 'a':
-                # Append the result to the shared variable history(dataframe)
-                self.experiments[experiment_index].shared_variable_history = pl.concat([self.experiments[experiment_index].shared_variable_history, new_result_of_experiment], how="diagonal")
-            case 'o':
-                # Overwrite the shared variable history(dataframe) with new_result_of_experiment
-                self.experiments[experiment_index].shared_variable_history = new_result_of_experiment
-            case _:
-                AssertionError(f"Unexpected input: update_type {update_type}")
+        experiment.shared_variable_history = new_history
 
         # Generate a new task of the updated experiment
         new_task = self.experiments[experiment_index].execute_one_step()

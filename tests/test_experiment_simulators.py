@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 import polars as pl
+from gems_python.common import dataframes
 
 from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import LinearPenalty
 from gems_python.multi_machine_problem_interval_task.task_info import (
@@ -27,7 +28,7 @@ class TimedState(State):
         self.first_start = first_start
 
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        start = self.first_start if df.is_empty() else int(df["time"][-1]) + 100
+        start = self.first_start if dataframes.row_count(df) == 0 else int(dataframes.last_value(df, "time")) + 100
         return TaskGroup(
             optimal_start_time=start,
             penalty_type=LinearPenalty(1),
@@ -46,7 +47,7 @@ class TestExperimentSimulators(unittest.TestCase):
                 results = SimulationRunner(
                     experiments, cell_culture.observe
                 ).run(8)
-        history = experiments.experiments[0].shared_variable_history
+        history = dataframes.convert(experiments.experiments[0].shared_variable_history, "polars")
         self.assertEqual(history["event"].to_list().count("passage"), 2)
         self.assertEqual(results[6]["to_state"], "PassageState")
         self.assertEqual(history["confluence"][-1], cell_culture.SEED_CONFLUENCE)
@@ -72,7 +73,7 @@ class TestExperimentSimulators(unittest.TestCase):
                         experiments, reaction_search.ReactionObserver(candidates)
                     ).run(9)
             histories.append(
-                experiments.experiments[0].shared_variable_history
+                dataframes.convert(experiments.experiments[0].shared_variable_history, "polars")
                 .drop(["task_group_id", "task_id"]).to_dict(as_series=False)
             )
         self.assertEqual(histories[0], histories[1])

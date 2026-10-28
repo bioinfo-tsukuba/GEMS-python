@@ -3,12 +3,13 @@
 from dataclasses import dataclass
 from typing import Callable
 
-import polars as pl
+from gems_python.common import dataframes
+from gems_python.common.dataframes import DataFrame
 
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
 
 
-ObservationProvider = Callable[[object, pl.DataFrame, object, object, int], pl.DataFrame]
+ObservationProvider = Callable[[object, DataFrame, object, object, int], DataFrame]
 
 
 @dataclass

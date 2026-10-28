@@ -14,7 +14,8 @@ import json
 from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union
 import uuid
 import numpy as np
-import polars as pl
+from gems_python.common import dataframes
+from gems_python.common.dataframes import DataFrame
 from pathlib import Path
 import os
 from gems_python.common.cp_sat_scheduler import schedule_task_groups
@@ -78,20 +79,20 @@ class State(ABC):
     
 
     @abstractmethod
-    def task_generator(self, df: pl.DataFrame) -> TaskGroup:
+    def task_generator(self, df: DataFrame) -> TaskGroup:
         pass
 
     @abstractmethod
-    def transition_function(self, df: pl.DataFrame) -> str:
+    def transition_function(self, df: DataFrame) -> str:
         """
         This function must return one of the state name in the 'states', state list of the parent experiment
         """
         pass
 
 
-    def dummy_output(self, df: pl.DataFrame, task_group_id: int, task_id: int) -> pl.DataFrame:
+    def dummy_output(self, df: DataFrame, task_group_id: int, task_id: int) -> DataFrame:
         """
-        Return a dummy (simulated) result as a Polars DataFrame.
+        Return a dummy (simulated) result as a Pandas or Polars DataFrame.
         Override in each State subclass to provide the columns/values your transition_function expects.
         The default raises, so you notice missing implementations at simulation time.
         """
@@ -135,7 +136,7 @@ class Experiment:
         experiment_name (str): The name of the experiment.
         states (List[State]): The states of the experiment.
         current_state_name (str): The name of the current state.
-        shared_variable_history (pl.DataFrame): The shared variable history of the experiment.
+        shared_variable_history (DataFrame): The shared variable history of the experiment.
         current_task (TaskGroup) (You can manually assign it or Automatically generated): The current task of the experiment.
         current_state_index (int) (Automatically generated): The index of the current state.
         experiment_uuid (str) (Automatically generated): The UUID of the experiment.
@@ -143,10 +144,11 @@ class Experiment:
     experiment_name: str
     states: List[State]
     current_state_name: str
-    shared_variable_history: pl.DataFrame = field(default_factory=pl.DataFrame)
+    shared_variable_history: DataFrame = field(default=None)
     current_task_group: TaskGroup = field(default=None)
     current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
+    dataframe_backend: str = "auto"
     
     def define_all_node(self)-> set:
         all_node = set()
@@ -292,7 +294,7 @@ class Experiment:
             f.write(self.to_json())
 
         # Save shared_variable_history
-        self.shared_variable_history.write_csv(save_path / f"{self.experiment_name}_{self.experiment_uuid}_shared_variable_history.csv")
+        dataframes.write_csv(self.shared_variable_history, save_path / f"{self.experiment_name}_{self.experiment_uuid}_shared_variable_history.csv")
         
         # for state in self.states:
         #     state.save_all(save_path)
@@ -301,11 +303,17 @@ class Experiment:
         """
         Initialize the experiment.
         """
+        self.dataframe_backend = dataframes.resolve_backend(self.dataframe_backend, self.shared_variable_history)
+        self.shared_variable_history = (
+            dataframes.make_frame(backend=self.dataframe_backend)
+            if self.shared_variable_history is None
+            else dataframes.convert(self.shared_variable_history, self.dataframe_backend)
+        )
         self.update_current_state_name_and_index(self.current_state_name)
         if self.current_task_group is None:
             self.current_task_group = self.generate_task_group_of_the_state()
 
-        # if self.shared_variable_history != pl.DataFrame:
+        # if self.shared_variable_history != DataFrame:
         #     pl.read_csv(self.shared_variable_history)
 
     def update_current_state_name_and_index(self, new_state_name: str):
@@ -379,7 +387,7 @@ class Experiment:
         # Generate a task
         state_index = self.current_state_index
         try:
-            task_group: TaskGroup = self.states[state_index].task_generator(self.shared_variable_history.clone())
+            task_group: TaskGroup = self.states[state_index].task_generator(dataframes.copy_frame(self.shared_variable_history))
             self.current_task_group = task_group
             self.current_task_group.configure_task_group_settings(
                 experiment_name = self.experiment_name,
@@ -708,7 +716,7 @@ class Experiments:
             self,
             task_group_id: int,
             task_id: int,
-            new_result_of_experiment: pl.DataFrame,
+            new_result_of_experiment: DataFrame,
             update_type: str = 'a',
             ) -> Tuple[TaskGroup, Task]:
         """
@@ -716,7 +724,6 @@ class Experiments:
         """
         # TODO-DONE: TaskGroupに対応
         # Update task_group
-        self.task_groups = TaskGroup.complete_task(self.task_groups, group_id=task_group_id, task_id=task_id)
         task_group_index = TaskGroup.find_task_group(self.task_groups, task_group_id)
         experiment_uuid = self.task_groups[task_group_index].experiment_uuid
         experiment_index = 0
@@ -724,16 +731,15 @@ class Experiments:
             if self.experiments[index].experiment_uuid == experiment_uuid:
                 experiment_index = index
 
-        # Update the shared variable history(dataframe) of the experiment of the task
-        match update_type:
-            case 'a':
-                # Append the result to the shared variable history(dataframe)
-                self.experiments[experiment_index].shared_variable_history = pl.concat([self.experiments[experiment_index].shared_variable_history, new_result_of_experiment], how="diagonal")
-            case 'o':
-                # Overwrite the shared variable history(dataframe) with new_result_of_experiment
-                self.experiments[experiment_index].shared_variable_history = new_result_of_experiment
-            case _:
-                AssertionError(f"Unexpected input: update_type {update_type}")
+        # Validate/convert before completing tasks so a rejected result is retryable.
+        experiment = self.experiments[experiment_index]
+        new_history = dataframes.update(
+            experiment.shared_variable_history, new_result_of_experiment, update_type
+        )
+        self.task_groups = TaskGroup.complete_task(
+            self.task_groups, group_id=task_group_id, task_id=task_id
+        )
+        experiment.shared_variable_history = new_history
 
         if self.task_groups[task_group_index].is_completed():
             # Delete the task group
@@ -749,7 +755,7 @@ class Experiments:
             self,
             task_group_id: int,
             task_id: int,
-            new_result_of_experiment: pl.DataFrame,
+            new_result_of_experiment: DataFrame,
             update_type: str = 'a',
             scheduling_method = 'o',
             optimal_time_reference_time: int = None
@@ -809,7 +815,7 @@ class Experiments:
 
         # Save the task groups
         schedule_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
-        schedule_df.write_csv(save_dir / "schedule.csv")
+        dataframes.write_csv(schedule_df, save_dir / "schedule.csv")
 
         # Save the gantt chart
         self.generate_gantt_chart(save_dir=save_dir)
@@ -819,7 +825,7 @@ class Experiments:
         os.makedirs(experiments_dir, exist_ok=True)
         for experiment in self.experiments:
             experiment.show_experiment_directed_graph(save_path=experiments_dir / f"{experiment.experiment_name}_{experiment.experiment_uuid}.png")
-            experiment.shared_variable_history.write_csv(experiments_dir / f"{experiment.experiment_name}_{experiment.experiment_uuid}_shared_variable_history.csv")
+            dataframes.write_csv(experiment.shared_variable_history, experiments_dir / f"{experiment.experiment_name}_{experiment.experiment_uuid}_shared_variable_history.csv")
 
     def proceed_to_next_step(self):
         self.step += 1
@@ -911,7 +917,12 @@ class Experiments:
                     except Exception as err:
                         print(f"Error starting task: {err}")
                 case "Completed":
-                    new_result_of_experiment = pl.read_csv(result_data["result_path"])
+                    group_index = TaskGroup.find_task_group(self.task_groups, task_group_id)
+                    experiment_uuid = self.task_groups[group_index].experiment_uuid
+                    experiment = next(e for e in self.experiments if e.experiment_uuid == experiment_uuid)
+                    new_result_of_experiment = dataframes.read_csv(
+                        result_data["result_path"], experiment.dataframe_backend
+                    )
                     self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
                         task_group_id=task_group_id,
                         task_id=task_id,
@@ -1010,17 +1021,17 @@ class Experiments:
         try:
             if observation_provider is None:
                 dummy_df = state.dummy_output(
-                    exp.shared_variable_history.clone(),
+                    dataframes.copy_frame(exp.shared_variable_history),
                     task_group_id=earliest_group_id,
                     task_id=earliest_task.task_id,
                 )
             else:
                 dummy_df = observation_provider(
-                    state, exp.shared_variable_history.clone(), tg,
+                    state, dataframes.copy_frame(exp.shared_variable_history), tg,
                     earliest_task, event_time,
                 )
-            if not isinstance(dummy_df, pl.DataFrame):
-                raise TypeError("dummy_output must return a pl.DataFrame")
+            if not dataframes.is_dataframe(dummy_df):
+                raise TypeError("dummy_output/observation_provider must return a pandas.DataFrame or polars.DataFrame")
         except Exception as err:
             return {"status": "error", "error": f"dummy_output_failed: {err!r}", "state": before_state_name}
 
