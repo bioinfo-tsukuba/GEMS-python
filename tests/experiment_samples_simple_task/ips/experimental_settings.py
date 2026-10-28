@@ -181,7 +181,8 @@ class PlateCoatingState(State):
 
 
 class IPSExperiment(Experiment):
-    def __init__(self, current_state_name, shared_variable_history=None, experiment_uuid=uuid.uuid4()):
+    def __init__(self, current_state_name, shared_variable_history=None, experiment_uuid=None):
+        experiment_uuid = str(uuid.uuid4()) if experiment_uuid is None else str(experiment_uuid)
         # Define the experiment using the states
 
         # Create a shared variable history DataFrame (empty for this example)

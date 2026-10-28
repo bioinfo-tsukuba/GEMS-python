@@ -182,7 +182,7 @@ class OneMachineTask:
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
-        colors = plt.cm.get_cmap('tab10', len(tasks))
+        colors = plt.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time
@@ -232,7 +232,7 @@ class OneMachineTask:
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
-        colors = plt.cm.get_cmap('tab10', len(tasks))
+        colors = plt.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time
