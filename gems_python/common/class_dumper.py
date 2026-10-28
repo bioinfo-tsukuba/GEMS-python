@@ -1,188 +1,73 @@
+"""Public persistence helpers and the existing auto_dataclass decorator."""
+
+from dataclasses import dataclass
 from enum import Enum
-from importlib import import_module
-import inspect
 import json
-from dataclasses import dataclass, asdict, fields, is_dataclass
 from pathlib import Path
 import pickle
-from typing import List, Dict, get_type_hints, get_args
-import polars as pl
-import pandas as pd
-from gems_python.common import dataframes
+
+from gems_python.common.serialization import decode, encode
 
 
-# Enumをシリアライズするためのヘルパー
 def serialize_enum(value):
-    if isinstance(value, Enum):
-        return value.name  # Enumの名前を保存
-    return value
+    return value.name if isinstance(value, Enum) else value
 
-# Enumをデシリアライズするためのヘルパー
+
 def deserialize_enum(enum_type, value):
-    if issubclass(enum_type, Enum):
-        return enum_type[value]  # Enumの名前から元のEnumに復元
-    return value
+    return enum_type[value] if issubclass(enum_type, Enum) else value
 
 
-# 再帰的に辞書へ変換する関数
 def recursive_to_dict(obj):
-    if is_dataclass(obj):
-        result = {}
-        for field in fields(obj):
-            key = field.name
-            value = getattr(obj, key)
-            if dataframes.is_dataframe(value):
-                result[key] = dataframes.serialize(value)
-            elif key == "penalty_type" and hasattr(value, "calculate_penalty"):
-                # The declared type is abstract; preserve the concrete penalty.
-                result[key] = json.loads(value.to_json())
-                result[key]["_penalty_module"] = type(value).__module__
+    return encode(obj)
 
-            elif hasattr(value, 'to_dict'):  # to_dictメソッドがあればそれを使う
-                result[key] = value.to_dict()
-            
-            elif isinstance(value, Enum):  # Enum型の場合、名前を保存
-                result[key] = serialize_enum(value)
-            elif is_dataclass(value):  # dataclassであれば再帰的に処理
-                result[key] = recursive_to_dict(value)
-            elif isinstance(value, list):  # リストの場合
-                result[key] = [(v).to_dict() if hasattr(v, 'to_dict') else v for v in value]
-            elif isinstance(value, dict):  # 辞書の場合
-                result[key] = {k: (v).to_dict() if hasattr(v, 'to_dict') else v for k, v in value.items()}
-            elif isinstance(value, Path):
-                result[key] = str(value)
-            else:
-                result[key] = value  # 単純な型の場合、そのまま格納
-        return result
-    return obj  # dataclass以外はそのまま返す
 
-# 再帰的に辞書からオブジェクトを生成する関数
 def recursive_from_dict(cls, data):
-    if is_dataclass(cls):
-        init_args = {}
-        type_hints = get_type_hints(cls)
-        dataclass_fields = {f.name: f for f in fields(cls)}
-        
+    return decode(data, cls)
 
-        for key, value in data.items():
-            if key not in type_hints or dataclass_fields[key].init is False:
-                # 型ヒントに無いか、init=Falseのフィールドは無視
-                continue
 
-            field_type = type_hints.get(key)
-            
-            # field_typeがNoneの場合（型ヒントが指定されていない場合）はそのまま続行
-            if field_type is None:
-                init_args[key] = value
-                continue
-
-            # DataFrame の場合の処理
-            if field_type in (pl.DataFrame, pd.DataFrame, dataframes.DataFrame) or any(
-                t in (pl.DataFrame, pd.DataFrame) for t in get_args(field_type)
-            ):
-                init_args[key] = dataframes.deserialize(value)
-            elif key == "penalty_type" and isinstance(value, dict) and "penalty_type" in value:
-                penalty_base = get_args(field_type)[0] if get_args(field_type) else field_type
-                if "_penalty_module" in value:
-                    penalty_base = import_module(value["_penalty_module"]).PenaltyType
-                init_args[key] = penalty_base.from_json(json.dumps(value))
-            elif hasattr(field_type, 'from_dict'):
-                init_args[key] = field_type.from_dict(value)
-            
-            # Enum 型の場合の処理
-            elif isinstance(field_type, type) and issubclass(field_type, Enum):
-                init_args[key] = deserialize_enum(field_type, value)
-            
-            # dataclass の場合の再帰処理
-            elif is_dataclass(field_type):
-                init_args[key] = recursive_from_dict(field_type, value)
-            
-            # List の場合の処理
-            elif isinstance(value, list):
-                # 型ヒントに __args__ があるかを確認
-                if hasattr(field_type, '__args__') and len(field_type.__args__) > 0:
-                    list_type = field_type.__args__[0]  # リストの要素型を取得
-                    # from_dict メソッドがあればそれを使う
-                    init_args[key] = [list_type.from_dict(v) if hasattr(list_type, 'from_dict') else v for v in value]
-                else:
-                    init_args[key] = value  # 型ヒントが無い場合、そのまま使う
-            
-            # Dict の場合の処理
-            elif isinstance(value, dict):
-                # 型ヒントに __args__ があり、辞書の値の型が指定されているかを確認
-                if hasattr(field_type, '__args__') and len(field_type.__args__) > 1:
-                    dict_value_type = field_type.__args__[1]
-                    init_args[key] = {k: dict_value_type.from_dict(v) if hasattr(dict_value_type, 'from_dict') else v for k, v in value.items()}
-                else:
-                    init_args[key] = value  # 型ヒントが無い場合、そのまま使う
-
-            # Path の場合の処理
-            elif isinstance(value, str) and field_type == Path:
-                init_args[key] = Path(value)
-            
-            # その他の型（int, strなど）の場合
-            else:
-                init_args[key] = value
-
-        return cls(**init_args)
-    return data
-
-# 辞書をJSONに変換するメソッドも追加
 def recursive_to_json(obj):
-    dic = recursive_to_dict(obj)
-    return json.dumps(dic)
+    return json.dumps(encode(obj), ensure_ascii=False)
 
-# JSONから復元するメソッドも追加
+
 def recursive_from_json(cls, json_str):
-    data = json.loads(json_str)
-    return recursive_from_dict(cls, data)
+    return decode(json.loads(json_str), cls)
 
 
-# カスタムデコレーター
-def auto_dataclass(cls):
-    # クラスに to_dict メソッドを追加
+class SerializationMixin:
+    _gems_serializable = True
+
     def to_dict(self):
         return recursive_to_dict(self)
 
-    # クラスに from_dict クラスメソッドを追加
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data):
         return recursive_from_dict(cls, data)
 
-    # クラスに to_json メソッドを追加
     def to_json(self):
         return recursive_to_json(self)
 
-    # クラスに from_json クラスメソッドを追加
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str):
         return recursive_from_json(cls, json_str)
-    
+
     def to_pickle(self, path: Path = None):
+        encode(self)  # Apply the same supported-value/cycle contract as JSON.
         dumped = pickle.dumps(self)
         if path is not None:
-            with open(path, 'wb') as f:
-                f.write(dumped)
+            Path(path).write_bytes(dumped)
         return dumped
-    
+
     @classmethod
     def from_pickle(cls, path: Path = None, dumped: bytes = None):
-        if dumped is not None:
-            ret = pickle.loads(dumped)
-        elif path is not None:
-            with open(path, 'rb') as f:
-                ret = pickle.load(f)
-        else:
-            raise ValueError("Either dumped or path must be specified.")
-        return ret
+        if dumped is None:
+            if path is None:
+                raise ValueError("Either dumped or path must be specified.")
+            dumped = Path(path).read_bytes()
+        # Normalize legacy IDs and validate both persistence paths consistently.
+        return decode(encode(pickle.loads(dumped)), cls)
 
-    # メソッドをクラスに追加
-    setattr(cls, 'to_dict', to_dict)
-    setattr(cls, 'from_dict', from_dict)
-    setattr(cls, 'to_json', to_json)
-    setattr(cls, 'from_json', from_json)
-    setattr(cls, 'to_pickle', to_pickle)
-    setattr(cls, 'from_pickle', from_pickle)
-    
-    # 元のdataclassデコレーターを適用してクラスを返す
+
+def auto_dataclass(cls):
+    for name in ("to_dict", "from_dict", "to_json", "from_json", "to_pickle", "from_pickle"):
+        setattr(cls, name, SerializationMixin.__dict__[name])
     return dataclass(cls)

@@ -1,3 +1,5 @@
+from gems_python.common.class_dumper import SerializationMixin
+from gems_python.common.persistence import load_snapshot, save_snapshot
 import textwrap
 from matplotlib import pyplot as plt
 from matplotlib.patches import Arc, Arrow
@@ -6,10 +8,9 @@ import ast
 import inspect
 from abc import ABC, abstractmethod
 import copy
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 import json
-import importlib
-from typing import List, Type, Union
+from typing import List, Union
 import uuid
 import numpy as np
 from gems_python.common import dataframes
@@ -17,7 +18,6 @@ from gems_python.common.dataframes import DataFrame
 from pathlib import Path
 import os
 from gems_python.common.cp_sat_scheduler import schedule_simple_tasks
-from gems_python.common.class_dumper import recursive_from_dict, recursive_to_dict
 
 from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask, OneMachineTaskLocalInformation        
 
@@ -26,7 +26,7 @@ from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask
 
 
 @dataclass
-class State(ABC):
+class State(SerializationMixin, ABC):
     """State class.
     This class is used as just an superclass for the State class.
     Defining "State", you should inherit this class and implement the methods.
@@ -87,22 +87,9 @@ class State(ABC):
 """MODULE: Experiment
 """
 
-def _legacy_state_class(name):
-    """Resolve a name-only legacy state without guessing between loaded classes."""
-    candidates = set()
-    pending = list(State.__subclasses__())
-    while pending:
-        candidate = pending.pop()
-        pending.extend(candidate.__subclasses__())
-        if candidate.__name__ == name:
-            candidates.add(candidate)
-    if len(candidates) != 1:
-        raise ValueError(f"Legacy state {name!r} requires one uniquely named, imported State class")
-    return candidates.pop()
-
 
 @dataclass
-class Experiment:
+class Experiment(SerializationMixin):
     """
     Experiment class.
 
@@ -116,7 +103,7 @@ class Experiment:
         experiment_uuid (str) (Automatically generated): The UUID of the experiment.
     """
     experiment_name: str
-    states: List[Type[State]]
+    states: List[State]
     current_state_name: str
     shared_variable_history: DataFrame = field(default=None)
     current_task: OneMachineTask = field(default=None)
@@ -125,62 +112,6 @@ class Experiment:
     dataframe_backend: str = "auto"
 
 
-    def to_dict(self) -> dict:
-        """
-        Converts the experiment object to a dictionary.
-        :return: Dictionary representation of the experiment object.
-        """
-        data = asdict(self)
-        data['states'] = [
-            {"_class": f"{type(state).__module__}.{type(state).__name__}",
-             "data": recursive_to_dict(state)}
-            for state in self.states
-        ]
-        data['shared_variable_history'] = dataframes.serialize(self.shared_variable_history)
-        data['current_task'] = recursive_to_dict(self.current_task)
-        
-        return data
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Experiment':
-        """
-        Creates an experiment object from a dictionary.
-        :param data: Dictionary containing the experiment data.
-        :return: Experiment object.
-        """
-        data = dict(data)
-        data.pop('current_state_index', None)
-        states = []
-        for state in data['states']:
-            if isinstance(state, str):
-                states.append(_legacy_state_class(state)())
-            else:
-                module, name = state['_class'].rsplit('.', 1)
-                state_class = getattr(importlib.import_module(module), name)
-                states.append(recursive_from_dict(state_class, state['data']))
-        data['states'] = states
-        data['shared_variable_history'] = dataframes.deserialize(data['shared_variable_history'])
-        if data.get('current_task') is not None:
-            data['current_task'] = recursive_from_dict(OneMachineTask, data['current_task'])
-        return cls(**data)
-
-    def to_json(self) -> str:
-        """
-        Converts the experiment object to a JSON string.
-        :return: JSON string representation of the experiment object.
-        """
-        data = self.to_dict()
-        return json.dumps(data)
-
-    @classmethod
-    def from_json(cls, json_str: str) -> 'Experiment':
-        """
-        Creates an experiment object from a JSON string.
-        :param json_str: JSON string containing the experiment data.
-        :return: Experiment object.
-        """
-        data = json.loads(json_str)
-        return cls.from_dict(data)
     
     def define_all_node(self)-> set:
         all_node = set()
@@ -331,6 +262,7 @@ class Experiment:
         """
         Initialize the experiment.
         """
+        self.experiment_uuid = str(self.experiment_uuid)
         self.dataframe_backend = dataframes.resolve_backend(self.dataframe_backend, self.shared_variable_history)
         self.shared_variable_history = (
             dataframes.make_frame(backend=self.dataframe_backend)
@@ -447,7 +379,7 @@ class Experiment:
 """
 
 @dataclass
-class Experiments:
+class Experiments(SerializationMixin):
     
     """
     Experiments class.
@@ -470,6 +402,11 @@ class Experiments:
 
             for index in range(len(self.tasks)):
                 self.tasks[index].task_id = index
+
+    def reload(self, save_dir: Path = None, *, source: str = "auto"):
+        """Return a saved collection; the current collection is never modified."""
+        directory = self.parent_dir_path if save_dir is None else Path(save_dir)
+        return load_snapshot(directory, type(self), source=source)
 
     def add_experiment(self, experiment: Experiment) -> Union[None, ValueError]:
 
@@ -518,6 +455,7 @@ class Experiments:
             save_path = save_dir if save_dir is not None else self.parent_dir_path
 
         os.makedirs(save_path, exist_ok=True)
+        save_snapshot(self, save_path)
         tasks = [task.to_json() for task in self.tasks]
         # print(f"{tasks=}")
         # for task in self.tasks:
