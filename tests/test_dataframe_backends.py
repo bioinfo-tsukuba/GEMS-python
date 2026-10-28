@@ -123,6 +123,17 @@ class TestDataframeBackends(unittest.TestCase):
         for value in ({"_dataframe": 2, "format": "arrow-ipc"}, {"_dataframe": 1, "format": "wrong"}):
             with self.assertRaises(ValueError):
                 frames.deserialize(value)
+        # Legacy simple experiments identify State classes only by name.
+        experiment = simple.Experiment("legacy", [SimpleState()], "SimpleState",
+                                       pl.DataFrame({"time": [5]}), experiment_uuid="legacy")
+        legacy_experiment = experiment.to_dict()
+        legacy_experiment["states"] = ["SimpleState"]
+        legacy_experiment["shared_variable_history"] = {"time": [5]}
+        legacy_experiment["current_task"] = None
+        legacy_experiment.pop("dataframe_backend")
+        restored = simple.Experiment.from_json(json.dumps(legacy_experiment))
+        self.assertIsInstance(restored.shared_variable_history, pl.DataFrame)
+        self.assertEqual(restored.current_task.optimal_time, 8)
 
     def test_experiment_save_restore_and_schedule_tables(self):
         for backend in ("pandas", "polars"):
@@ -231,6 +242,12 @@ class TestDataframeBackends(unittest.TestCase):
                         before.execute_scheduling()
                         after.execute_scheduling()
                         self.assertEqual(evaluate(before, variant), evaluate(after, variant))
+                        if variant != "simple":
+                            tables = [
+                                module.TaskGroup.create_non_completed_tasks_df(before.task_groups, b)
+                                for b in ("pandas", "polars")
+                            ]
+                            self.assertEqual(frames.records(tables[0]), frames.records(tables[1]))
 
     def test_invalid_observation_keeps_history_and_task_uncompleted(self):
         for backend in ("pandas", "polars"):

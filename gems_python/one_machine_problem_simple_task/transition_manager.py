@@ -87,6 +87,20 @@ class State(ABC):
 """MODULE: Experiment
 """
 
+def _legacy_state_class(name):
+    """Resolve a name-only legacy state without guessing between loaded classes."""
+    candidates = set()
+    pending = list(State.__subclasses__())
+    while pending:
+        candidate = pending.pop()
+        pending.extend(candidate.__subclasses__())
+        if candidate.__name__ == name:
+            candidates.add(candidate)
+    if len(candidates) != 1:
+        raise ValueError(f"Legacy state {name!r} requires one uniquely named, imported State class")
+    return candidates.pop()
+
+
 @dataclass
 class Experiment:
     """
@@ -139,7 +153,7 @@ class Experiment:
         states = []
         for state in data['states']:
             if isinstance(state, str):
-                states.append(globals()[state]())
+                states.append(_legacy_state_class(state)())
             else:
                 module, name = state['_class'].rsplit('.', 1)
                 state_class = getattr(importlib.import_module(module), name)
