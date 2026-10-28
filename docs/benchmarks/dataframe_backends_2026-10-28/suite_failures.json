@@ -1,0 +1,100 @@
+[
+  {
+    "label": "baseline",
+    "commit": "e1e5df6",
+    "tests": 63,
+    "seconds": 18.961,
+    "log_path": "/tmp/gems-dataframe-baseline-20261028.log",
+    "failures": [
+      {
+        "test": "test_experiment_structure (test_experiment_loop.TestExperimentStructure.test_experiment_structure)",
+        "cause": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_experiment_structure_graph (test_experiment_loop.TestExperimentStructure.test_experiment_structure_graph)",
+        "cause": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_experiment_structure_task_generation (test_experiment_loop.TestExperimentStructure.test_experiment_structure_task_generation)",
+        "cause": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_run_experiment (test_ips_experiment.TestRunExperimentIPS.test_run_experiment)",
+        "cause": "TypeError: Object of type UUID is not JSON serializable"
+      },
+      {
+        "test": "test_task_group (test_one_machine_problem_interval_task.TestClass.test_task_group)",
+        "cause": "EOFError: EOF when reading a line"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_mono_task (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_mono_task)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_mono_task_minus (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_mono_task_minus)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_multiple_tasks (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_multiple_tasks)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_multiple_tasks_multiple_type (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_multiple_tasks_multiple_type)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_task_generator (test_transition_manager.TestTransitionManager.test_task_generator)",
+        "cause": "TypeError: cannot unpack non-iterable OneMachineTaskLocalInformation object"
+      }
+    ]
+  },
+  {
+    "label": "final",
+    "commit": "d6acdef",
+    "tests": 74,
+    "seconds": 20.295,
+    "log_path": "/tmp/gems-dataframe-final-fullsuite-20261028.log",
+    "failures": [
+      {
+        "test": "test_experiment_structure (test_experiment_loop.TestExperimentStructure.test_experiment_structure)",
+        "cause": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_experiment_structure_graph (test_experiment_loop.TestExperimentStructure.test_experiment_structure_graph)",
+        "cause": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_experiment_structure_task_generation (test_experiment_loop.TestExperimentStructure.test_experiment_structure_task_generation)",
+        "cause": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_run_experiment (test_ips_experiment.TestRunExperimentIPS.test_run_experiment)",
+        "cause": "TypeError: Object of type UUID is not JSON serializable"
+      },
+      {
+        "test": "test_task_group (test_one_machine_problem_interval_task.TestClass.test_task_group)",
+        "cause": "EOFError: EOF when reading a line"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_mono_task (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_mono_task)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_mono_task_minus (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_mono_task_minus)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_multiple_tasks (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_multiple_tasks)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_simulated_annealing_schedule_multiple_tasks_multiple_type (test_transition_manager.TestScheduler.test_simulated_annealing_schedule_multiple_tasks_multiple_type)",
+        "cause": "AttributeError: module 'matplotlib.cm' has no attribute 'get_cmap'"
+      },
+      {
+        "test": "test_task_generator (test_transition_manager.TestTransitionManager.test_task_generator)",
+        "cause": "TypeError: cannot unpack non-iterable OneMachineTaskLocalInformation object"
+      }
+    ]
+  }
+]

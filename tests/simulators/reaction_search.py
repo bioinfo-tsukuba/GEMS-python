@@ -4,7 +4,8 @@ from itertools import product
 from pathlib import Path
 import random
 
-import polars as pl
+from gems_python.common import dataframes
+from gems_python.common.dataframes import DataFrame
 
 from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import LinearPenalty
 from gems_python.multi_machine_problem_interval_task.task_info import (
@@ -54,9 +55,9 @@ class ReactionState(State):
         super().__init__()
         self.candidates = candidates
 
-    def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        condition = self.candidates[df.height % len(self.candidates)]
-        last_time = 0 if df.is_empty() else int(df["time"][-1])
+    def task_generator(self, df: DataFrame) -> TaskGroup:
+        condition = self.candidates[dataframes.row_count(df) % len(self.candidates)]
+        last_time = 0 if dataframes.row_count(df) == 0 else int(dataframes.last_value(df, "time"))
         return TaskGroup(
             optimal_start_time=last_time,
             penalty_type=LinearPenalty(1),
@@ -65,7 +66,7 @@ class ReactionState(State):
             ],
         )
 
-    def transition_function(self, df: pl.DataFrame) -> str:
+    def transition_function(self, df: DataFrame) -> str:
         return "ReactionState"
 
 
@@ -74,11 +75,11 @@ class ReactionObserver:
         self.candidates = candidates
 
     def __call__(
-        self, state, history: pl.DataFrame, group, task, event_time: int
-    ) -> pl.DataFrame:
-        condition = self.candidates[history.height]
+        self, state, history: DataFrame, group, task, event_time: int
+    ) -> DataFrame:
+        condition = self.candidates[dataframes.row_count(history)]
         temperature, concentration, duration = condition
-        return pl.DataFrame({
+        return dataframes.make_frame({
             "time": [event_time],
             "temperature": [temperature],
             "concentration": [concentration],
@@ -86,10 +87,10 @@ class ReactionObserver:
             "yield": [synthetic_yield(condition)],
             "task_group_id": [group.task_group_id],
             "task_id": [task.task_id],
-        })
+        }, backend=dataframes.backend_of(history))
 
 
-def build_experiments(directory: Path, candidates: tuple) -> Experiments:
+def build_experiments(directory: Path, candidates: tuple, dataframe_backend: str = "auto") -> Experiments:
     machines = MachineList([
         Machine(machine_type=0, machine_id="reactor"),
     ])
@@ -97,6 +98,8 @@ def build_experiments(directory: Path, candidates: tuple) -> Experiments:
         experiment_name="SyntheticReactionSearch",
         states=[ReactionState(candidates)],
         current_state_name="ReactionState",
+        dataframe_backend=dataframe_backend,
+        experiment_uuid="synthetic-reaction-search",
     )
     return Experiments(
         experiments=[experiment], machine_list=machines, parent_dir_path=directory
