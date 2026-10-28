@@ -1,0 +1,4580 @@
+{
+  "python": "3.14.4",
+  "ortools": "9.15.6755",
+  "simanneal": "0.5.0",
+  "matplotlib": "3.11.2",
+  "solver_time_limit_seconds": 5.0,
+  "annealing_steps": 100000,
+  "annealing_tmax": 25000.0,
+  "annealing_tmin": 1.0,
+  "reference_minute": 0,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "cases": {
+    "simple": {
+      "optimal": [
+        10,
+        12,
+        15,
+        18
+      ],
+      "durations": [
+        6,
+        5,
+        4,
+        5
+      ]
+    },
+    "single_interval": {
+      "optimal": [
+        10,
+        12,
+        14
+      ],
+      "groups": [
+        [
+          [
+            2,
+            5
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        [
+          [
+            2,
+            5
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        [
+          [
+            2,
+            5
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      ]
+    },
+    "multi_interval": {
+      "optimal": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "machines": [
+        "m0",
+        "m1"
+      ],
+      "groups": [
+        [
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        [
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        [
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        [
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            3
+          ]
+        ]
+      ]
+    }
+  },
+  "penalty_parameters": {
+    "NonePenalty": {},
+    "LinearPenalty": {
+      "penalty_coefficient": 3
+    },
+    "LinearWithRangePenalty": {
+      "lower": -2,
+      "lower_coefficient": 4,
+      "upper": 2,
+      "upper_coefficient": 2
+    },
+    "CyclicalRestPenalty": {
+      "cycle_start_time": 0,
+      "cycle_duration": 20,
+      "rest_time_ranges": [
+        [
+          10,
+          14
+        ]
+      ]
+    },
+    "CyclicalRestPenaltyWithLinear": {
+      "cycle_start_time": 0,
+      "cycle_duration": 20,
+      "rest_time_ranges": [
+        [
+          10,
+          14
+        ]
+      ],
+      "penalty_coefficient": 3
+    }
+  },
+  "rows": [
+    {
+      "variant": "simple",
+      "penalty": "NonePenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.003067,
+      "status": "OPTIMAL",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 14,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 4,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 0,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 9,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 1.37792,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 1.33443,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 1.336971,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearPenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.004806,
+      "status": "OPTIMAL",
+      "timing_penalty": 27,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 4,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 10,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 15,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 19,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 1.60947,
+      "status": "FINISHED",
+      "timing_penalty": 51,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 1.592949,
+      "status": "FINISHED",
+      "timing_penalty": 51,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 1.586915,
+      "status": "FINISHED",
+      "timing_penalty": 51,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearWithRangePenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.004858,
+      "status": "OPTIMAL",
+      "timing_penalty": 10,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 6,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 17,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 21,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 1.729784,
+      "status": "FINISHED",
+      "timing_penalty": 22,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 1.731242,
+      "status": "FINISHED",
+      "timing_penalty": 22,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 1.724301,
+      "status": "FINISHED",
+      "timing_penalty": 22,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.007249,
+      "status": "OPTIMAL",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 15,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 9,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 0,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 4,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 2.07074,
+      "status": "FINISHED",
+      "timing_penalty": 1000000,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 2.051394,
+      "status": "FINISHED",
+      "timing_penalty": 1000000,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 2.065905,
+      "status": "FINISHED",
+      "timing_penalty": 1000000,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.008849,
+      "status": "OPTIMAL",
+      "timing_penalty": 30,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 9,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 4,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 15,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 19,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 0,
+      "seconds": 2.135461,
+      "status": "FINISHED",
+      "timing_penalty": 1000051,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 1,
+      "seconds": 2.12195,
+      "status": "FINISHED",
+      "timing_penalty": 1000051,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "simple",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 2,
+      "seconds": 2.131594,
+      "status": "FINISHED",
+      "timing_penalty": 1000051,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 6,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 2,
+          "start": 21,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 15
+        },
+        {
+          "group": 3,
+          "task": 3,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 18
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "NonePenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.001636,
+      "status": "OPTIMAL",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 26,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 34,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 14,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 22,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 10,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "NonePenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.000151,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 2.59738,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 2.542531,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 2.530088,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearPenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.004805,
+      "status": "OPTIMAL",
+      "timing_penalty": 60,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 10,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 14,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 22,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 26,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 34,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearPenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.00012,
+      "status": "FINISHED",
+      "timing_penalty": 90,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 2.880034,
+      "status": "FINISHED",
+      "timing_penalty": 90,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 2.912704,
+      "status": "FINISHED",
+      "timing_penalty": 75,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 14,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 22,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 10,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 27,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 35,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 2.860574,
+      "status": "FINISHED",
+      "timing_penalty": 75,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 10,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 14,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 22,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 31,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 39,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.005,
+      "status": "OPTIMAL",
+      "timing_penalty": 44,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 4,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 12,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 24,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 28,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 36,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.000123,
+      "status": "FINISHED",
+      "timing_penalty": 52,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 2.981151,
+      "status": "FINISHED",
+      "timing_penalty": 52,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 3.010875,
+      "status": "FINISHED",
+      "timing_penalty": 46,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 8,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 16,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 20,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 28,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 33,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 41,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 2.978079,
+      "status": "FINISHED",
+      "timing_penalty": 52,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 20,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 24,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 32,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 36,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.006308,
+      "status": "OPTIMAL",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 10,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 9.5e-05,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 3.24703,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 3.190637,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 3.226247,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.008375,
+      "status": "OPTIMAL",
+      "timing_penalty": 69,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.000119,
+      "status": "FINISHED",
+      "timing_penalty": 81,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 0,
+      "seconds": 3.508792,
+      "status": "FINISHED",
+      "timing_penalty": 81,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 1,
+      "seconds": 3.488609,
+      "status": "FINISHED",
+      "timing_penalty": 81,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "single_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 2,
+      "seconds": 3.479908,
+      "status": "FINISHED",
+      "timing_penalty": 81,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 25,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 13,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 29,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 14
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 37,
+          "duration": 4,
+          "machine": "m0",
+          "optimal": 14
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "NonePenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.003902,
+      "status": "OPTIMAL",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 9,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 9,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "NonePenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.000141,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 3.781374,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 3.729438,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "NonePenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 3.765125,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearPenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.093679,
+      "status": "OPTIMAL",
+      "timing_penalty": 42,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 4,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 11,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 11,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 18,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 14,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 21,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 19,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 26,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearPenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.000136,
+      "status": "FINISHED",
+      "timing_penalty": 48,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 4.198244,
+      "status": "FINISHED",
+      "timing_penalty": 48,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 4.2016,
+      "status": "FINISHED",
+      "timing_penalty": 48,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearPenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 4.163516,
+      "status": "FINISHED",
+      "timing_penalty": 48,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.034949,
+      "status": "OPTIMAL",
+      "timing_penalty": 16,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 8,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 15,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 11,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 18,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 16,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 23,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 21,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 28,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.000131,
+      "status": "FINISHED",
+      "timing_penalty": 24,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 4.309877,
+      "status": "FINISHED",
+      "timing_penalty": 24,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 4.293083,
+      "status": "FINISHED",
+      "timing_penalty": 24,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "LinearWithRangePenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 4.263154,
+      "status": "FINISHED",
+      "timing_penalty": 24,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.032185,
+      "status": "OPTIMAL",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 10,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 17,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 9,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 5,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 12,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.00012,
+      "status": "FINISHED",
+      "timing_penalty": 2000000,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 0,
+      "seconds": 4.59556,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 5,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 37,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 44,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 37,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 44,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 1,
+      "seconds": 4.562492,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 45,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 52,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 30,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 37,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenalty",
+      "method": "s",
+      "seed": 2,
+      "seconds": 4.538778,
+      "status": "FINISHED",
+      "timing_penalty": 0,
+      "overlap_minutes": 3,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 11,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 18,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 28,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 35,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 26,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 33,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "o",
+      "seed": null,
+      "seconds": 0.025618,
+      "status": "OPTIMAL",
+      "timing_penalty": 45,
+      "overlap_minutes": 0,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 8,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 15,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 11,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 18,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 21,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 28,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "f",
+      "seed": null,
+      "seconds": 0.000127,
+      "status": "FINISHED",
+      "timing_penalty": 2000048,
+      "overlap_minutes": 4,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 12,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 19,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 13,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 20,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 22,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 29,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 23,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 30,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 0,
+      "seconds": 4.925501,
+      "status": "FINISHED",
+      "timing_penalty": 84,
+      "overlap_minutes": 3,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 9,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 9,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 19,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 26,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 1,
+      "seconds": 4.893709,
+      "status": "FINISHED",
+      "timing_penalty": 93,
+      "overlap_minutes": 3,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 2,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 9,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 20,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 27,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 19,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 26,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 6,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 13,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    },
+    {
+      "variant": "multi_interval",
+      "penalty": "CyclicalRestPenaltyWithLinear",
+      "method": "s",
+      "seed": 2,
+      "seconds": 4.950659,
+      "status": "FINISHED",
+      "timing_penalty": 84,
+      "overlap_minutes": 3,
+      "assignment_errors": 0,
+      "interval_errors": 0,
+      "tasks": [
+        {
+          "group": 0,
+          "task": 0,
+          "start": 11,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 0,
+          "task": 1,
+          "start": 18,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 10
+        },
+        {
+          "group": 1,
+          "task": 0,
+          "start": 17,
+          "duration": 5,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 1,
+          "task": 1,
+          "start": 24,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 11
+        },
+        {
+          "group": 2,
+          "task": 0,
+          "start": 25,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 2,
+          "task": 1,
+          "start": 32,
+          "duration": 3,
+          "machine": "m0",
+          "optimal": 12
+        },
+        {
+          "group": 3,
+          "task": 0,
+          "start": 27,
+          "duration": 5,
+          "machine": "m0",
+          "optimal": 13
+        },
+        {
+          "group": 3,
+          "task": 1,
+          "start": 34,
+          "duration": 3,
+          "machine": "m1",
+          "optimal": 13
+        }
+      ]
+    }
+  ]
+}

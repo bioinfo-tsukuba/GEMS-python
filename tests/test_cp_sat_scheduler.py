@@ -1,6 +1,7 @@
 """Behavioral checks for the OR-Tools default scheduler."""
 
 import inspect
+from importlib import import_module
 import tempfile
 import unittest
 from pathlib import Path
@@ -39,6 +40,9 @@ from gems_python.one_machine_problem_simple_task.penalty.penalty_class import (
 from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask
 from gems_python.one_machine_problem_simple_task.transition_manager import (
     Experiments as SimpleExperiments,
+)
+from scripts.compare_schedulers import (
+    PENALTIES, VARIANTS, overlap_minutes, run_case,
 )
 
 
@@ -212,6 +216,76 @@ class TestDefaultScheduler(unittest.TestCase):
                         solver.value(cost),
                         penalty.calculate_penalty(minute, 105),
                     )
+
+    def test_all_penalty_types_match_existing_formula(self):
+        for module_name in (
+            "one_machine_problem_simple_task",
+            "one_machine_problem_interval_task",
+            "multi_machine_problem_interval_task",
+        ):
+            module = import_module(
+                f"gems_python.{module_name}.penalty.penalty_class"
+            )
+            penalties = (
+                module.NonePenalty(),
+                module.LinearPenalty(3),
+                module.LinearWithRangePenalty(-2, 4, 2, 5),
+                module.CyclicalRestPenalty(10, 12, [(0, 2), (10, 11)]),
+                module.CyclicalRestPenaltyWithLinear(
+                    10, 12, [(0, 2), (10, 11)], 3
+                ),
+            )
+            for penalty in penalties:
+                for minute in range(9, 35):
+                    with self.subTest(
+                        module=module_name,
+                        penalty=type(penalty).__name__,
+                        minute=minute,
+                    ):
+                        model = cp_model.CpModel()
+                        start = model.new_int_var(minute, minute, "start")
+                        cost, _ = _cost(
+                            model, start, minute, minute, 23, penalty, "penalty"
+                        )
+                        solver = cp_model.CpSolver()
+                        self.assertEqual(solver.solve(model), cp_model.OPTIMAL)
+                        self.assertEqual(
+                            solver.value(cost),
+                            penalty.calculate_penalty(minute, 23),
+                        )
+
+    def test_all_penalty_types_schedule_without_resource_conflicts(self):
+        for variant in VARIANTS:
+            for penalty in PENALTIES:
+                with self.subTest(variant=variant, penalty=penalty):
+                    result = run_case(variant, penalty, "o", None)
+                    self.assertIn(result["status"], ("OPTIMAL", "FEASIBLE"))
+                    self.assertEqual(result["overlap_minutes"], 0)
+                    self.assertEqual(result["assignment_errors"], 0)
+                    self.assertEqual(result["interval_errors"], 0)
+
+    def test_comparison_counts_physical_machine_overlap(self):
+        self.assertEqual(overlap_minutes([(1, 5), (5, 7)]), 0)
+        self.assertEqual(overlap_minutes([(1, 5), (3, 7)]), 2)
+        self.assertEqual(
+            overlap_minutes([(1, 5), (2, 4), (3, 6)]), 4
+        )
+
+    def test_legacy_multi_machine_penalty_misses_machine_id_conflict(self):
+        groups = [
+            MultiGroup(
+                0, MultiLinear(1),
+                [MultiTask(
+                    5, f"t{index}", 0,
+                    allocated_machine_id="m0", scheduled_time=index,
+                )],
+                task_group_id=index,
+            )
+            for index in range(2)
+        ]
+        machines = MachineList([Machine(0, "m0"), Machine(0, "m1")])
+        self.assertEqual(MultiGroup.eval_machine_penalty(groups, machines), 0)
+        self.assertEqual(overlap_minutes([(0, 5), (1, 6)]), 4)
 
     def test_invalid_method_fails(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -31,6 +31,16 @@ these files from being written.
 | Time limit | Record `OPTIMAL` or `FEASIBLE`, penalty, objective, and solve time; never label an unproven feasible solution optimal. |
 | Concurrent simulation | A shorter task that starts later reports its observation first; the longer task keeps its original start and completion times. |
 
+## Old/new scheduler comparison
+
+The reproducible comparison, all five timing-penalty formulas, three fixed
+workloads, three annealing seeds, physical-machine overlap metric, CSV/JSON
+records, and PNG plots are documented in
+[scheduler comparison](benchmarks/scheduler_comparison.md). The focused tests
+check the 390 formula/CP-SAT pairs and all 15 OR-Tools public-API cases.
+The comparison calls the existing `"s"` and `"f"` implementations without
+changing their annealing parameters.
+
 ## Synthetic experiment scenarios
 
 **Cell culture:** start at confluence 0.12, use logistic growth with rate
@@ -74,3 +84,18 @@ research [2], without claiming the synthetic response models a real reaction.
 - A concurrent simulation test initially showed a running task being moved
   after another task finished. The simulator now fixes started tasks before
   rescheduling; the reproduction passes with completion times 2 and 20.
+
+## Verification on 2026-10-28
+
+- The 70-run scheduler comparison finished with 15 `OPTIMAL` CP-SAT results.
+  All 390 formula checks passed. All 15 CP-SAT comparison cases had zero
+  physical-machine overlap, invalid assignments, and group-interval errors.
+- The legacy annealer produced physical-machine ID overlaps in 14 of 45 runs;
+  the sequential method did so in 5 of 10 runs. The exact schedules, seeds,
+  and diagrams are preserved in the comparison report. This is a finding in
+  the existing optional methods, not a new CP-SAT failure.
+- The focused scheduler and simulator tests passed. The disposable-checkout
+  full suite reported 58 tests with the same 10 errors as on 2026-10-27:
+  missing HEK arguments (3), UUID JSON (1), interactive input (1),
+  old Matplotlib API (4), and tuple-unpacking (1). The new focused
+  comparison-metric test was added after this full-suite run.
