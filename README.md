@@ -16,6 +16,13 @@ GEMS is a Python toolkit for orchestrating, simulating, and supervising multi-ma
 
 This document describes how to set up the environment, run tests, simulate experiments, and work with the interactive UI.
 
+## Saving and resuming experiments
+
+All three experiment managers support JSON and pickle snapshots with concrete
+State classes, settings, progress, task times, and shared references preserved.
+See [保存・復元とreloadの仕様](docs/persistence.md) for usage, automatic selection,
+legacy compatibility, and verification results.
+
 ## Prerequisites
 - Python 3.14.4 (the repository's `.python-version`)
 - [Poetry](https://python-poetry.org/) for dependency management

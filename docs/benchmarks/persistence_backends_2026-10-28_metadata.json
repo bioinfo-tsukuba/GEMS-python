@@ -1,0 +1,26 @@
+{
+  "commit": "1e38d2cbd42879aec5d0c447e511f92eabd3b367",
+  "working_tree_dirty": true,
+  "python": "3.14.4",
+  "versions": {
+    "pandas": "3.1.0",
+    "polars": "1.44.2",
+    "pyarrow": "26.0.0",
+    "ortools": "9.15.6755"
+  },
+  "scheduler": "o",
+  "time_limit_seconds": 5.0,
+  "solver_seed": 0,
+  "workers": 1,
+  "command": [
+    "scripts/compare_dataframe_backends.py",
+    "--output",
+    "/tmp/gems-persistence-backend-comparison-1e38d2c"
+  ],
+  "working_tree_note": "Only documentation and its comparison summaries were uncommitted; implementation and acceptance tests were at the recorded commit.",
+  "legacy_snapshot_sha256": {
+    "multi.json": "5cc7750f645cabe80cde1ace27f6ceae0323e4aab10d2a8a643227f95032b1c1",
+    "simple.json": "66d425981cf5d5abc92893716bb17d415388403eea8861c80612a55318a92aac",
+    "single.json": "7eb9b078e6c832e7446418aaaa1ea6303be4e0b8aed2dc30e6f93f66e3ce8c47"
+  }
+}
