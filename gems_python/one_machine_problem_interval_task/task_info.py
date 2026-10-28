@@ -443,7 +443,7 @@ class TaskGroup:
         """
         penalty = 0
         for group in task_groups:
-            scheduled_time = group.tasks[0].scheduled_time
+            scheduled_time = group.tasks[0].scheduled_time - group.tasks[0].interval
             penalty += group.penalty_type.calculate_penalty(scheduled_time=scheduled_time, optimal_time=group.optimal_start_time)
 
         return penalty

@@ -17,7 +17,7 @@
    poetry install
    poetry run python tests/test_simulate_multi.py
    ```
-2. The console prints simulated annealing scheduling logs followed by per-step transition results (fields such as `status`, `from_state`, `to_state`).  
+2. OR-Tools is the default scheduler. The console prints per-step transition results (fields such as `status`, `from_state`, `to_state`).
    コンソールにはシミュレーテッドアニーリングのログと、`status` や `from_state` などを含む各ステップの遷移結果が出力されます。
 3. When `save_each_step` remains `True`, directories like `experiments_dir_demo/step_00000000` are created automatically with CSV schedules, JSON experiment data, and generated graphs. Adjust the output path by editing `parent_dir_path`.  
    `save_each_step=True` のままにすると `experiments_dir_demo/step_00000000` などが自動生成され、スケジュール CSV や実験情報 JSON、状態遷移図などが保存されます。出力先を変えたい場合は `parent_dir_path` を変更してください。

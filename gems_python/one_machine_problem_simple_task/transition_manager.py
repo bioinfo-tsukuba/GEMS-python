@@ -14,6 +14,7 @@ import numpy as np
 import polars as pl
 from pathlib import Path
 import os
+from gems_python.common.cp_sat_scheduler import schedule_simple_tasks
 
 from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask, OneMachineTaskLocalInformation        
 
@@ -508,16 +509,21 @@ class Experiments:
 
     def execute_scheduling(
             self,
-            scheduling_method: str = 's',
+            scheduling_method: str = 'o',
             optimal_time_reference_time: int = 0
             ):
         """
         Execute the scheduling of the tasks.
-        :param scheduling_method: The method of scheduling. 's' for simulated annealing.
+        :param scheduling_method: 'o' for OR-Tools or 's' for simulated annealing.
         :param optimal_time_reference_time: The reference time for the optimal time.
         """
 
         self.assign_task_ids()
+        if scheduling_method == 'o':
+            self.tasks = schedule_simple_tasks(self.tasks, optimal_time_reference_time)
+            return
+        if scheduling_method != 's':
+            raise ValueError(f"Unexpected scheduling_method: {scheduling_method}")
         # Reschedule
         tasks = self.tasks.copy()
 
@@ -528,7 +534,7 @@ class Experiments:
             case 's':
                 self.tasks = OneMachineTask.simulated_annealing_schedule(tasks)
             case _:
-                AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
+                raise ValueError(f"Unexpected scheduling_method: {scheduling_method}")
 
         
         for task in tasks:
@@ -542,7 +548,7 @@ class Experiments:
             task_id: int,
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
-            scheduling_method = 's',
+            scheduling_method = 'o',
             optimal_time_reference_time: int = 0
             ) -> OneMachineTask:
         """

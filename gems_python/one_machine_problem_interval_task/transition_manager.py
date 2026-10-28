@@ -11,12 +11,13 @@ from abc import ABC, abstractmethod
 import copy
 from dataclasses import field
 import json
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union
 import uuid
 import numpy as np
 import polars as pl
 from pathlib import Path
 import os
+from gems_python.common.cp_sat_scheduler import schedule_task_groups
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 
 from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGroup
@@ -619,13 +620,13 @@ class Experiments:
 
     def execute_scheduling(
             self,
-            scheduling_method: str = 's',
+            scheduling_method: str = 'o',
             reference_time: int = None
             ):
         # TODO-DONE: TaskGroupに対応
         """
         Execute the scheduling of the tasks.
-        :param scheduling_method: The method of scheduling. 's' for simulated annealing.
+        :param scheduling_method: 'o' for OR-Tools, 's' for simulated annealing, or 'f' for sequential scheduling.
         :param reference_time: The reference time for the optimal time.
         """
         if reference_time is not None:
@@ -638,12 +639,14 @@ class Experiments:
         scheduled_task_groups = list()
 
         match scheduling_method:
+            case 'o':
+                scheduled_task_groups = schedule_task_groups(task_groups, reference_time)
             case 's':
                 scheduled_task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time)
             case 'f':
                 scheduled_task_groups = TaskGroup.schedule_task_groups(task_groups, reference_time)
             case _:
-                AssertionError(f"Unexpected input: scheduling_method {scheduling_method}")
+                raise ValueError(f"Unexpected scheduling_method: {scheduling_method}")
 
         self.task_groups = scheduled_task_groups
 
@@ -696,7 +699,7 @@ class Experiments:
             task_id: int,
             new_result_of_experiment: pl.DataFrame,
             update_type: str = 'a',
-            scheduling_method = 's',
+            scheduling_method = 'o',
             optimal_time_reference_time: int = None
             ) -> Tuple[TaskGroup, Task]:
         """
@@ -838,7 +841,7 @@ class Experiments:
             # Following fields are optional, add default values if not found
             task_response = result_data.get("task_response", "success")
             update_type = result_data.get("update_type", "a")
-            scheduling_method = result_data.get("scheduling_method", "s")
+            scheduling_method = result_data.get("scheduling_method", "o")
             task_group_id = result_data["task_group_id"]
             task_id = result_data["task_id"]
             optimal_time_reference_time = result_data.get("schedule_reference_time")
@@ -889,9 +892,10 @@ class Experiments:
     # ========================= 
     def simulate_one(
         self,
-        scheduling_method: str = "s",
+        scheduling_method: str = "o",
         optimal_time_reference_time: int | None = None,
         save_each_step: bool = False,
+        observation_provider: Callable | None = None,
     ) -> dict:
         if optimal_time_reference_time is not None:
             self.reference_time = optimal_time_reference_time
@@ -903,7 +907,23 @@ class Experiments:
             return {"status": "no_tasks"}
 
         try:
-            earliest_task, earliest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
+            if observation_provider is None:
+                earliest_task, earliest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
+            else:
+                group, earliest_task = min(
+                    (
+                        (group, task)
+                        for group in self.task_groups
+                        for task in group.tasks if not task.completed
+                    ),
+                    key=lambda item: (
+                        item[1].scheduled_time + item[1].processing_time,
+                        item[1].scheduled_time,
+                        item[0].task_group_id,
+                        item[1].task_id,
+                    ),
+                )
+                earliest_group_id = group.task_group_id
         except Exception as err:
             return {"status": "error", "error": f"failed_to_pick_task: {err!r}"}
 
@@ -921,12 +941,22 @@ class Experiments:
         state_index = exp.get_current_state_index_from_current_state_name()
         state = exp.states[state_index]
         before_state_name = exp.current_state_name
+        event_time = max(
+            self.reference_time,
+            earliest_task.scheduled_time + earliest_task.processing_time,
+        )
         try:
-            dummy_df = state.dummy_output(
-                exp.shared_variable_history.clone(),
-                task_group_id=earliest_group_id,
-                task_id=earliest_task.task_id,
-            )
+            if observation_provider is None:
+                dummy_df = state.dummy_output(
+                    exp.shared_variable_history.clone(),
+                    task_group_id=earliest_group_id,
+                    task_id=earliest_task.task_id,
+                )
+            else:
+                dummy_df = observation_provider(
+                    state, exp.shared_variable_history.clone(), tg,
+                    earliest_task, event_time,
+                )
             if not isinstance(dummy_df, pl.DataFrame):
                 raise TypeError("dummy_output must return a pl.DataFrame")
         except Exception as err:
@@ -934,6 +964,16 @@ class Experiments:
 
         # 本番と同経路で更新→遷移→再スケジュール
         try:
+            if observation_provider is not None:
+                for scheduled_group in self.task_groups:
+                    if scheduled_group.is_not_started() and any(
+                        not scheduled_task.completed
+                        and scheduled_task.scheduled_time <= event_time
+                        < scheduled_task.scheduled_time + scheduled_task.processing_time
+                        for scheduled_task in scheduled_group.tasks
+                    ):
+                        scheduled_group.status = type(scheduled_group.status).IN_PROGRESS
+                self.reference_time = event_time
             _next_tg, _next_task = self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
                 task_group_id=earliest_group_id,
                 task_id=earliest_task.task_id,
@@ -958,16 +998,18 @@ class Experiments:
             "to_state": after_state_name,
             "simulated_task_group_id": earliest_group_id,
             "simulated_task_id": earliest_task.task_id,
+            "simulated_time": event_time,
             "step_after": self.step,
         }
 
     def simulate(
         self,
         max_steps: int = 10,
-        scheduling_method: str = "s",
+        scheduling_method: str = "o",
         optimal_time_reference_time: int | None = None,
         save_each_step: bool = False,
         stop_when_no_tasks: bool = True,
+        observation_provider: Callable | None = None,
     ) -> List[dict]:
         results: list[dict] = []
         for _ in range(max_steps):
@@ -975,6 +1017,7 @@ class Experiments:
                 scheduling_method=scheduling_method,
                 optimal_time_reference_time=optimal_time_reference_time,
                 save_each_step=save_each_step,
+                observation_provider=observation_provider,
             )
             results.append(res)
             if res.get("status") != "ok" and stop_when_no_tasks:

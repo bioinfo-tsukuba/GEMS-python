@@ -17,7 +17,7 @@
    poetry install
    poetry run python tests/test_simulate_one.py
    ```
-2. The console first prints simulated annealing scheduling logs, followed by per-step transition summaries such as `status`, `from_state`, and `to_state` in the `[step N] {...}` format.  
+2. OR-Tools is the default scheduler. The console then prints per-step transition summaries such as `status`, `from_state`, and `to_state` in the `[step N] {...}` format.
    コンソールにはシミュレーテッドアニーリングのログが表示され、その後に `[step N] {...}` 形式で状態遷移結果（`status`、`from_state`、`to_state` など）が続きます。
 3. To persist results, change `save_each_step` to `True` as noted around `tests/test_simulate_one.py:124`. Directories like `experiments_dir_demo_one_machine/step_00000000` will then contain CSV schedules and experiment snapshots.  
    結果を保存したい場合は `tests/test_simulate_one.py:124` 付近のコメントを参考に `save_each_step=True` に設定してください。すると `experiments_dir_demo_one_machine/step_00000000` などが生成され、スケジュール CSV や実験情報が保存されます。
