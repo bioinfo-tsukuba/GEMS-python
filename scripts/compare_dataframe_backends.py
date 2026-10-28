@@ -46,7 +46,7 @@ def main():
         print(f"{case['name']}: equal ({case['steps']} steps)")
     (args.output / "runs.json").write_text(json.dumps({"metadata": metadata, "cases": results}, indent=2) + "\n")
     with (args.output / "summary.csv").open("w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=list(summary[0]))
+        writer = csv.DictWriter(file, fieldnames=list(summary[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(summary)
     (args.output / "summary.md").write_text(

@@ -138,6 +138,8 @@ The corresponding archives are
   intended ingestion path; this protocol was not changed.
 - Git initially lacked a configured author. Commits use the prior implementation
   history's `Codex <codex@openai.com>` identity per command.
+- The CSV writer initially used CRLF, which Git flagged as trailing whitespace.
+  The writer now uses LF; the retained CSV was normalized without changing data.
 
 Verified conversion types are ordinary numeric, boolean, string, null and
 datetime columns. Arbitrary Python objects, every Polars/Pandas-specific type,
