@@ -1,0 +1,133 @@
+self.__class__.__module__='tests.test_scheduler_capacity'.self.__class__.__name__='FiniteState'
+Completed task 0 in task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)
+eariest_group_id=0
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.NOT_STARTED: 'Not Started'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=5, task_id=0)
+eariest_group_id=0
+Completed task 0 in task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)
+eariest_group_id=0
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+self.task_groups=[]
+self.__class__.__module__='tests.test_scheduler_capacity'.self.__class__.__name__='FiniteState'
+Completed task 0 in task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)
+eariest_group_id=0
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.NOT_STARTED: 'Not Started'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=5, task_id=0)
+eariest_group_id=0
+Completed task 0 in task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)
+eariest_group_id=0
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+self.task_groups=[]
+self.__class__.__module__='tests.test_scheduler_capacity'.self.__class__.__name__='FiniteState'
+reference_time=0
+SA_schedule:
+Completed task 0 in task group 0.
+reference_time=3
+SA_schedule:
+self.task_groups=[TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)
+eariest_group_id=0
+reference_time=3
+SA_schedule:
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+reference_time=5
+SA_schedule:
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.NOT_STARTED: 'Not Started'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=5, task_id=0)
+eariest_group_id=0
+reference_time=5
+SA_schedule:
+Completed task 0 in task group 0.
+reference_time=8
+SA_schedule:
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='finite', experiment_uuid='finite')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)
+eariest_group_id=0
+reference_time=8
+SA_schedule:
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+reference_time=10
+SA_schedule:
+self.task_groups=[]
+reference_time=10
+SA_schedule:
+reference_time=5
+SA_schedule:
+reference_time=10
+SA_schedule:
+reference_time=10
+SA_schedule:
+reference_time=10
+SA_schedule:
+reference_time=10
+SA_schedule:
+reference_time=0
+SA_schedule:
+self.__class__.__module__='tests.test_scheduler_capacity'.self.__class__.__name__='FiniteState'
+self.__class__.__module__='tests.test_scheduler_capacity'.self.__class__.__name__='FiniteState'
+Completed task 0 in task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m1', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='first', experiment_uuid='first'), TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.IN_PROGRESS: 'In Progress'>, allocated_machine_id='m0', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=1, experiment_name='second', experiment_uuid='second')]
+earliest_task=Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.IN_PROGRESS: 'In Progress'>, allocated_machine_id='m0', scheduled_time=0, task_id=0)
+eariest_group_id=1
+Completed task 0 in task group 1.
+self.task_groups=[TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m1', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='first', experiment_uuid='first'), TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=1, experiment_name='second', experiment_uuid='second')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=4, task_id=1)
+eariest_group_id=0
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=0, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=0, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=4, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=1, experiment_name='second', experiment_uuid='second'), TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.NOT_STARTED: 'Not Started'>, task_group_id=0, experiment_name='first', experiment_uuid='first')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=4, task_id=1)
+eariest_group_id=1
+Completed task 1 in task group 1.
+All tasks in task group 1 are completed.
+Deleted task group 1.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.IN_PROGRESS: 'In Progress'>, allocated_machine_id='m1', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='first', experiment_uuid='first'), TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.NOT_STARTED: 'Not Started'>, task_group_id=1, experiment_name='second', experiment_uuid='second')]
+earliest_task=Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.IN_PROGRESS: 'In Progress'>, allocated_machine_id='m1', scheduled_time=5, task_id=0)
+eariest_group_id=0
+Completed task 0 in task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m1', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='first', experiment_uuid='first'), TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.IN_PROGRESS: 'In Progress'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=1, experiment_name='second', experiment_uuid='second')]
+earliest_task=Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.IN_PROGRESS: 'In Progress'>, allocated_machine_id='m0', scheduled_time=5, task_id=0)
+eariest_group_id=1
+Completed task 0 in task group 1.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m1', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=0, experiment_name='first', experiment_uuid='first'), TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=1, experiment_name='second', experiment_uuid='second')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m1', scheduled_time=9, task_id=1)
+eariest_group_id=0
+Completed task 1 in task group 0.
+All tasks in task group 0 are completed.
+Deleted task group 0.
+self.task_groups=[TaskGroup(optimal_start_time=5, penalty_type=LinearPenalty(penalty_coefficient=1), tasks=[Task(processing_time=3, experiment_operation='first', optimal_machine_type=0, interval=0, task_status=<TaskStatus.COMPLETED: 'Completed'>, allocated_machine_id='m0', scheduled_time=5, task_id=0), Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)], status=<TaskGroupStatus.IN_PROGRESS: 'In Progress'>, task_group_id=1, experiment_name='second', experiment_uuid='second')]
+earliest_task=Task(processing_time=1, experiment_operation='second', optimal_machine_type=0, interval=1, task_status=<TaskStatus.NOT_STARTED: 'Not Started'>, allocated_machine_id='m0', scheduled_time=9, task_id=1)
+eariest_group_id=1
+Completed task 1 in task group 1.
+All tasks in task group 1 are completed.
+Deleted task group 1.
+self.task_groups=[]
+reference_time=0
+SA_schedule:
+----------------------------------------------------------------------
+Ran 63 tests in 18.994s
+
+OK
