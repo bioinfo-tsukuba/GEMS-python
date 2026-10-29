@@ -188,7 +188,8 @@ class TaskGroup:
         return None
     
     @classmethod
-    def add_task_group(cls, task_groups: List['TaskGroup'], group: 'TaskGroup') -> List['TaskGroup']:
+    def add_task_group(cls, task_groups: List['TaskGroup'], group: 'TaskGroup', *,
+                       reschedule: bool = True) -> List['TaskGroup']:
         """_summary_
 
         Args:
@@ -204,7 +205,8 @@ class TaskGroup:
         # タスク群のidを割り当て
         task_groups = cls.set_task_group_ids(task_groups)
         # タスク群のスケジュールを更新
-        task_groups = cls.schedule_task_groups(task_groups, reference_time=0)
+        if reschedule:
+            task_groups = cls.schedule_task_groups(task_groups, reference_time=0)
         
         return task_groups
 

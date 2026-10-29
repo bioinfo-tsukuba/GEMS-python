@@ -18,6 +18,7 @@ from gems_python.common.dataframes import DataFrame
 from pathlib import Path
 import os
 from gems_python.common.cp_sat_scheduler import schedule_simple_tasks
+from gems_python.common.scheduling import DEFAULT_SOLVER_TIME_LIMIT_SECONDS, validate_time_limit
 
 from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask, OneMachineTaskLocalInformation        
 
@@ -390,11 +391,13 @@ class Experiments(SerializationMixin):
     parent_dir_path: Path
     # Automatically generated fields, not accept user input
     tasks: List[OneMachineTask] = field(default=None, init=False)
+    solver_time_limit_seconds: float = DEFAULT_SOLVER_TIME_LIMIT_SECONDS
 
     def __post_init__(self):
         """
         Initialize the experiments.
         """
+        self.solver_time_limit_seconds = validate_time_limit(self.solver_time_limit_seconds)
         if self.tasks is None:
             self.tasks = list()
             for experiment in self.experiments:
@@ -489,7 +492,8 @@ class Experiments(SerializationMixin):
     def execute_scheduling(
             self,
             scheduling_method: str = 'o',
-            optimal_time_reference_time: int = 0
+            optimal_time_reference_time: int = 0,
+            *, solver_time_limit_seconds: float | None = None,
             ):
         """
         Execute the scheduling of the tasks.
@@ -497,9 +501,12 @@ class Experiments(SerializationMixin):
         :param optimal_time_reference_time: The reference time for the optimal time.
         """
 
+        limit = validate_time_limit(self.solver_time_limit_seconds if solver_time_limit_seconds is None
+                                    else solver_time_limit_seconds)
         self.assign_task_ids()
         if scheduling_method == 'o':
-            self.tasks = schedule_simple_tasks(self.tasks, optimal_time_reference_time)
+            self.tasks = schedule_simple_tasks(
+                self.tasks, optimal_time_reference_time, solver_time_limit_seconds=limit)
             return
         if scheduling_method != 's':
             raise ValueError(f"Unexpected scheduling_method: {scheduling_method}")
@@ -528,11 +535,15 @@ class Experiments(SerializationMixin):
             new_result_of_experiment: DataFrame,
             update_type: str = 'a',
             scheduling_method = 'o',
-            optimal_time_reference_time: int = 0
+            optimal_time_reference_time: int = 0,
+            *, solver_time_limit_seconds: float | None = None,
             ) -> OneMachineTask:
         """
         TODO: explanation
         """
+        solver_time_limit_seconds = validate_time_limit(
+            self.solver_time_limit_seconds if solver_time_limit_seconds is None
+            else solver_time_limit_seconds)
         experiment_uuid = 0
         for index in range(len(self.tasks)):
             if self.tasks[index].task_id == task_id:
@@ -558,7 +569,8 @@ class Experiments(SerializationMixin):
         self.tasks.append(new_task)
         self.assign_task_ids()
         
-        self.execute_scheduling(scheduling_method, optimal_time_reference_time)
+        self.execute_scheduling(scheduling_method, optimal_time_reference_time,
+                                solver_time_limit_seconds=solver_time_limit_seconds)
 
         return OneMachineTask.get_earliest_scheduled_task(self.tasks)
     
