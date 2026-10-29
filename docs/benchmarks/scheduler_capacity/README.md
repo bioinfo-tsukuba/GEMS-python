@@ -21,6 +21,11 @@ The primary run measured commit `9e269d41bd7ce83b80a99955856d14d46a018e3e`:
 [input/output verification](artifact_verification.json) and
 [verification report](verification.md).
 
+The [additional statistical analysis](statistics/README.md) retains medians,
+quartiles, p95, sample deviations, paired-input quality comparisons and four
+figures. It is generated from the saved CSV files without running a solver.
+Primary repetitions and final-source confirmation remain separate.
+
 ![Static valid plans / measured trials](success_rates.png)
 
 The final source adds checks for inconsistent progress, restores pending

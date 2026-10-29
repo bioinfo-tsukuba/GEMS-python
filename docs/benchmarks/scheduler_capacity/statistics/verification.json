@@ -1,0 +1,35 @@
+{
+  "counts": {
+    "trials": 193,
+    "calls": 333,
+    "updates": 67,
+    "confirmation_conditions": 17,
+    "outcomes": {
+      "VALID": 161,
+      "NO_SOLUTION": 32
+    },
+    "solver_statuses": {
+      "OPTIMAL": 27,
+      "FEASIBLE": 274,
+      "UNKNOWN": 32
+    }
+  },
+  "previous_summary_conditions_checked": 105,
+  "independent_linear_quantile_checks": "all 105 conditions, four metrics, four quantiles",
+  "deterministic_statistical_outputs": [
+    "statistics.json",
+    "condition_statistics.csv",
+    "paired_quality.csv",
+    "README.md"
+  ],
+  "same_input_static_pairs": 45,
+  "pairs_valid_at_both_limits": 39,
+  "successful_updates": 65,
+  "attempted_updates": 67,
+  "focused_tests": "63 tests passed in 18.994 seconds; see tests.log",
+  "raw_archive_sha256": "verified OK; preserved archive unchanged",
+  "analysis_script_sha256": "a03ee1e8f4dc67271e2ded8a29b8431baf5c81cbaf75f3fbde6e90459bd6b206",
+  "visual_review": "all four PNGs inspected; delay axis corrected to start at zero and identical delay/RSS scales used across limits",
+  "new_solver_executions": "none during analysis; focused tests execute their small regression fixtures",
+  "limitations": "descriptive statistics only; no pooling source commits, workload sizes or independent-operations inference"
+}
