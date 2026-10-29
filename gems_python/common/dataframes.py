@@ -110,12 +110,16 @@ def serialize(frame: DataFrame) -> dict:
     sink = pa.BufferOutputStream()
     with pa.ipc.new_stream(sink, table.schema) as writer:
         writer.write_table(table)
-    return {
+    envelope = {
         "_dataframe": 1,
         "backend": backend_of(frame),
         "format": "arrow-ipc",
         "data": base64.b64encode(sink.getvalue().to_pybytes()).decode("ascii"),
     }
+    # Arrow has no column metadata for a table with zero columns.
+    if isinstance(frame, pd.DataFrame) and isinstance(frame.columns, pd.RangeIndex) and not len(frame.columns):
+        envelope["empty_range_columns"] = True
+    return envelope
 
 
 def deserialize(value) -> DataFrame:
@@ -129,7 +133,10 @@ def deserialize(value) -> DataFrame:
         if value["backend"] == "auto":
             raise ValueError("Serialized DataFrame must identify its backend")
         table = pa.ipc.open_stream(base64.b64decode(value["data"], validate=True)).read_all()
-        return pl.from_arrow(table) if backend == "polars" else table.to_pandas()
+        restored = pl.from_arrow(table) if backend == "polars" else table.to_pandas()
+        if backend == "pandas" and value.get("empty_range_columns") and not len(restored.columns):
+            restored.columns = pd.RangeIndex(0)
+        return restored
     if isinstance(value, dict):
         return pl.DataFrame(value)
     raise TypeError("Expected a serialized DataFrame")

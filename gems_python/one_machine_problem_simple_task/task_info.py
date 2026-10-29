@@ -1,13 +1,13 @@
+from gems_python.common.class_dumper import SerializationMixin
 import copy
-from dataclasses import asdict, dataclass, field
-import json
+from dataclasses import dataclass, field
 from typing import List, Type
 from pathlib import Path
 
 from gems_python.one_machine_problem_simple_task.penalty.penalty_class import PenaltyType        
         
 @dataclass
-class OneMachineTaskLocalInformation:
+class OneMachineTaskLocalInformation(SerializationMixin):
     """
     OneMachineTaskLocalInformation class.
     This class is used as a data class for the task.
@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import random
 @dataclass
-class OneMachineTask:
+class OneMachineTask(SerializationMixin):
     """
     OneMachineTask class.
     This class is used as a data class for the task.
@@ -36,40 +36,6 @@ class OneMachineTask:
     task_id: int = field(default=None)
     scheduled_time: int = field(default=None)
 
-    def to_dict(self) -> dict:
-        """
-        Converts the task object to a dictionary.
-        :return: Dictionary representation of the task object.
-        """
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'OneMachineTask':
-        """
-        Creates a task object from a dictionary.
-        :param data: Dictionary containing the task data.
-        :return: Task object.
-        """
-        return cls(**data)
-
-    def to_json(self) -> str:
-        """
-        Converts the task object to a JSON string.
-        :return: JSON string representation of the task object.
-        """
-        data = self.to_dict()
-        data["penalty_type"] = self.penalty_type.to_json()
-        return json.dumps(data)
-
-    @classmethod
-    def from_json(cls, json_str: str) -> 'OneMachineTask':
-        """
-        Creates a task object from a JSON string.
-        :param json_str: JSON string containing the task data.
-        :return: Task object.
-        """
-        data = json.loads(json_str)
-        return cls.from_dict(data)
 
     @classmethod
     def simulated_annealing_schedule(cls, tasks: List['OneMachineTask']) -> List['OneMachineTask']:
@@ -182,7 +148,7 @@ class OneMachineTask:
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
-        colors = plt.cm.get_cmap('tab10', len(tasks))
+        colors = plt.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time
@@ -232,7 +198,7 @@ class OneMachineTask:
         ax.set_xlim(min_time, max_time)
 
         # タスクごとに異なる色を設定
-        colors = plt.cm.get_cmap('tab10', len(tasks))
+        colors = plt.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time

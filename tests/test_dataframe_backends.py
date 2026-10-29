@@ -126,14 +126,16 @@ class TestDataframeBackends(unittest.TestCase):
         # Legacy simple experiments identify State classes only by name.
         experiment = simple.Experiment("legacy", [SimpleState()], "SimpleState",
                                        pl.DataFrame({"time": [5]}), experiment_uuid="legacy")
-        legacy_experiment = experiment.to_dict()
-        legacy_experiment["states"] = ["SimpleState"]
-        legacy_experiment["shared_variable_history"] = {"time": [5]}
-        legacy_experiment["current_task"] = None
-        legacy_experiment.pop("dataframe_backend")
+        legacy_experiment = {
+            "experiment_name": "legacy", "states": ["SimpleState"],
+            "current_state_name": "SimpleState",
+            "shared_variable_history": {"time": [5]},
+            "current_task": None, "experiment_uuid": "legacy",
+        }
         restored = simple.Experiment.from_json(json.dumps(legacy_experiment))
         self.assertIsInstance(restored.shared_variable_history, pl.DataFrame)
-        self.assertEqual(restored.current_task.optimal_time, 8)
+        # Restore the saved absence of a task without generating a replacement.
+        self.assertIsNone(restored.current_task)
 
     def test_experiment_save_restore_and_schedule_tables(self):
         for backend in ("pandas", "polars"):

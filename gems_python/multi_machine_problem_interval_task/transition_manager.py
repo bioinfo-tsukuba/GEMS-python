@@ -1,6 +1,6 @@
+from gems_python.common.class_dumper import SerializationMixin
+from gems_python.common.persistence import load_snapshot, save_snapshot
 from datetime import datetime
-import importlib
-import warnings
 import textwrap
 from matplotlib import pyplot as plt
 from matplotlib.patches import Arc, Arrow
@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import copy
 from dataclasses import field
 import json
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union
+from typing import Callable, List, Tuple, Union
 import uuid
 import numpy as np
 from gems_python.common import dataframes
@@ -27,9 +27,7 @@ from gems_python.multi_machine_problem_interval_task.task_info import Machine, M
 """
 
 
-T = TypeVar('T', bound='State')
-
-class State(ABC):
+class State(SerializationMixin, ABC):
     """State class.
     This class is used as just an superclass for the State class.
     Defining "State", you should inherit this class and implement the methods.
@@ -99,29 +97,6 @@ class State(ABC):
         raise NotImplementedError(
             f"{self.__class__.__name__}.dummy_output(df, task_group_id, task_id) is not implemented."
         )
-
-    def to_dict(self) -> dict:
-        result = dict()
-        result['_class'] = f"{self.__class__.__module__}.{self.__class__.__name__}"
-        return result
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
-
-    @classmethod
-    def from_dict(cls: Type[T], data: Dict[str, Any]) -> T:
-        if '_class' in data:
-            class_path = data.pop('_class')
-            module_name, class_name = class_path.rsplit('.', 1)
-            module = importlib.import_module(module_name)
-            cls = getattr(module, class_name)
-        return cls(**data)
-
-    @classmethod
-    def from_json(cls: Type[T], json_str: str) -> T:
-        data = json.loads(json_str)
-        return cls.from_dict(data)
-
 
 
 """MODULE: Experiment
@@ -303,6 +278,7 @@ class Experiment:
         """
         Initialize the experiment.
         """
+        self.experiment_uuid = str(self.experiment_uuid)
         self.dataframe_backend = dataframes.resolve_backend(self.dataframe_backend, self.shared_variable_history)
         self.shared_variable_history = (
             dataframes.make_frame(backend=self.dataframe_backend)
@@ -452,78 +428,16 @@ class Experiments:
 
             self.set_task_group_ids()
 
-    def reload(self, step: int = None):
-        """
-        Reload the experiments from the saved directory.
-        """
+    def reload(self, step: int = None, *, source: str = "auto"):
+        """Return a saved step without changing this collection, even on failure."""
         if step is None:
-            # 保存ディレクトリ内のすべてのstepディレクトリを取得
-            step_dirs = [
-                d for d in self.parent_dir_path.iterdir()
-                if d.is_dir() and d.name.startswith('step_') and d.name[5:].isdigit()
-            ]
-            if not step_dirs:
-                raise ValueError("リロード可能なステップディレクトリが見つかりません。")
-            # ステップ番号を抽出し、最大値を選択
-            step_numbers = [int(d.name[5:]) for d in step_dirs]
-            step = max(step_numbers)
-            print(f"ステップが指定されなかったため、最大のステップ {step} を選択しました。")
-            
-        old_step = self.step
-        self.step = step
-
-        experiments_js_path = self.save_dir() / "experiments.json"
-        experiments_pkl_path = self.save_dir() / "experiments.pkl"
-        experiments_json = None
-        experiments_pkl = None
-        # TODO: Jsonを読み込んでも、Penaltyの再構成がうまく行っていない
-        try:
-            json_str = ""
-            with open(experiments_js_path, "r") as f:
-                json_str = f.read()
-            experiments_json = Experiments.from_json(json_str)
-        except Exception as err:
-            print(f"Error loading experiments from json: {err}")
-        try:
-            with open(experiments_pkl_path, "rb") as f:
-                experiments_pkl = Experiments.from_pickle(experiments_pkl_path)
-        except Exception as err:
-            print(f"Error loading experiments from pickle: {err}")
-            self.step = old_step
-
-        if experiments_json is None and experiments_pkl is None:
-            raise RuntimeError(f"Error loading experiments: {err}")
-        elif experiments_json is None:
-            experiments = experiments_pkl
-            print(f"Experiments loaded from pickle: {experiments_pkl_path} because json file could not be loaded.")
-        elif experiments_pkl is None:
-            experiments = experiments_json
-            print(f"Experiments loaded from json: {experiments_js_path} because pickle file could not be loaded.")
-        else:
-            if experiments_json.to_json() != experiments_pkl.to_json():
-                # Warn that the loaded experiments are different using warnings
-                warnings.warn("The loaded experiments from json and pickle are different. The experiments from json will be used.")
-                while True:
-                    ok = input("Do you want to use the experiments from json or pickle, or cancel the reload? (j/p/c): ").strip().lower()
-                    if ok == 'j':
-                        experiments = experiments_json
-                        print(f"Experiments loaded from json: {experiments_js_path}")
-                        break
-                    elif ok == 'p':
-                        experiments = experiments_pkl
-                        print(f"Experiments loaded from pickle: {experiments_pkl_path}")
-                        break
-                    elif ok == 'c':
-                        self.step = old_step
-                        print("Reload canceled.")
-                        raise RuntimeError("Reload canceled.")
-                    else:
-                        print("Invalid input. Please enter 'j', 'p', or 'c'.")
-            else:
-                experiments = experiments_pkl
-                print(f"Experiments loaded from pickle because the json and pickle files are the same: {experiments_pkl_path}")
-            
-        return experiments
+            steps = [int(d.name[5:]) for d in self.parent_dir_path.iterdir()
+                     if d.is_dir() and d.name.startswith("step_") and d.name[5:].isdigit()]
+            if not steps:
+                raise ValueError("No saved step directories were found.")
+            step = max(steps)
+        directory = self.parent_dir_path / f"step_{step:08d}"
+        return load_snapshot(directory, type(self), source=source)
 
     def save_dir(self):
         return self.parent_dir_path / f"step_{str(self.step).zfill(8)}"
@@ -648,6 +562,7 @@ class Experiments:
             save_path = save_dir if save_dir is not None else self.parent_dir_path
 
         os.makedirs(save_path, exist_ok=True)
+        save_snapshot(self, save_path)
         # TODO: TaskGroupに対応
         tasks = [task.to_json() for task in self.task_groups]
         # print(f"{tasks=}")
@@ -800,14 +715,7 @@ class Experiments:
             save_dir = self.save_dir()
 
         os.makedirs(save_dir, exist_ok=True)
-        # Save the task groups
-        experiment_js_path = save_dir / "experiments.json"
-        with open(experiment_js_path, "w") as f:
-            f.write(self.to_json())
-        
-        experiment_pickle_path = save_dir / "experiments.pkl"
-        with open(experiment_pickle_path, "wb") as f:
-            f.write(self.to_pickle())
+        save_snapshot(self, save_dir)
 
         date_and_time = datetime.now().astimezone().isoformat()
         with open(save_dir / "date_and_time.txt", "w") as f:
