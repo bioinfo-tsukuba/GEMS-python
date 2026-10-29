@@ -1,0 +1,752 @@
+{
+  "analysis_date_jst": "2026-10-29",
+  "baseline_commit": "aee423c0d7c78fd2a34062036669c1dad6164931",
+  "analysis_issue": 21,
+  "paper": {
+    "doi": "10.1039/D5DD00409H",
+    "local_path": "volatile/d5dd00409h.pdf",
+    "git_tracked": false,
+    "physical_pages": 14,
+    "journal_pages": "1411–1424",
+    "sha256": "3ecdf5b909a19588ed0244a8ac776acbe36684a63e237dc754d774f9e0a31f3d",
+    "limits_explicit_journal_page": 1423,
+    "finite_automaton_assumptions_journal_page": 1414
+  },
+  "github_snapshot": {
+    "retrieved_date_jst": "2026-10-29",
+    "previous_issue_count": 6,
+    "previous_comment_count": 17,
+    "previous_pr_count": 14,
+    "issues": [
+      {
+        "number": 19,
+        "title": "当時未解決だった双方向復元を修正し、UUID生成・描画を改善",
+        "state": "closed",
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/19",
+        "updated_at": "2026-10-29T00:41:17Z",
+        "body_sha256": "2793dcff994671bce8249e039eefcbfb6d38b71f92a40c948947f3f71d2f0d19",
+        "comments": [
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/19#issuecomment-6470052623",
+            "created_at": "2026-10-28T13:19:13Z",
+            "body_sha256": "a837efa1ad289e32479580ab91bb93fbda594285cf17bc30366e34019c44568e"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/19#issuecomment-6470277753",
+            "created_at": "2026-10-28T13:29:00Z",
+            "body_sha256": "57a92dd3a6f1d7bbfcf0f582d21368769777eca948f3ebb583b09c93c1d5dfdc"
+          }
+        ]
+      },
+      {
+        "number": 17,
+        "title": "Support Pandas and Polars with automatic DataFrame selection",
+        "state": "closed",
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/17",
+        "updated_at": "2026-10-28T12:57:37Z",
+        "body_sha256": "5d4b9cb511c55da98c1aa2b67705dfc9829ced8919c6056b03245e2444c965a1",
+        "comments": [
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/17#issuecomment-6469361745",
+            "created_at": "2026-10-28T12:47:07Z",
+            "body_sha256": "b305a29acd0a794bea5374d7512028786115b02765f40bb2c5a1cc2c8470e2c3"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/17#issuecomment-6469436206",
+            "created_at": "2026-10-28T12:50:52Z",
+            "body_sha256": "bae017fe2f9c72a0b696afa5e02f17bd709115f34888ebf2952fb8df496fcef7"
+          }
+        ]
+      },
+      {
+        "number": 15,
+        "title": "Default to OR-Tools and add reusable experiment simulators (0.1.4)",
+        "state": "closed",
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15",
+        "updated_at": "2026-10-28T09:01:19Z",
+        "body_sha256": "80b1a514a2ca3a8ebd72753a9675a6d8be9c22e8fbcca35a29b91d982010098a",
+        "comments": [
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6436428499",
+            "created_at": "2026-10-27T07:41:33Z",
+            "body_sha256": "cb751bec77c138d380f4d6993be720ea93d37d05030b64cc20f1b7eab04dded8"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6458221936",
+            "created_at": "2026-10-28T01:30:00Z",
+            "body_sha256": "f92e2a2d391e77eb88d3e7e0175537012250904e8a516806c9ff2153dcdcf8fc"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6458410350",
+            "created_at": "2026-10-28T01:43:50Z",
+            "body_sha256": "e88e9e11ab444aea1252bc4eee93cf1b4bdfd2a871060cf56f60b45a2e696741"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6458555843",
+            "created_at": "2026-10-28T01:54:49Z",
+            "body_sha256": "02c961d7b3ffea34982c6671111acfe69c5003921766b781f976c10e18d3b7dd"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6458592543",
+            "created_at": "2026-10-28T01:57:38Z",
+            "body_sha256": "13378c11a23eef038f4308e90fd336f4d4d9178010c3097c8c5a1e54e1285080"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6458852406",
+            "created_at": "2026-10-28T02:17:10Z",
+            "body_sha256": "2258c019d9f09f2a3425f4591acea29f2ed577160fdd451e01ff6545d6fbb4c0"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6458961776",
+            "created_at": "2026-10-28T02:25:24Z",
+            "body_sha256": "0717299952490e896cbe18c6e67f491f75eb88627965c32955f5de73e83568e9"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6459554352",
+            "created_at": "2026-10-28T03:05:19Z",
+            "body_sha256": "c7647bbc78c20b739cf2919d45c138999dbe18892ea6933e51ca1dfa44dd87a3"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/15#issuecomment-6463464294",
+            "created_at": "2026-10-28T07:39:42Z",
+            "body_sha256": "a6c8784d6a3e1ec6f6e6eb89267a0eb65b512967079e4d5cc6a770b2ec3eafd5"
+          }
+        ]
+      },
+      {
+        "number": 11,
+        "title": "On-the-fly experimetal loading",
+        "state": "closed",
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/11",
+        "updated_at": "2025-10-19T03:53:21Z",
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "comments": [
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/11#issuecomment-3418100554",
+            "created_at": "2025-10-18T09:21:36Z",
+            "body_sha256": "0fe7237e122139aef289af063b83610bc445b6b37c5868e7d9948db1754e0afb"
+          },
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/11#issuecomment-3419187371",
+            "created_at": "2025-10-19T03:46:56Z",
+            "body_sha256": "8e70a7a6e31e725c4469c49d4b830411567be33726247b76a81a203761bd1bfe"
+          }
+        ]
+      },
+      {
+        "number": 8,
+        "title": "シミュレーションのネイティブ実装",
+        "state": "closed",
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/8",
+        "updated_at": "2025-09-30T09:30:45Z",
+        "body_sha256": "a90a84efa180c2ad61c34605793f118eadb6edd98c42a78f994720f9fb20358e",
+        "comments": [
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/8#issuecomment-3113656632",
+            "created_at": "2025-07-24T14:17:57Z",
+            "body_sha256": "666eebbffa08550d88b31b42976faabe7f4c7c642da94981ae857e455314c127"
+          }
+        ]
+      },
+      {
+        "number": 2,
+        "title": "Bug for from_json function",
+        "state": "closed",
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/2",
+        "updated_at": "2024-10-20T09:34:53Z",
+        "body_sha256": "c70dcf472c174912092b92feaab159e7ea9131f3d2521824dfa596ec2608287b",
+        "comments": [
+          {
+            "url": "https://github.com/bioinfo-tsukuba/GEMS-python/issues/2#issuecomment-2424775096",
+            "created_at": "2024-10-20T09:34:52Z",
+            "body_sha256": "9ed56ed0707ef7da9232e6b42cffc42cab59be9b8c3de5f7b452e80209ce2d19"
+          }
+        ]
+      }
+    ],
+    "prs": [
+      {
+        "number": 20,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/20",
+        "title": "当時技術的に未解決だった保存・復元を完成し、UUID生成・描画を修正",
+        "merged_at": "2026-10-29T00:41:15Z",
+        "merge_commit_sha": "aee423c0d7c78fd2a34062036669c1dad6164931"
+      },
+      {
+        "number": 18,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/18",
+        "title": "Support Pandas and Polars histories with automatic selection",
+        "merged_at": "2026-10-28T12:57:35Z",
+        "merge_commit_sha": "3641e77817d8f4821b01026884be1a04543a7c1b"
+      },
+      {
+        "number": 16,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/16",
+        "title": "Default schedulers to OR-Tools and add experiment simulators (0.1.4)",
+        "merged_at": "2026-10-28T09:01:18Z",
+        "merge_commit_sha": "e1e5df6a64dbf0e4cd86c2a7bb18c8fa7546a94b"
+      },
+      {
+        "number": 14,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/14",
+        "title": "Chore/add readme logo placeholder",
+        "merged_at": "2026-02-13T08:09:24Z",
+        "merge_commit_sha": "d79ec9f3536ab6543cee373a6e91062c196f1999"
+      },
+      {
+        "number": 13,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/13",
+        "title": "refactor: translate user-facing Japanese messages to English",
+        "merged_at": "2026-02-12T06:53:57Z",
+        "merge_commit_sha": "5828efc316139010467f810f30b67d41dd303080"
+      },
+      {
+        "number": 12,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/12",
+        "title": "11 on the fly experimetal loading",
+        "merged_at": "2025-10-19T03:53:20Z",
+        "merge_commit_sha": "83adb4302a892cbc045d5309000ca0ed16eaeff1"
+      },
+      {
+        "number": 10,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/10",
+        "title": "Add simulation utilities for interval tasks and document usage",
+        "merged_at": "2025-10-10T05:58:28Z",
+        "merge_commit_sha": "c06664efcc080479478e74bd0b79626e8d06ef87"
+      },
+      {
+        "number": 9,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/9",
+        "title": "Native simulation impl",
+        "merged_at": "2025-09-30T09:30:43Z",
+        "merge_commit_sha": "548e5e6fa11bd5bc52e206ef0c8e165a968d2a18"
+      },
+      {
+        "number": 7,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/7",
+        "title": "Add Multi machine problem interval task manager",
+        "merged_at": "2025-01-06T14:15:44Z",
+        "merge_commit_sha": "c1ff97f1c4f76f5ffd6251a552c8b3156aaccf15"
+      },
+      {
+        "number": 6,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/6",
+        "title": "Fix cyclical penalty bug",
+        "merged_at": "2024-11-15T06:33:58Z",
+        "merge_commit_sha": "3a9b3582526e460fca44f6e081e94d066574abf1"
+      },
+      {
+        "number": 5,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/5",
+        "title": "Refactor interactive_ui.py to handle errors when loading or reloading modules",
+        "merged_at": "2024-11-01T13:19:42Z",
+        "merge_commit_sha": "733dba1a5f9bde068aa74362eb32a769e15a9b4e"
+      },
+      {
+        "number": 4,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/4",
+        "title": "Dynamic interactive command CUI",
+        "merged_at": "2024-10-30T12:16:50Z",
+        "merge_commit_sha": "4b011d0df3dcc8efefb5efd3a943512e3d78b07a"
+      },
+      {
+        "number": 3,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/3",
+        "title": "Refactor transition_manager.py to remove unnecessary field initialisation",
+        "merged_at": "2024-10-20T09:33:23Z",
+        "merge_commit_sha": "80f773e8a1594b2fc017c44864b18dadcbc56984"
+      },
+      {
+        "number": 1,
+        "url": "https://github.com/bioinfo-tsukuba/GEMS-python/pull/1",
+        "title": "Stateシリアライズ デシリアライズ",
+        "merged_at": "2024-10-11T01:40:48Z",
+        "merge_commit_sha": "249fa7a9ba46c6d6a53063dda8bfbb6ce90ef31a"
+      }
+    ]
+  },
+  "environment": {
+    "python": "3.14.4",
+    "pandas": "3.1.0",
+    "polars": "1.44.2",
+    "pyarrow": "26.0.0",
+    "ortools": "9.15.6755",
+    "simanneal": "0.5.0",
+    "matplotlib": "3.11.2",
+    "python_path_used": "/tmp/gems-venv/bin/python",
+    "MPLBACKEND": "Agg",
+    "MPLCONFIGDIR": "/tmp/gems-mpl"
+  },
+  "unittest_discover": {
+    "command": "PYTHONPATH=/tmp/gems-limitations-review-20261029 MPLBACKEND=Agg MPLCONFIGDIR=/tmp/gems-mpl /tmp/gems-venv/bin/python -m unittest discover -s tests -p 'test_*.py'",
+    "isolation": "git archive of baseline commit in /tmp/gems-limitations-review-20261029",
+    "test_count": 87,
+    "seconds": 34.144,
+    "exit_code": 1,
+    "error_count": 5,
+    "errors": [
+      {
+        "test": "test_experiment_structure (test_experiment_loop.TestExperimentStructure.test_experiment_structure)",
+        "exception": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'",
+        "traceback": "Traceback (most recent call last):\n  File \"tests/test_experiment_loop.py\", line 10, in setUp\n    self.experiment = HekCellCulture()\n                      ~~~~~~~~~~~~~~^^\nTypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_experiment_structure_graph (test_experiment_loop.TestExperimentStructure.test_experiment_structure_graph)",
+        "exception": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'",
+        "traceback": "Traceback (most recent call last):\n  File \"tests/test_experiment_loop.py\", line 10, in setUp\n    self.experiment = HekCellCulture()\n                      ~~~~~~~~~~~~~~^^\nTypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_experiment_structure_task_generation (test_experiment_loop.TestExperimentStructure.test_experiment_structure_task_generation)",
+        "exception": "TypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'",
+        "traceback": "Traceback (most recent call last):\n  File \"tests/test_experiment_loop.py\", line 10, in setUp\n    self.experiment = HekCellCulture()\n                      ~~~~~~~~~~~~~~^^\nTypeError: HekCellCulture.__init__() missing 1 required positional argument: 'current_state_name'"
+      },
+      {
+        "test": "test_task_group (test_one_machine_problem_interval_task.TestClass.test_task_group)",
+        "exception": "EOFError: EOF when reading a line",
+        "traceback": "Traceback (most recent call last):\n  File \"tests/test_one_machine_problem_interval_task.py\", line 297, in test_task_group\n    input(f\"press enter to complete task {task_id}\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nEOFError: EOF when reading a line"
+      },
+      {
+        "test": "test_task_generator (test_transition_manager.TestTransitionManager.test_task_generator)",
+        "exception": "TypeError: cannot unpack non-iterable OneMachineTaskLocalInformation object",
+        "traceback": "Traceback (most recent call last):\n  File \"tests/test_transition_manager.py\", line 184, in test_task_generator\n    task_name, task_count, penalty = self.state.task_generator(self.df)\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: cannot unpack non-iterable OneMachineTaskLocalInformation object"
+      }
+    ]
+  },
+  "scheduler_reproduction": {
+    "factory": "scripts.compare_schedulers.make_case",
+    "variant": "multi_interval",
+    "penalty": "LinearPenalty",
+    "input": {
+      "group_optimal_start_times": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "tasks_per_group": [
+        {
+          "processing_time": 5,
+          "interval": 2,
+          "optimal_machine_type": 0
+        },
+        {
+          "processing_time": 3,
+          "interval": 2,
+          "optimal_machine_type": 0
+        }
+      ],
+      "machine_type": 0,
+      "machine_count": 2,
+      "linear_penalty_coefficient": 3
+    },
+    "configuration": {
+      "cp_sat_time_limit_seconds": 5.0,
+      "cp_sat_workers": 1,
+      "cp_sat_seed": 0,
+      "sa_steps": 100000,
+      "sa_Tmax": 25000,
+      "sa_Tmin": 1,
+      "sa_seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "runs": [
+      {
+        "variant": "multi_interval",
+        "method": "o",
+        "seed": 0,
+        "seconds": 0.095311,
+        "status": "OPTIMAL",
+        "timing_penalty": 42,
+        "overlap_minutes": 0,
+        "assignment_errors": 0,
+        "interval_errors": 0,
+        "tasks": [
+          {
+            "group": 0,
+            "task": 0,
+            "start": 4,
+            "duration": 5,
+            "machine": "m1",
+            "optimal": 10
+          },
+          {
+            "group": 0,
+            "task": 1,
+            "start": 11,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 1,
+            "task": 0,
+            "start": 11,
+            "duration": 5,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 1,
+            "task": 1,
+            "start": 18,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 2,
+            "task": 0,
+            "start": 14,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 2,
+            "task": 1,
+            "start": 21,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 12
+          },
+          {
+            "group": 3,
+            "task": 0,
+            "start": 19,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 13
+          },
+          {
+            "group": 3,
+            "task": 1,
+            "start": 26,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 13
+          }
+        ]
+      },
+      {
+        "variant": "multi_interval",
+        "method": "f",
+        "seed": 0,
+        "seconds": 0.00014,
+        "status": "FINISHED",
+        "timing_penalty": 48,
+        "overlap_minutes": 4,
+        "assignment_errors": 0,
+        "interval_errors": 0,
+        "tasks": [
+          {
+            "group": 0,
+            "task": 0,
+            "start": 12,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 0,
+            "task": 1,
+            "start": 19,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 1,
+            "task": 0,
+            "start": 13,
+            "duration": 5,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 1,
+            "task": 1,
+            "start": 20,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 2,
+            "task": 0,
+            "start": 22,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 2,
+            "task": 1,
+            "start": 29,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 3,
+            "task": 0,
+            "start": 23,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 13
+          },
+          {
+            "group": 3,
+            "task": 1,
+            "start": 30,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 13
+          }
+        ]
+      },
+      {
+        "variant": "multi_interval",
+        "method": "s",
+        "seed": 0,
+        "seconds": 4.105416,
+        "status": "FINISHED",
+        "timing_penalty": 48,
+        "overlap_minutes": 4,
+        "assignment_errors": 0,
+        "interval_errors": 0,
+        "tasks": [
+          {
+            "group": 0,
+            "task": 0,
+            "start": 12,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 0,
+            "task": 1,
+            "start": 19,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 1,
+            "task": 0,
+            "start": 13,
+            "duration": 5,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 1,
+            "task": 1,
+            "start": 20,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 2,
+            "task": 0,
+            "start": 22,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 2,
+            "task": 1,
+            "start": 29,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 3,
+            "task": 0,
+            "start": 23,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 13
+          },
+          {
+            "group": 3,
+            "task": 1,
+            "start": 30,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 13
+          }
+        ]
+      },
+      {
+        "variant": "multi_interval",
+        "method": "s",
+        "seed": 1,
+        "seconds": 4.129376,
+        "status": "FINISHED",
+        "timing_penalty": 48,
+        "overlap_minutes": 4,
+        "assignment_errors": 0,
+        "interval_errors": 0,
+        "tasks": [
+          {
+            "group": 0,
+            "task": 0,
+            "start": 12,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 0,
+            "task": 1,
+            "start": 19,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 1,
+            "task": 0,
+            "start": 13,
+            "duration": 5,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 1,
+            "task": 1,
+            "start": 20,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 2,
+            "task": 0,
+            "start": 22,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 2,
+            "task": 1,
+            "start": 29,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 3,
+            "task": 0,
+            "start": 23,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 13
+          },
+          {
+            "group": 3,
+            "task": 1,
+            "start": 30,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 13
+          }
+        ]
+      },
+      {
+        "variant": "multi_interval",
+        "method": "s",
+        "seed": 2,
+        "seconds": 4.076843,
+        "status": "FINISHED",
+        "timing_penalty": 48,
+        "overlap_minutes": 4,
+        "assignment_errors": 0,
+        "interval_errors": 0,
+        "tasks": [
+          {
+            "group": 0,
+            "task": 0,
+            "start": 12,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 0,
+            "task": 1,
+            "start": 19,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 10
+          },
+          {
+            "group": 1,
+            "task": 0,
+            "start": 13,
+            "duration": 5,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 1,
+            "task": 1,
+            "start": 20,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 11
+          },
+          {
+            "group": 2,
+            "task": 0,
+            "start": 22,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 2,
+            "task": 1,
+            "start": 29,
+            "duration": 3,
+            "machine": "m0",
+            "optimal": 12
+          },
+          {
+            "group": 3,
+            "task": 0,
+            "start": 23,
+            "duration": 5,
+            "machine": "m0",
+            "optimal": 13
+          },
+          {
+            "group": 3,
+            "task": 1,
+            "start": 30,
+            "duration": 3,
+            "machine": "m1",
+            "optimal": 13
+          }
+        ]
+      }
+    ]
+  },
+  "not_verified": [
+    "physical hardware/recovery",
+    "paper supplementary information, Appendix A, and Zenodo archive contents",
+    "facility-scale workloads",
+    "all allowed dependency versions and arbitrary DataFrame types",
+    "crash-interrupted snapshot writes",
+    "plugin load/reload failure execution",
+    "all interactive checks from issue #11"
+  ]
+}
