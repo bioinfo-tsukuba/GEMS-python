@@ -95,10 +95,11 @@ its fixed time; running work requires a known ID. Contradictory task/group
 progress raises an input error: synchronize the group with `status_update()`.
 Zero-duration tasks occupy no machine time.
 
-The [measured results](docs/benchmarks/scheduler_capacity/measurement_summary.md)
-report five workloads with fixed 1/60-second search limits, including failures
-during operational updates. A static plan's success does not guarantee continued
-updates at the same size.
+The [evaluation conclusions and archived statistics](docs/benchmarks/scheduler_capacity/README.md)
+cover five workloads with fixed 1/60-second search limits, including failures
+during operational updates. Figures and raw records are retained on a dedicated
+archive branch and linked from Issue #23 / PR #25. A static plan's success does
+not guarantee continued updates at the same size.
 
 Cyclical rest is a **group-start penalty**: if the start falls in an inclusive
 rest range of its cycle, the configured maximum penalty applies. It does not
