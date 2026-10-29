@@ -1,0 +1,7 @@
+{
+  "elapsed_seconds": 10088.051981167984,
+  "trial_count": 193,
+  "skipped": [],
+  "fully_measured": true,
+  "note": "512 success is a censored bound, not a maximum. Nonmonotonic behavior is possible."
+}

@@ -4,6 +4,8 @@ The user changed the original Issue's time criterion: **1 / 60 seconds is the
 fixed CP-SAT search limit**, applied directly to `max_time_in_seconds`. Model
 construction, application, checks and update overhead do not consume that limit
 or determine success. Early optimality ends a search without waiting.
+The native solver limit is not an exact stopwatch cutoff; returning and stopping
+can make measured search elapsed time slightly exceed its setting.
 Each search in an update has its own limit; an update can contain multiple searches.
 
 Success means `OPTIMAL` or `FEASIBLE` with a valid physical schedule. `UNKNOWN`
@@ -12,6 +14,30 @@ does not impose delay or quality thresholds and does not establish a total
 one-second / sixty-second response guarantee.
 
 ## Configuration and reproduction
+
+The primary run measured commit `9e269d41bd7ce83b80a99955856d14d46a018e3e`:
+193 trials in 10,088.052 seconds, with no skipped condition. See the
+[result overview](measurement_summary.md), [detailed statistics](summary.md),
+[input/output verification](artifact_verification.json) and
+[verification report](verification.md).
+
+![Static valid plans / measured trials](success_rates.png)
+
+The final source adds checks for inconsistent progress, restores pending
+fixed-time work with unset IDs, treats zero-duration work as empty intervals and
+fixes CLI state pickle identity. All retained inputs pass the final guards.
+The largest five representative CP models and their solver settings are
+identical: [model equivalence](model_equivalence.json). Primary timing and memory
+figures belong to the measured commit; final-source confirmation is separate
+and is not pooled with the primary repetitions.
+
+The [final-source confirmation](confirmation_summary.md) retains
+[17 conditions](confirmation.json) and its
+[environment](confirmation_environment.json). Ten representative static inputs
+were valid. The two 128-experiment / 1-second operational UNKNOWNs recurred;
+both corresponding 64-experiment supplemental operations completed eight
+updates. Each confirmation condition has one run, so those smaller successes
+are observations, not reliable operational maxima.
 
 ```bash
 MPLCONFIGDIR=/tmp/gems-mpl MPLBACKEND=Agg poetry run python \
@@ -22,6 +48,8 @@ MPLCONFIGDIR=/tmp/gems-mpl MPLBACKEND=Agg poetry run python \
 # Rebuild tables from saved records, without solving again:
 poetry run python scripts/measure_scheduler_capacity.py \
   --summarize /tmp/gems-capacity-study
+poetry run python scripts/report_scheduler_capacity.py /tmp/gems-capacity-study
+poetry run python scripts/verify_scheduler_capacity.py /tmp/gems-capacity-study
 
 # Replay a saved trial (preserve the original directory first):
 poetry run python scripts/measure_scheduler_capacity.py \
@@ -32,11 +60,52 @@ The main study refuses to reuse an existing output directory. A worker replay
 writes `result.json`, `output.json` and any error in its request's directory.
 Use a copy to preserve the original measured output.
 
+The compressed `raw_artifacts.tar.gz` preserves the full study, requests,
+outputs, failed inputs, exceptions, worker logs, IO files, verification logs and
+final-source confirmation. Restore and check it from this directory:
+
+```bash
+sha256sum -c raw_artifacts.tar.gz.sha256
+mkdir -p /tmp/gems-capacity-restored
+tar -xzf raw_artifacts.tar.gz -C /tmp/gems-capacity-restored
+cd /tmp/gems-capacity-restored/gems-issue23-capacity-20261029
+sha256sum -c SHA256SUMS
+```
+
+From the repository root, export models without executing a search:
+
+```bash
+mkdir -p /tmp/gems-capacity-measured-source
+git archive 9e269d41bd7ce83b80a99955856d14d46a018e3e |
+  tar -x -C /tmp/gems-capacity-measured-source
+poetry run python scripts/capture_scheduler_capacity_models.py \
+  /tmp/gems-capacity-measured-source /tmp/gems-capacity-study /tmp/models-measured
+poetry run python scripts/capture_scheduler_capacity_models.py \
+  "$PWD" /tmp/gems-capacity-study /tmp/models-final
+cmp /tmp/models-measured/model_fingerprints.json /tmp/models-final/model_fingerprints.json
+```
+
+Final-source confirmation uses each pattern's largest all-success 1-second static
+condition, 512 experiments at 60 seconds, and its original 1-second operation
+input. If the original or confirmation operation is UNKNOWN, separately labelled
+smaller operations halve the size until an eight-update success or size 2.
+These supplemental conditions have one run each and are not reliable maxima:
+
+```bash
+poetry run python scripts/confirm_scheduler_capacity.py \
+  /tmp/gems-capacity-study /tmp/gems-capacity-final-confirmation
+```
+
+The confirmation controller enforces the combined six-hour allowance from the
+primary environment's start timestamp. For a later replay of individual cases,
+use copied worker requests instead of extending that expired allowance.
+
 The tracked configuration fixes worker 1, seed 0, three tasks per group
 (durations 5/3/4 minutes, preceding intervals 2/2/1 minutes), three group cycles,
 eight operational updates and one new experiment at updates 2 and 4.
 No experimental noise, sample splitting, real equipment or calibrated scientific
-response model is used. CPU/OS interference can still vary search outcomes.
+response model is used. CPU/OS interference can still vary search outcomes. No CPU affinity or exclusive
+host isolation was used; brief QA commands also ran on this host.
 
 | Pattern | Machines / timing |
 | --- | --- |
@@ -61,14 +130,23 @@ structured per-search records, exceptions and fresh-worker peak resident memory.
 Only the output path is normalized for input hashing. Paired static conditions
 have the same input hash; closed-loop inputs can diverge because schedules change
 completion order. Updates retain their own inputs and every scheduling call,
-including experiment additions.
+including experiment additions. Static success does not guarantee that eight
+closed-loop updates at the same size will succeed.
 
 CSV/JSON summarize median, linearly interpolated p95 and maximum search/total
 times, successes, statuses and memory. Raw records also retain weighted solver
 objective and bound in identical units, penalty, delay distribution, pending
 schedule utilization, group/task/machine/type/assignment/fixed/history counts.
 Five repetitions do not constitute a precise operational p95 guarantee.
-Memory includes imports; operational memory is the peak up to that update.
+Memory includes imports; operational memory is the cumulative worker peak
+across the whole attempted trial, including a failing update, not a per-update sample.
+The recorded assignment-candidate count is the number compatible by type
+before filtering fixed work to a known machine ID. `timing_penalty` covers all
+active groups; the solver penalty and `movable_penalty` cover movable groups.
+Objective and bound use the same weighted units and should not be summed across
+calls with different weights or inputs. Search includes native presolve.
+`total_seconds` times the trial operations (plus IO in an IO trial);
+`worker_process_seconds` also includes startup, restoration and artifact output.
 Saving/drawing is disabled in operational timing. Artifact serialization occurs
 outside per-search timing. Separate two-experiment `io` trials record snapshot
 saving and Gantt drawing times as reference costs.

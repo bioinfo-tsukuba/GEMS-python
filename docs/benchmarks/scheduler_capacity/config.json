@@ -1,0 +1,75 @@
+{
+  "search_limits_seconds": [
+    1.0,
+    60.0
+  ],
+  "sizes": [
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256,
+    512
+  ],
+  "patterns": [
+    "contention",
+    "heterogeneous",
+    "many_candidates",
+    "mixed_penalties",
+    "replanning"
+  ],
+  "boundary_repetitions": 5,
+  "total_runtime_seconds": 21600,
+  "operation_steps": 8,
+  "operation_add_at_steps": [
+    2,
+    4
+  ],
+  "operation_add_count": 1,
+  "group_cycles": 3,
+  "processing_minutes": [
+    5,
+    3,
+    4
+  ],
+  "interval_minutes": [
+    2,
+    2,
+    1
+  ],
+  "machine_counts": {
+    "contention": [
+      2
+    ],
+    "heterogeneous": [
+      2,
+      2,
+      1
+    ],
+    "many_candidates": [
+      8
+    ],
+    "mixed_penalties": [
+      2
+    ],
+    "replanning": [
+      2
+    ]
+  },
+  "rest_cycle_minutes": 120,
+  "rest_ranges": [
+    [
+      20,
+      30
+    ],
+    [
+      90,
+      105
+    ]
+  ],
+  "seed": 0,
+  "workers": 1
+}

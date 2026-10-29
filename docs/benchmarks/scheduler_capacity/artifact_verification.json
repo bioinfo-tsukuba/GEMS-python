@@ -1,0 +1,20 @@
+{
+  "verified_inputs": 193,
+  "verified_calls": 333,
+  "verified_valid_outputs": 161,
+  "verified_static_quality_and_fixed_work": 153,
+  "preserved_failures": 32,
+  "verified_io_roundtrips": 5,
+  "verified_update_inputs": 67,
+  "trial_count": 193,
+  "paired_static_conditions": 45,
+  "outcomes": {
+    "VALID": 161,
+    "NO_SOLUTION": 32
+  },
+  "phases": {
+    "scan": 178,
+    "io": 5,
+    "operation": 10
+  }
+}

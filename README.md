@@ -41,8 +41,10 @@ The local package version is **0.1.4**. Poetry uses `pyproject.toml` and
 
 For normal use, leave `scheduling_method` unset to use the recommended
 OR-Tools scheduler. Select `"s"` explicitly when comparing with the legacy
-simulated annealer; in the synthetic evaluation, 24 of its 192 runs had
-overlapping tasks assigned to the same physical machine ID.
+simulated annealer; in the evaluation of the original implementation, 24 of its
+192 runs had overlapping tasks assigned to the same physical machine ID.
+Issue #23 corrects the multi-machine legacy assignments; the original result
+remains a historical record.
 
 The three task variants use Google OR-Tools CP-SAT when `scheduling_method` is
 omitted or set to `"o"`. Use `"s"` to select simulated annealing explicitly.
@@ -87,7 +89,16 @@ The multi-machine legacy `"f"` and `"s"` methods now assign physical machine IDs
 against fixed reservations and check the resulting schedule. If annealing's
 final schedule cannot be assigned or fails validation, it returns its validated
 initial sequential schedule and records the fallback reason. Started groups
-keep their remaining task times and machine IDs during replanning.
+keep their remaining task times and known machine IDs during replanning. Pending
+future work with an unset machine ID can receive a compatible ID while retaining
+its fixed time; running work requires a known ID. Contradictory task/group
+progress raises an input error: synchronize the group with `status_update()`.
+Zero-duration tasks occupy no machine time.
+
+The [measured results](docs/benchmarks/scheduler_capacity/measurement_summary.md)
+report five workloads with fixed 1/60-second search limits, including failures
+during operational updates. A static plan's success does not guarantee continued
+updates at the same size.
 
 Cyclical rest is a **group-start penalty**: if the start falls in an inclusive
 rest range of its cycle, the configured maximum penalty applies. It does not

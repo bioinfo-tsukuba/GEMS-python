@@ -1,0 +1,77 @@
+{
+  "measured_commit": "9e269d41bd7ce83b80a99955856d14d46a018e3e",
+  "final_source_commit": "b08dbe83d1addf14dc40a845d1e5c52c9d58d48e",
+  "equal": true,
+  "captured_without_search": true,
+  "cases": [
+    {
+      "pattern": "contention",
+      "size": 512,
+      "input_hash": "ac62e68766d0040734dd764c25da019690e56d6d404896f9173b960ad9a148fa",
+      "model_sha256": "1df859d798f8431276a5d4d03dd117ff0f1078420727edcddc71af84764fa41c",
+      "variable_count": 7680,
+      "constraint_count": 7170,
+      "solver_limit": 60.0,
+      "workers": 1,
+      "seed": 0
+    },
+    {
+      "pattern": "heterogeneous",
+      "size": 512,
+      "input_hash": "d670f79db65c93d6f52b945f48dc6b9606cf70d751af940f87c79793a15c7fcb",
+      "model_sha256": "2f94d1f1067c7deb41a55a8b68777a9ef8d06372096975683c7fb3c5ef641948",
+      "variable_count": 7168,
+      "constraint_count": 6661,
+      "solver_limit": 60.0,
+      "workers": 1,
+      "seed": 0
+    },
+    {
+      "pattern": "many_candidates",
+      "size": 512,
+      "input_hash": "be48ff2e830f5dbf8b55e5a82a9ea3648687ceaf09a6d3af9711d98d35c27ad9",
+      "model_sha256": "4ddbb534f3e23e7b9513eb14af1d2c8b7e9c6e3390ba88e10e3526d5c816d7fc",
+      "variable_count": 16896,
+      "constraint_count": 16392,
+      "solver_limit": 60.0,
+      "workers": 1,
+      "seed": 0
+    },
+    {
+      "pattern": "mixed_penalties",
+      "size": 512,
+      "input_hash": "4990e6c344108a7fdb42e9657b446aec10d94a415c95d64cf29541f07fc7a8be",
+      "model_sha256": "261b9cfcd742dfe561482ad3b27ccd74cc0816b46fded74c51c60d303a7f8749",
+      "variable_count": 8701,
+      "constraint_count": 9211,
+      "solver_limit": 60.0,
+      "workers": 1,
+      "seed": 0
+    },
+    {
+      "pattern": "replanning",
+      "size": 512,
+      "input_hash": "94a84bd18c1dbd6c7be9f99cef917e1ca5f0f18ab1be0956cba8e18d97cf7a2f",
+      "model_sha256": "cff554c0f56c0182537c6dfb7ec76a494005ec01162670c27b389661b7fb940f",
+      "variable_count": 6016,
+      "constraint_count": 5890,
+      "solver_limit": 60.0,
+      "workers": 1,
+      "seed": 0
+    }
+  ],
+  "source_sha256": {
+    "gems_python/common/scheduling.py": {
+      "measured": "34e8c503f03a86181cb20014979a8cbae461db31568589f02bb49ad4d0a2a780",
+      "final": "1cc4dc7f87ac2a833f5d0c8f4cb17279e8eef0f29472d0fe0ca022f0a2c0275b"
+    },
+    "gems_python/common/cp_sat_scheduler.py": {
+      "measured": "fccff454332469d78ad33ef8c4eba3fc494f83c7180fb1cd3d98a862b4bccd14",
+      "final": "4bd81ebef6a3ac9bcf3b812ab93dbb7ec407d89ea060e53774a7953629d8eff7"
+    },
+    "scripts/measure_scheduler_capacity.py": {
+      "measured": "26c84d068ef47eb4361c71e38ce35d461f2f4e99ef63301d9898a15a5c348bce",
+      "final": "c585a182f546103edf477f8fdc8bb280e673991669635b89c5dc8f3b7aafa921"
+    }
+  }
+}
