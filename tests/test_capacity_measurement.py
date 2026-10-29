@@ -1,7 +1,10 @@
 """Check paired snapshots, solver-only limits and operational measurement."""
 
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -11,6 +14,43 @@ from scripts.measure_scheduler_capacity import (
 
 
 class TestCapacityMeasurement(unittest.TestCase):
+    def test_cli_worker_can_pickle_added_live_state(self):
+        config = json.loads(DEFAULT_CONFIG.read_text())
+        config["operation_steps"] = 3
+        config["operation_add_at_steps"] = [2]
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            value = snapshot(make_case("heterogeneous", 2, directory / "input", config))
+            request = directory / "request.json"
+            request.write_text(json.dumps(dict(
+                pattern="heterogeneous", size=2, phase="operation", repetition=0,
+                search_limit_seconds=1.0, input_hash=fingerprint(value), input=value, config=config,
+            )))
+            # Run the actual __main__ path. JSON alone cannot detect a class whose
+            # claimed module resolves to a different class when pickle imports it.
+            program = """
+import runpy
+import sys
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+original = Experiments.to_json
+def checked_json(manager, *args, **kwargs):
+    restored = Experiments.from_pickle(dumped=manager.to_pickle())
+    assert len(restored.experiments) == len(manager.experiments)
+    return original(manager, *args, **kwargs)
+Experiments.to_json = checked_json
+sys.argv = ["scripts/measure_scheduler_capacity.py", "--worker", sys.argv[1]]
+runpy.run_path("scripts/measure_scheduler_capacity.py", run_name="__main__")
+"""
+            completed = subprocess.run(
+                [sys.executable, "-c", program, str(request)],
+                cwd=DEFAULT_CONFIG.parent.parent, capture_output=True, text=True,
+                env={**os.environ, "MPLBACKEND": "Agg"}, timeout=30,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            row = json.loads((directory / "result.json").read_text())
+            self.assertEqual(row["outcome"], "VALID", row.get("error"))
+            self.assertEqual(len(row["updates"][2]["added_experiments"]), 1)
+
     def test_all_workloads_have_reproducible_inputs_and_valid_small_plans(self):
         config = json.loads(DEFAULT_CONFIG.read_text())
         with tempfile.TemporaryDirectory() as temporary:

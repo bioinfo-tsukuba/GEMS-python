@@ -162,11 +162,11 @@ def schedule_simple_tasks(tasks, reference_time: int, *,
         end = model.new_int_var(
             reference_time, horizon + task.processing_time, f"task_{index}_end"
         )
-        intervals.append(
-            model.new_interval_var(
-                start, task.processing_time, end, f"task_{index}_interval"
-            )
+        interval = model.new_interval_var(
+            start, task.processing_time, end, f"task_{index}_interval"
         )
+        if task.processing_time:
+            intervals.append(interval)
         cost, bound = _cost(
             model, start, reference_time, horizon, task.optimal_time,
             task.penalty_type, f"task_{index}",
@@ -194,7 +194,12 @@ def schedule_task_groups(task_groups, reference_time: int, machines=None, *,
         return task_groups
     started = perf_counter()
     movable = [group for group in task_groups if group.is_not_started()]
-    if not movable:
+    needs_assignment = machines is not None and any(
+        not task.completed and task.allocated_machine_id is None
+        for group in task_groups if not group.is_completed()
+        for task in group.tasks
+    )
+    if not movable and not needs_assignment:
         diagnostics["status"] = "FIXED_ONLY"
         return task_groups
     all_tasks = [task for group in task_groups for task in group.tasks]
@@ -232,9 +237,9 @@ def schedule_task_groups(task_groups, reference_time: int, machines=None, *,
 
     def add_task(task, start, end, label, fixed=False):
         if by_type is None:
-            machine_intervals[None].append(
-                model.new_interval_var(start, task.processing_time, end, label)
-            )
+            interval = model.new_interval_var(start, task.processing_time, end, label)
+            if task.processing_time:
+                machine_intervals[None].append(interval)
             return
         compatible = by_type.get(task.optimal_machine_type, [])
         if not compatible:
@@ -253,7 +258,8 @@ def schedule_task_groups(task_groups, reference_time: int, machines=None, *,
                 start, task.processing_time, end, chosen,
                 f"{label}_interval_{machine.machine_id}",
             )
-            machine_intervals[machine.machine_id].append(interval)
+            if task.processing_time:
+                machine_intervals[machine.machine_id].append(interval)
             choices.append((chosen, machine.machine_id))
         model.add(sum(chosen for chosen, _ in choices) == 1)
         assignments.append((task, choices))

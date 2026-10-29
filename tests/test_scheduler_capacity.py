@@ -11,7 +11,7 @@ from unittest.mock import patch
 from ortools.sat.python import cp_model
 
 from gems_python.common import dataframes
-from gems_python.common.cp_sat_scheduler import schedule_task_groups
+from gems_python.common.cp_sat_scheduler import schedule_simple_tasks, schedule_task_groups
 from gems_python.common.scheduling import (
     LOGGER, assign_machine_ids, validate_groups,
 )
@@ -54,6 +54,92 @@ class Reports(logging.Handler):
 
 
 class TestSchedulerCapacity(unittest.TestCase):
+    @staticmethod
+    def schedule(method, groups, machines, reference):
+        if method == "o":
+            return schedule_task_groups(groups, reference, machines)
+        if method == "f":
+            return TaskGroup.schedule_task_groups(groups, machines, reference)
+        with patch("simanneal.Annealer.anneal", lambda self: (self.state, 0)):
+            return TaskGroup.schedule_task_groups_simulated_annealing(groups, machines, reference)
+
+    def test_inconsistent_progress_rejected_before_moving_started_work(self):
+        machines = MachineList([Machine(0, "m0")])
+        for method in ("f", "s", "o"):
+            for task_status, group_status in (
+                (TaskStatus.IN_PROGRESS, TaskGroupStatus.NOT_STARTED),
+                (TaskStatus.COMPLETED, TaskGroupStatus.NOT_STARTED),
+                (TaskStatus.NOT_STARTED, TaskGroupStatus.COMPLETED),
+            ):
+                with self.subTest(method=method, task_status=task_status, group_status=group_status):
+                    group = TaskGroup(100, LinearPenalty(1), [
+                        Task(10, "started", 0, task_status=task_status,
+                             scheduled_time=0, allocated_machine_id="m0"),
+                    ], status=group_status)
+                    with self.assertRaisesRegex(ValueError, "status_update"):
+                        self.schedule(method, [group], machines, 100)
+                    self.assertEqual((group.tasks[0].scheduled_time,
+                                      group.tasks[0].allocated_machine_id), (0, "m0"))
+                    self.assertEqual(group.status, group_status)
+
+    def test_future_fixed_time_with_unassigned_machine_is_filled_and_preserved(self):
+        machines = MachineList([Machine(0, "m0"), Machine(0, "m1")])
+        for method in ("f", "s", "o"):
+            for fixed_only in (False, True):
+                with self.subTest(method=method, fixed_only=fixed_only):
+                    fixed = TaskGroup(0, LinearPenalty(1), [
+                        Task(10, "running", 0, task_status=TaskStatus.IN_PROGRESS,
+                             scheduled_time=0, allocated_machine_id="m0"),
+                        Task(2, "future", 0, interval=5, scheduled_time=15),
+                    ], status=TaskGroupStatus.IN_PROGRESS)
+                    groups = [fixed]
+                    if not fixed_only:
+                        groups.append(TaskGroup(14, LinearPenalty(1), [Task(2, "new", 0)]))
+                    result = self.schedule(method, groups, machines, 10)
+                    pending = result[0].tasks[1]
+                    self.assertEqual(pending.scheduled_time, 15)
+                    self.assertIn(pending.allocated_machine_id, ("m0", "m1"))
+                    known = [(t.scheduled_time, t.allocated_machine_id) for t in result[0].tasks]
+                    again = self.schedule(method, result, machines, 10)
+                    self.assertEqual([(t.scheduled_time, t.allocated_machine_id)
+                                      for t in again[0].tasks], known)
+                    validate_groups(again, 10, machines)
+            running_without_id = TaskGroup(0, LinearPenalty(1), [
+                Task(2, "running", 0, task_status=TaskStatus.IN_PROGRESS, scheduled_time=0),
+            ], status=TaskGroupStatus.IN_PROGRESS)
+            with self.assertRaisesRegex(ValueError, "Invalid fixed machine ID"):
+                self.schedule(method, [running_without_id], machines, 0)
+
+    def test_zero_duration_occupies_no_machine_time(self):
+        machines = MachineList([Machine(0, "m0")])
+        for method in ("f", "s", "o"):
+            fixed = TaskGroup(5, LinearPenalty(1), [
+                Task(0, "empty", 0, scheduled_time=5, allocated_machine_id="m0"),
+            ], status=TaskGroupStatus.IN_PROGRESS)
+            result = self.schedule(method, [
+                fixed, TaskGroup(4, LinearPenalty(1), [Task(2, "positive", 0)]),
+            ], machines, 0)
+            self.assertEqual(result[1].tasks[0].scheduled_time, 4)
+            validate_groups(result, 0, machines)
+        from gems_python.one_machine_problem_simple_task.task_info import OneMachineTask as SimpleTask
+        from gems_python.one_machine_problem_simple_task.penalty.penalty_class import (
+            LinearPenalty as SimplePenalty,
+        )
+        tasks = [SimpleTask(5, 0, SimplePenalty(1), "empty", "test", "test"),
+                 SimpleTask(4, 2, SimplePenalty(1), "positive", "test", "test")]
+        schedule_simple_tasks(tasks, 0)
+        self.assertEqual([t.scheduled_time for t in tasks], [5, 4])
+        from gems_python.one_machine_problem_interval_task.task_info import (
+            Task as SingleTask, TaskGroup as SingleGroup,
+        )
+        from gems_python.one_machine_problem_interval_task.penalty.penalty_class import (
+            LinearPenalty as SinglePenalty,
+        )
+        groups = [SingleGroup(5, SinglePenalty(1), [SingleTask(0, "empty")]),
+                  SingleGroup(4, SinglePenalty(1), [SingleTask(2, "positive")])]
+        schedule_task_groups(groups, 0)
+        self.assertEqual([g.tasks[0].scheduled_time for g in groups], [5, 4])
+
     def test_original_overlap_reproduction_now_valid(self):
         for method, seed in [("f", 0), ("s", 0), ("s", 1), ("s", 2), ("o", 0)]:
             with self.subTest(method=method, seed=seed):

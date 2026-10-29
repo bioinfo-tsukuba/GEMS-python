@@ -86,8 +86,9 @@ class CapacityState(State):
         raise RuntimeError("Capacity study requires its fixed observation provider")
 
 
-# Keep saved State identities stable whether invoked as a script or a module.
-CapacityState.__module__ = "scripts.measure_scheduler_capacity"
+# Use the importable class itself so saved JSON and pickle have the same identity.
+if __name__ == "__main__":
+    from scripts.measure_scheduler_capacity import CapacityState
 
 
 def observe(state, history, group, task, event_time):
@@ -221,6 +222,7 @@ def classify(reports, error=None):
 
 def run_trial(request, directory):
     manager = Experiments.from_dict(request["input"])
+    restored_input_hash = fingerprint(snapshot(manager))
     manager.parent_dir_path = directory / "workspace"
     manager.parent_dir_path.mkdir(parents=True, exist_ok=True)
     limit = request["search_limit_seconds"]
@@ -291,7 +293,7 @@ def run_trial(request, directory):
     }
     row.update(
         outcome=classify(handler.rows, error), error=error,
-        actual_input_hash=fingerprint(request["input"]), dimensions=before,
+        actual_input_hash=restored_input_hash, dimensions=before,
         total_seconds=time.perf_counter() - started,
         memory_peak_mib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
         reports=handler.rows, updates=updates,
