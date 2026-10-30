@@ -149,6 +149,8 @@ class TaskGroup:
     task_group_id: int = field(default=None) # グループ番号. Experiments 生成時に割り当て
     experiment_name: str = field(default=None)  # 実験の名前. Experiment 生成時に割り当て
     experiment_uuid: str = field(default=None)  # 実験のUUID. Experiment 生成時に割り当て
+    task_group_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
+    lifecycle_version: int = 1
 
 
     def __post_init__(self):
