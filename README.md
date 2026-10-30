@@ -41,18 +41,70 @@ The local package version is **0.1.4**. Poetry uses `pyproject.toml` and
 
 For normal use, leave `scheduling_method` unset to use the recommended
 OR-Tools scheduler. Select `"s"` explicitly when comparing with the legacy
-simulated annealer; in the synthetic evaluation, 24 of its 192 runs had
-overlapping tasks assigned to the same physical machine ID.
+simulated annealer; in the evaluation of the original implementation, 24 of its
+192 runs had overlapping tasks assigned to the same physical machine ID.
+Issue #23 corrects the multi-machine legacy assignments; the original result
+remains a historical record.
 
 The three task variants use Google OR-Tools CP-SAT when `scheduling_method` is
 omitted or set to `"o"`. Use `"s"` to select simulated annealing explicitly.
 The interval-task variants also retain `"f"` for sequential scheduling.
 OR-Tools forbids overlapping use of the same machine, minimizes the existing
-timing penalties, and searches for up to five seconds per scheduling call. A
+timing penalties, and by default searches for up to five seconds per scheduling call. A
 feasible schedule may be returned before optimality is proven; the solver
 status, objective, and best bound are recorded through Python logging at
 `INFO` level. Missing resources or a failure to find a feasible schedule
 raise an error.
+
+All three `Experiments` managers accept `solver_time_limit_seconds`, saved in
+JSON/pickle snapshots. The value must be a finite positive number; old snapshots
+without it use five seconds. A keyword argument to `execute_scheduling` overrides
+it for that call without changing the saved setting:
+
+```python
+manager = Experiments(
+    experiments=experiments,
+    parent_dir_path=directory,
+    # Include machine_list=machines for the multi-machine variant.
+    solver_time_limit_seconds=60.0,
+)
+manager.execute_scheduling()                              # Search limit: 60 seconds
+manager.execute_scheduling(solver_time_limit_seconds=1.0) # Search limit: 1 second
+```
+
+The interval variants also accept this keyword in `simulate_one`, `simulate`,
+`add_experiment`, and the combined history/state update method. A simulation
+override applies to every scheduling call inside that update. The simple-task
+variant accepts it in its combined update method. `add_experiment(save_step=False)`
+skips its usual saving/drawing step, useful for simulation-only measurements.
+The limit affects `"o"` only; it does not change annealing steps.
+
+These are **solver search limits**, not limits on model construction, result
+application, validation, or the complete update. Optimal solutions may end the
+search early. The [capacity study](docs/benchmarks/scheduler_capacity/README.md)
+uses fixed one-second and sixty-second search limits and reports those other
+times as reference measurements.
+
+The multi-machine legacy `"f"` and `"s"` methods now assign physical machine IDs
+against fixed reservations and check the resulting schedule. If annealing's
+final schedule cannot be assigned or fails validation, it returns its validated
+initial sequential schedule and records the fallback reason. Started groups
+keep their remaining task times and known machine IDs during replanning. Pending
+future work with an unset machine ID can receive a compatible ID while retaining
+its fixed time; running work requires a known ID. Contradictory task/group
+progress raises an input error: synchronize the group with `status_update()`.
+Zero-duration tasks occupy no machine time.
+
+The [evaluation conclusions and archived statistics](docs/benchmarks/scheduler_capacity/README.md)
+cover five workloads with fixed 1/60-second search limits, including failures
+during operational updates. Figures and raw records are retained on a dedicated
+archive branch and linked from Issue #23 / PR #25. A static plan's success does
+not guarantee continued updates at the same size.
+
+The received-result response measurement starts with an already decoded result
+DataFrame and ends with the updated schedule serialized to JSON. It uses one
+search and excludes the simulation's planning before the result arrives;
+see the same evaluation document for timing boundaries and archived results.
 
 Cyclical rest is a **group-start penalty**: if the start falls in an inclusive
 rest range of its cycle, the configured maximum penalty applies. It does not

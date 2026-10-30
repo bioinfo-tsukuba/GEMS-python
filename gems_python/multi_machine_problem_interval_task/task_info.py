@@ -1,6 +1,9 @@
 from enum import Enum
 from dataclasses import field, asdict
 import random
+import copy
+import logging
+from time import perf_counter
 import uuid
 from pathlib import Path
 from gems_python.common import dataframes
@@ -20,6 +23,9 @@ from typing import List, Tuple, Type
 
 from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import CyclicalRestPenalty, CyclicalRestPenaltyWithLinear, LinearPenalty
 from gems_python.one_machine_problem_interval_task.penalty.penalty_class import NonePenalty, PenaltyType
+from gems_python.common.scheduling import (
+    assign_machine_ids, measured_schedule, schedule_sequential_groups, validate_groups,
+)
 
 
 
@@ -375,7 +381,8 @@ class TaskGroup:
         return None
     
     @classmethod
-    def add_task_group(cls, task_groups: List['TaskGroup'], machines: MachineList, group: 'TaskGroup') -> List['TaskGroup']:
+    def add_task_group(cls, task_groups: List['TaskGroup'], machines: MachineList, group: 'TaskGroup', *,
+                       reschedule: bool = True) -> List['TaskGroup']:
         """_summary_
 
         Args:
@@ -391,7 +398,8 @@ class TaskGroup:
         # タスク群のidを割り当て
         task_groups = cls.set_task_group_ids(task_groups)
         # タスク群のスケジュールを更新
-        task_groups = cls.schedule_task_groups(task_groups, machines, reference_time=0)
+        if reschedule:
+            task_groups = cls.schedule_task_groups(task_groups, machines, reference_time=0)
         
         return task_groups
 
@@ -486,79 +494,12 @@ class TaskGroup:
 
     @classmethod
     def schedule_task_groups(cls, task_groups: List['TaskGroup'], machines: MachineList, reference_time: int) -> Tuple[List['TaskGroup'], List[Machine]]:
-        """
-        Schedule a list of task groups.
-
-        :param task_groups: A list of task groups to schedule.
-        :param reference_time: The reference time for scheduling the task groups.
-
-        :return: A list of scheduled task groups.
-        """
-
-        """
-        Schedule all the groups one by one group.
-        """
-        # すでに終わっているタスクも含めてゼロの位置を決める
-        # スケジュールするやつの基準はそれはそれで決める
-        # 例えば、available_reference_time
-
-        # タスク群をNOT_STARTEDを最後にして、開始時刻の昇順にソート
-        task_groups = task_groups.copy()
-        task_groups.sort(key=lambda group: (group.is_not_started(), group.optimal_start_time))
-        machine_type2machine = {machine.machine_type: list() for machine in machines.machines}
-        machine_shift = {machine.machine_id: False for machine in machines.machines} # Used = True, Not used = False
-        for machine in machines.machines:
-            machine_type2machine[machine.machine_type].append(machine)
-        
-        # タスク群を順番にスケジュール
-        scheduled_groups = list()
-        for group in task_groups:
-            diff = 0
-            scheduled_groups.append(group.task_group_id)
-            while True:
-                # もし、スケジュール基準時刻がタスク群の最適な開始時刻よりも遅い場合、スケジュール基準時刻を最適な開始時刻に設定
-                # そうでない場合、スケジュール基準時刻を最適な開始時刻に設定
-                # スケジュール基準時刻より遅い範囲で、タスク群のスケジュールを試行（0, 1, -1, 2, -2, ...）
-                # ちょっと遅いが、とりあえず実装はこれでいいかも
-                # TODO: 実装を軽くするために、無駄なdiffの計算をなくす。すなわち、group.optimal_start_time + diff >= self.schedule_reference_timeを満たすdiffだけを試す
-                time_candidate = max(reference_time, group.optimal_start_time + diff)
-                group.schedule_tasks(time_candidate)
-                if cls.eval_machine_penalty(task_groups, machines=machines, eval_group_ids=scheduled_groups) == 0:
-                    break
-
-                if diff <= 0:
-                    diff *= -1
-                    diff += 1
-                else:
-                    diff *= -1
-
-        # Machine allocation
-        # (Time, Start/End, MachineType)
-        occupied_time = list()
-        for group in task_groups:
-            if group.task_group_id in scheduled_groups:
-                for task in group.tasks:
-                    task_group_index, task_index = cls.find_task(task_groups, group.task_group_id, task.task_id)
-                    occupied_time.append((task.scheduled_time, True, task.optimal_machine_type, task_group_index, task_index))
-                    occupied_time.append((task.scheduled_time + task.processing_time, False, task.optimal_machine_type, task_group_index, task_index))
-        
-        occupied_time.sort(key=lambda x: (x[0], x[1]))
-        for time, is_start, machine_type, task_group_index, task_index in occupied_time:
-            if is_start:
-                for machine in machine_type2machine[machine_type]:
-                    if not machine_shift[machine.machine_id]:
-                        machine_shift[machine.machine_id] = True
-                        task_groups[task_group_index].tasks[task_index].allocated_machine_id = machine.machine_id
-                        break
-            else:
-                for machine in machine_type2machine[machine_type]:
-                    if machine_shift[machine.machine_id]:
-                        machine_shift[machine.machine_id] = False
-
-        return task_groups
+        """Schedule whole groups with reservations for each physical machine."""
+        return schedule_sequential_groups(task_groups, machines, reference_time)
 
     @classmethod
-    def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], machines: MachineList, reference_time: int) -> List['TaskGroup']:
+    @measured_schedule
+    def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], machines: MachineList, reference_time: int, *, diagnostics=None) -> List['TaskGroup']:
         # TODO: MachineListを使って、マシンのペナルティを計算する
         print(f"{reference_time=}")
         """
@@ -579,10 +520,11 @@ class TaskGroup:
                 """
                 temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
                 # PASS: ここで、タスクのスケジュールを変更する
-                if len(self.state) == 0:
+                movable = [i for i, group in enumerate(self.state) if group.is_not_started()]
+                if not movable:
                     return
-                for i in range(min(temp, len(self.state))):
-                    a = random.randint(0, len(self.state) - 1)
+                for i in range(min(temp, len(movable))):
+                    a = random.choice(movable)
                     scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
                     scheduled_time += random.randint(-int(temp), int(temp))
                     scheduled_time = max(reference_time, scheduled_time)
@@ -607,27 +549,40 @@ class TaskGroup:
                 total_penalty += overlap * 100000
                 return total_penalty
 
-        # Initialize the tasks with some initial schedule (e.g., their optimal timings)
-        time = 0
-        task_groups = cls.schedule_task_groups(task_groups=task_groups, machines=machines, reference_time=reference_time)
-        task_groups_copy = task_groups.copy()
-
-        # Create an instance of the annealer with the initial state
-        annealer = TaskAnnealer(task_groups)
-        # Set the annealing parameters as needed
+        # Keep a separate valid fallback: Annealer deep-copies its best state.
+        preparing = perf_counter()
+        initial = copy.deepcopy(cls.schedule_task_groups(task_groups, machines, reference_time))
+        diagnostics["build_seconds"] = perf_counter() - preparing
+        active = [group for group in copy.deepcopy(initial) if not group.is_completed()]
+        if not active or not any(group.is_not_started() for group in active):
+            diagnostics["status"] = "FINISHED"
+            return initial
+        annealer = TaskAnnealer(active)
         annealer.steps = 100000
         annealer.Tmax = 25000.0
         annealer.Tmin = 1.0
-
-        # Run the annealing process
+        searching = perf_counter()
         state, _ = annealer.anneal()
-        
-        print(f"{cls.eval_schedule_penalty(state)=}", f"{cls.eval_machine_penalty(state, machines)=}")
-        print(f"{cls.eval_schedule_penalty(task_groups_copy)=}", f"{cls.eval_machine_penalty(task_groups_copy, machines)=}")
-
-
+        diagnostics["search_seconds"] = perf_counter() - searching
+        applying = perf_counter()
+        state += [group for group in initial if group.is_completed()]
+        try:
+            assign_machine_ids(state, machines)
+            validate_groups(state, reference_time, machines)
+            for before, after in zip([g for g in initial if not g.is_completed()], state):
+                if not before.is_not_started():
+                    if [(t.scheduled_time, t.allocated_machine_id) for t in before.tasks] != [
+                        (t.scheduled_time, t.allocated_machine_id) for t in after.tasks
+                    ]:
+                        raise ValueError("Annealing changed fixed work")
+        except ValueError as error:
+            diagnostics["fallback_reason"] = str(error)
+            logging.getLogger(__name__).warning(
+                "Annealing rejected; returning validated sequential schedule: %s", error)
+            state = initial
+        diagnostics["status"] = "FINISHED"
+        diagnostics["apply_seconds"] = perf_counter() - applying
         return state
-
 
     @classmethod
     def eval_machine_penalty(cls, task_groups: List['TaskGroup'], machines: List[Machine], eval_group_ids: List[int] = None) -> int:

@@ -19,6 +19,7 @@ from gems_python.common.dataframes import DataFrame
 from pathlib import Path
 import os
 from gems_python.common.cp_sat_scheduler import schedule_task_groups
+from gems_python.common.scheduling import DEFAULT_SOLVER_TIME_LIMIT_SECONDS, validate_time_limit
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 
 from gems_python.one_machine_problem_interval_task.task_info import Task, TaskGroup
@@ -405,8 +406,10 @@ class Experiments:
     task_groups: List[TaskGroup] = field(default=None)
     step: int = field(default=0)
     reference_time: int = field(default=0)
+    solver_time_limit_seconds: float = DEFAULT_SOLVER_TIME_LIMIT_SECONDS
 
     def __post_init__(self):
+        self.solver_time_limit_seconds = validate_time_limit(self.solver_time_limit_seconds)
         self.parent_dir_path = Path(self.parent_dir_path)
         # TODO: TaskGroupに対応
         if self.parent_dir_path.exists():
@@ -451,9 +454,14 @@ class Experiments:
         else:
             self.reference_time = reference_time
 
-    def add_experiment(self, experiment: Experiment) -> Union[None, ValueError]:
+    def add_experiment(self, experiment: Experiment, *,
+                       solver_time_limit_seconds: float | None = None,
+                       save_step: bool = True) -> Union[None, ValueError]:
 
         # Check the duplication of the experiment name and uuid
+        solver_time_limit_seconds = validate_time_limit(
+            self.solver_time_limit_seconds if solver_time_limit_seconds is None
+            else solver_time_limit_seconds)
         for e in self.experiments:
             if e.experiment_name == experiment.experiment_name and e.experiment_uuid == experiment.experiment_uuid:
                 raise ValueError(f"Experiment name and uuid must be unique: {experiment.experiment_name}, {experiment.experiment_uuid}")
@@ -461,8 +469,9 @@ class Experiments:
         self.experiments.append(experiment)
         self.task_groups.append(copy.deepcopy(experiment.current_task_group))
         self.set_task_group_ids()
-        self.execute_scheduling()
-        self.proceed_to_next_step()
+        self.execute_scheduling(solver_time_limit_seconds=solver_time_limit_seconds)
+        if save_step:
+            self.proceed_to_next_step()
 
 
     def delete_experiment_with_experiment_uuid(self, experiment_uuid: str) -> Union[None, ValueError]:
@@ -544,7 +553,8 @@ class Experiments:
     def execute_scheduling(
             self,
             scheduling_method: str = 'o',
-            reference_time: int = None
+            reference_time: int = None,
+            *, solver_time_limit_seconds: float | None = None,
             ):
         # TODO-DONE: TaskGroupに対応
         """
@@ -552,6 +562,8 @@ class Experiments:
         :param scheduling_method: 'o' for OR-Tools, 's' for simulated annealing, or 'f' for sequential scheduling.
         :param reference_time: The reference time for the optimal time.
         """
+        limit = validate_time_limit(self.solver_time_limit_seconds if solver_time_limit_seconds is None
+                                    else solver_time_limit_seconds)
         if reference_time is not None:
             self.reference_time = reference_time
         
@@ -563,7 +575,8 @@ class Experiments:
 
         match scheduling_method:
             case 'o':
-                scheduled_task_groups = schedule_task_groups(task_groups, reference_time)
+                scheduled_task_groups = schedule_task_groups(
+                    task_groups, reference_time, solver_time_limit_seconds=limit)
             case 's':
                 scheduled_task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups, reference_time)
             case 'f':
@@ -610,7 +623,9 @@ class Experiments:
             # Transition and generate a new task group
             new_task_group = self.experiments[experiment_index].execute_one_step()
             # Add the new task group and reschedule
-            self.task_groups = TaskGroup.add_task_group(self.task_groups, new_task_group)
+            if new_task_group.tasks:
+                self.task_groups = TaskGroup.add_task_group(
+                    self.task_groups, new_task_group, reschedule=False)
 
         self.set_task_group_ids()
 
@@ -621,11 +636,15 @@ class Experiments:
             new_result_of_experiment: DataFrame,
             update_type: str = 'a',
             scheduling_method = 'o',
-            optimal_time_reference_time: int = None
+            optimal_time_reference_time: int = None,
+            *, solver_time_limit_seconds: float | None = None,
             ) -> Tuple[TaskGroup, Task]:
         """
         TODO: explanation
         """
+        solver_time_limit_seconds = validate_time_limit(
+            self.solver_time_limit_seconds if solver_time_limit_seconds is None
+            else solver_time_limit_seconds)
         # TODO-DONE: TaskGroupに対応
         # Update task_group
 
@@ -634,10 +653,12 @@ class Experiments:
         self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type)
         self.set_task_group_ids()
         
-        self.execute_scheduling(scheduling_method)
+        self.execute_scheduling(scheduling_method, solver_time_limit_seconds=solver_time_limit_seconds)
         print(f"{self.task_groups=}")
 
         earliest_task, eariest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
+        if earliest_task is None:
+            return None, None
         print(f"{earliest_task=}")
         print(f"{eariest_group_id=}")
         eariest_group_index = TaskGroup.find_task_group(self.task_groups, eariest_group_id)
@@ -815,34 +836,36 @@ class Experiments:
         optimal_time_reference_time: int | None = None,
         save_each_step: bool = False,
         observation_provider: Callable | None = None,
+        *, solver_time_limit_seconds: float | None = None,
     ) -> dict:
+        solver_time_limit_seconds = validate_time_limit(
+            self.solver_time_limit_seconds if solver_time_limit_seconds is None
+            else solver_time_limit_seconds)
         if optimal_time_reference_time is not None:
             self.reference_time = optimal_time_reference_time
 
         self.set_task_group_ids()
-        self.execute_scheduling(scheduling_method=scheduling_method, reference_time=self.reference_time)
+        self.execute_scheduling(scheduling_method=scheduling_method, reference_time=self.reference_time,
+                                solver_time_limit_seconds=solver_time_limit_seconds)
 
         if len(self.task_groups) == 0:
             return {"status": "no_tasks"}
 
         try:
-            if observation_provider is None:
-                earliest_task, earliest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
-            else:
-                group, earliest_task = min(
-                    (
-                        (group, task)
-                        for group in self.task_groups
-                        for task in group.tasks if not task.completed
-                    ),
-                    key=lambda item: (
-                        item[1].scheduled_time + item[1].processing_time,
-                        item[1].scheduled_time,
-                        item[0].task_group_id,
-                        item[1].task_id,
-                    ),
-                )
-                earliest_group_id = group.task_group_id
+            group, earliest_task = min(
+                (
+                    (group, task)
+                    for group in self.task_groups
+                    for task in group.tasks if not task.completed
+                ),
+                key=lambda item: (
+                    item[1].scheduled_time + item[1].processing_time,
+                    item[1].scheduled_time,
+                    item[0].task_group_id,
+                    item[1].task_id,
+                ),
+            )
+            earliest_group_id = group.task_group_id
         except Exception as err:
             return {"status": "error", "error": f"failed_to_pick_task: {err!r}"}
 
@@ -883,16 +906,14 @@ class Experiments:
 
         # 本番と同経路で更新→遷移→再スケジュール
         try:
-            if observation_provider is not None:
-                for scheduled_group in self.task_groups:
-                    if scheduled_group.is_not_started() and any(
-                        not scheduled_task.completed
-                        and scheduled_task.scheduled_time <= event_time
-                        < scheduled_task.scheduled_time + scheduled_task.processing_time
-                        for scheduled_task in scheduled_group.tasks
-                    ):
-                        scheduled_group.status = type(scheduled_group.status).IN_PROGRESS
-                self.reference_time = event_time
+            for scheduled_group in self.task_groups:
+                if scheduled_group.is_not_started() and any(
+                    not scheduled_task.completed
+                    and scheduled_task.scheduled_time <= event_time
+                    for scheduled_task in scheduled_group.tasks
+                ):
+                    scheduled_group.status = type(scheduled_group.status).IN_PROGRESS
+            self.reference_time = event_time
             _next_tg, _next_task = self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
                 task_group_id=earliest_group_id,
                 task_id=earliest_task.task_id,
@@ -900,6 +921,7 @@ class Experiments:
                 update_type="a",
                 scheduling_method=scheduling_method,
                 optimal_time_reference_time=self.reference_time,
+                solver_time_limit_seconds=solver_time_limit_seconds,
             )
         except Exception as err:
             return {"status": "error", "error": f"simulation_update_failed: {err!r}"}
@@ -929,6 +951,7 @@ class Experiments:
         save_each_step: bool = False,
         stop_when_no_tasks: bool = True,
         observation_provider: Callable | None = None,
+        *, solver_time_limit_seconds: float | None = None,
     ) -> List[dict]:
         results: list[dict] = []
         for _ in range(max_steps):
@@ -937,6 +960,7 @@ class Experiments:
                 optimal_time_reference_time=optimal_time_reference_time,
                 save_each_step=save_each_step,
                 observation_provider=observation_provider,
+                solver_time_limit_seconds=solver_time_limit_seconds,
             )
             results.append(res)
             if res.get("status") != "ok" and stop_when_no_tasks:

@@ -232,6 +232,11 @@ def _decode_value(value, path, context):
             raise SerializationError(f"{path}: missing saved attributes")
         if is_dataclass(cls):
             missing = [f.name for f in fields(cls) if f.name not in saved]
+            # This field was added after v1 snapshots shipped. Only this
+            # documented migration may default; missing progress still fails.
+            if any(base.__name__ == "Experiments" and base.__module__.startswith("gems_python.")
+                   for base in cls.__mro__):
+                missing = [name for name in missing if name != "solver_time_limit_seconds"]
             if missing:
                 raise SerializationError(f"{path}: missing saved fields {', '.join(missing)}")
         return _restore(cls, {k: _decode(v, f"{path}.{k}", context) for k, v in saved.items()}, path)
@@ -289,6 +294,13 @@ def _restore(cls, saved, path):
             object.__setattr__(obj, key, value)
     except (TypeError, AttributeError) as err:
         raise SerializationError(f"{path}: cannot restore {cls.__name__}: {err}") from err
+    if _domain(obj, "Experiments"):
+        from gems_python.common.scheduling import DEFAULT_SOLVER_TIME_LIMIT_SECONDS, validate_time_limit
+        try:
+            obj.solver_time_limit_seconds = validate_time_limit(
+                saved.get("solver_time_limit_seconds", DEFAULT_SOLVER_TIME_LIMIT_SECONDS))
+        except ValueError as err:
+            raise SerializationError(f"{path}.solver_time_limit_seconds: {err}") from err
     if any(_domain(obj, name) for name in ("Experiment", "Task", "TaskGroup", "OneMachineTask", "Machine")):
         for name in ("experiment_uuid", "machine_id", "allocated_machine_id"):
             if isinstance(getattr(obj, name, None), UUID):

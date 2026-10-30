@@ -2,12 +2,16 @@
 
 from importlib import import_module
 import logging
+from time import perf_counter
 
 from ortools.sat.python import cp_model
+from gems_python.common.scheduling import (
+    DEFAULT_SOLVER_TIME_LIMIT_SECONDS, measured_schedule,
+)
 
 
 LOGGER = logging.getLogger(__name__)
-SOLVER_TIME_LIMIT_SECONDS = 5.0
+SOLVER_TIME_LIMIT_SECONDS = DEFAULT_SOLVER_TIME_LIMIT_SECONDS
 
 
 def _rest_maximum(penalty) -> int:
@@ -102,7 +106,8 @@ def _cost(model, start, lower, upper, optimal, penalty, name):
     return cost, maximum
 
 
-def _solve(model, costs, cost_bounds, starts, reference_time, horizon):
+def _solve(model, costs, cost_bounds, starts, reference_time, horizon,
+           solver_time_limit_seconds, diagnostics):
     # The second term chooses earlier times among equal-penalty schedules.
     span = horizon - reference_time
     weight = len(starts) * span + 1
@@ -110,12 +115,21 @@ def _solve(model, costs, cost_bounds, starts, reference_time, horizon):
         raise ValueError("Scheduling objective exceeds CP-SAT integer range")
     model.minimize(sum(costs) * weight + sum(start - reference_time for start in starts))
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = SOLVER_TIME_LIMIT_SECONDS
+    solver.parameters.max_time_in_seconds = solver_time_limit_seconds
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 0
+    started = perf_counter()
     status = solver.solve(model)
+    diagnostics.update(
+        status=solver.status_name(status), search_seconds=perf_counter() - started,
+        solver_wall_seconds=solver.wall_time,
+        objective=solver.objective_value, best_bound=solver.best_objective_bound,
+        objective_penalty_weight=weight, reference_time=reference_time, horizon=horizon,
+    )
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError(f"OR-Tools failed to find a schedule: {solver.status_name(status)}")
+    diagnostics["penalty"] = sum(
+        solver.value(cost) if not isinstance(cost, int) else cost for cost in costs)
     LOGGER.info(
         "OR-Tools status=%s penalty=%s objective=%s best_bound=%s wall_time_seconds=%.3f",
         solver.status_name(status),
@@ -127,10 +141,14 @@ def _solve(model, costs, cost_bounds, starts, reference_time, horizon):
     return solver
 
 
-def schedule_simple_tasks(tasks, reference_time: int):
+@measured_schedule
+def schedule_simple_tasks(tasks, reference_time: int, *,
+                          solver_time_limit_seconds=SOLVER_TIME_LIMIT_SECONDS,
+                          diagnostics=None):
     """Schedule independent tasks on one machine using absolute minute times."""
     if not tasks:
         return tasks
+    started = perf_counter()
     if any(task.processing_time < 0 for task in tasks):
         raise ValueError("processing_time must be nonnegative")
     horizon = max(reference_time, *(task.optimal_time for task in tasks))
@@ -144,11 +162,11 @@ def schedule_simple_tasks(tasks, reference_time: int):
         end = model.new_int_var(
             reference_time, horizon + task.processing_time, f"task_{index}_end"
         )
-        intervals.append(
-            model.new_interval_var(
-                start, task.processing_time, end, f"task_{index}_interval"
-            )
+        interval = model.new_interval_var(
+            start, task.processing_time, end, f"task_{index}_interval"
         )
+        if task.processing_time:
+            intervals.append(interval)
         cost, bound = _cost(
             model, start, reference_time, horizon, task.optimal_time,
             task.penalty_type, f"task_{index}",
@@ -157,18 +175,32 @@ def schedule_simple_tasks(tasks, reference_time: int):
         costs.append(cost)
         cost_bounds.append(bound)
     model.add_no_overlap(intervals)
-    solver = _solve(model, costs, cost_bounds, starts, reference_time, horizon)
+    diagnostics["build_seconds"] = perf_counter() - started
+    solver = _solve(model, costs, cost_bounds, starts, reference_time, horizon,
+                    solver_time_limit_seconds, diagnostics)
+    applying = perf_counter()
     for task, start in zip(tasks, starts):
         task.scheduled_time = solver.value(start)
+    diagnostics["apply_seconds"] = perf_counter() - applying
     return tasks
 
 
-def schedule_task_groups(task_groups, reference_time: int, machines=None):
+@measured_schedule
+def schedule_task_groups(task_groups, reference_time: int, machines=None, *,
+                         solver_time_limit_seconds=SOLVER_TIME_LIMIT_SECONDS,
+                         diagnostics=None):
     """Schedule fixed-offset task groups on one or multiple physical machines."""
     if not task_groups:
         return task_groups
+    started = perf_counter()
     movable = [group for group in task_groups if group.is_not_started()]
-    if not movable:
+    needs_assignment = machines is not None and any(
+        not task.completed and task.allocated_machine_id is None
+        for group in task_groups if not group.is_completed()
+        for task in group.tasks
+    )
+    if not movable and not needs_assignment:
+        diagnostics["status"] = "FIXED_ONLY"
         return task_groups
     all_tasks = [task for group in task_groups for task in group.tasks]
     if any(task.processing_time < 0 or task.interval < 0 for task in all_tasks):
@@ -205,9 +237,9 @@ def schedule_task_groups(task_groups, reference_time: int, machines=None):
 
     def add_task(task, start, end, label, fixed=False):
         if by_type is None:
-            machine_intervals[None].append(
-                model.new_interval_var(start, task.processing_time, end, label)
-            )
+            interval = model.new_interval_var(start, task.processing_time, end, label)
+            if task.processing_time:
+                machine_intervals[None].append(interval)
             return
         compatible = by_type.get(task.optimal_machine_type, [])
         if not compatible:
@@ -226,7 +258,8 @@ def schedule_task_groups(task_groups, reference_time: int, machines=None):
                 start, task.processing_time, end, chosen,
                 f"{label}_interval_{machine.machine_id}",
             )
-            machine_intervals[machine.machine_id].append(interval)
+            if task.processing_time:
+                machine_intervals[machine.machine_id].append(interval)
             choices.append((chosen, machine.machine_id))
         model.add(sum(chosen for chosen, _ in choices) == 1)
         assignments.append((task, choices))
@@ -276,7 +309,10 @@ def schedule_task_groups(task_groups, reference_time: int, machines=None):
                 )
     for intervals in machine_intervals.values():
         model.add_no_overlap(intervals)
-    solver = _solve(model, costs, cost_bounds, starts, reference_time, horizon)
+    diagnostics["build_seconds"] = perf_counter() - started
+    solver = _solve(model, costs, cost_bounds, starts, reference_time, horizon,
+                    solver_time_limit_seconds, diagnostics)
+    applying = perf_counter()
     for item in assignments:
         task, value = item
         if isinstance(value, list):
@@ -285,4 +321,5 @@ def schedule_task_groups(task_groups, reference_time: int, machines=None):
             )
         else:
             task.scheduled_time = solver.value(value)
+    diagnostics["apply_seconds"] = perf_counter() - applying
     return task_groups
