@@ -55,6 +55,13 @@ def _lifecycle_migration_fields(cls, saved):
 def _migrate_lifecycle(cls, saved):
     from uuid import NAMESPACE_URL, uuid5
     migrated = dict(saved)
+    if any(base.__name__ == "Experiments" and
+           base.__module__ == "gems_python.multi_machine_problem_interval_task.transition_manager"
+           for base in cls.__mro__) and "retrospective_trace" not in migrated:
+        # Older snapshots did not retain registration or completed reservations.
+        # Preserve that absence explicitly; never invent a complete history.
+        migrated["retrospective_trace"] = {
+            "version": 1, "complete": False, "experiments": {}, "tasks": {}}
     permitted = _lifecycle_migration_fields(cls, saved)
     for f in fields(cls) if is_dataclass(cls) else ():
         if f.name in permitted and f.name not in migrated:
@@ -275,7 +282,8 @@ def _decode_value(value, path, context):
             # documented migration may default; missing progress still fails.
             if any(base.__name__ == "Experiments" and base.__module__.startswith("gems_python.")
                    for base in cls.__mro__):
-                missing = [name for name in missing if name != "solver_time_limit_seconds"]
+                missing = [name for name in missing if name not in (
+                    "solver_time_limit_seconds", "retrospective_trace")]
             permitted = _lifecycle_migration_fields(cls, saved)
             missing = [name for name in missing if name not in permitted]
             if missing:

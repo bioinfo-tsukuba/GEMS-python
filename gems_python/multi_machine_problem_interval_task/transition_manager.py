@@ -456,6 +456,10 @@ class Experiments(LifecycleManager):
     split_requests: dict = field(default_factory=dict)
     completed_results: dict = field(default_factory=dict)
     handled_groups: dict = field(default_factory=dict)
+    # Completed groups are removed from the scheduler; keep their last
+    # reservations separately for post-run review, without duplicating history.
+    retrospective_trace: dict = field(default_factory=lambda: {
+        "version": 1, "complete": True, "experiments": {}, "tasks": {}})
 
     def __post_init__(self):
         self.solver_time_limit_seconds = validate_time_limit(self.solver_time_limit_seconds)
@@ -477,6 +481,13 @@ class Experiments(LifecycleManager):
                 self.task_groups.append(copy.deepcopy(experiment.current_task_group))
 
             self.set_task_group_ids()
+        for experiment in self.experiments:
+            self._register_retrospective(experiment)
+
+    def render_retrospective(self, output, *, font=None, time_unit="min"):
+        """Export post-run PNG/SVG views and a standalone interactive HTML."""
+        from gems_python.visualization.retrospective import render_retrospective
+        return render_retrospective(self, output, font=font, time_unit=time_unit)
 
     def reload(self, step: int = None, *, source: str = "auto"):
         """Return a saved step without changing this collection, even on failure."""
@@ -520,6 +531,7 @@ class Experiments(LifecycleManager):
             
         self.experiments.append(experiment)
         self.task_groups.append(copy.deepcopy(experiment.current_task_group))
+        self._register_retrospective(experiment)
         self.set_task_group_ids()
         self.execute_scheduling(solver_time_limit_seconds=solver_time_limit_seconds)
         if save_step:
@@ -684,8 +696,19 @@ class Experiments(LifecycleManager):
             raise RuntimeError("STOPPED manager only accepts results of in-progress tasks")
         new_history = dataframes.update(experiment.shared_variable_history,
                                         new_result_of_experiment, update_type)
+        reservation = {
+            "experiment": experiment.experiment_uuid,
+            "group": group.task_group_uuid, "task_id": task.task_id,
+            "machine": task.allocated_machine_id,
+            "operation": task.experiment_operation,
+            "start": task.scheduled_time,
+            "end": (None if task.scheduled_time is None else
+                    task.scheduled_time + task.processing_time),
+            "completed_at": self.reference_time,
+        }
         TaskGroup.complete_task(self.task_groups, group.task_group_id, task_id)
         experiment.shared_variable_history = new_history
+        self.retrospective_trace["tasks"][f"{group.task_group_uuid}:{task.task_id}"] = reservation
         if result_id is not None:
             self.completed_results[result_id] = {
                 "fingerprint": result_hash,

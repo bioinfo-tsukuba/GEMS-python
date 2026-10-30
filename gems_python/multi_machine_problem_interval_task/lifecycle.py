@@ -131,6 +131,12 @@ class PlanningProgress:
 class LifecycleManager:
     """Mixin for Experiments; persistent fields are declared on the dataclass."""
 
+    def _register_retrospective(self, experiment):
+        self.retrospective_trace["experiments"].setdefault(experiment.experiment_uuid, {
+            "name": experiment.experiment_name, "parent": experiment.parent_uuid,
+            "born": self.reference_time,
+        })
+
     def _experiment(self, uuid, *, optional=False):
         experiment = next((e for e in self.experiments if e.experiment_uuid == uuid), None)
         if experiment is None and not optional:
@@ -462,7 +468,7 @@ class LifecycleManager:
             raise ValueError("Cannot confirm split before parent tasks finish")
         history = parent.history_for_state()
         before = (self.experiments, self.task_groups, self.ended_experiments,
-                  record.status, record.logical_time)
+                  record.status, record.logical_time, self.retrospective_trace)
         try:
             if fingerprint((record.parent_uuid, record.children)) != record.specification_hash:
                 raise ValueError(f"Split specification changed after request: {request_id}")
@@ -473,10 +479,17 @@ class LifecycleManager:
             new_groups += [e.current_task_group for e in children if e.current_task_group.tasks]
             # Allocate containers before the commit; no user code runs in the swap.
             endings = dict(self.ended_experiments, **{parent.experiment_uuid: ending})
+            registrations = dict(self.retrospective_trace["experiments"])
+            for child in children:
+                registrations[child.experiment_uuid] = {
+                    "name": child.experiment_name, "parent": child.parent_uuid,
+                    "born": self.reference_time}
+            trace = dict(self.retrospective_trace, experiments=registrations)
             self._commit_split(new_experiments, new_groups, endings, record)
+            self.retrospective_trace = trace
         except Exception as err:
             (self.experiments, self.task_groups, self.ended_experiments,
-             record.status, record.logical_time) = before
+             record.status, record.logical_time, self.retrospective_trace) = before
             raise self._stop("INVALID_CHILD_SPECIFICATION", err) from err
         if replan:
             self.plan_tasks()
