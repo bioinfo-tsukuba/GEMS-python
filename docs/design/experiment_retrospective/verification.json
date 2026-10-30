@@ -1,0 +1,112 @@
+{
+  "runtime_commit": "4e5f6894692eba8b3ad95bc0f132cbe751b0f4ef",
+  "environment": {
+    "python": "3.14.4",
+    "ortools": "9.15.6755",
+    "pandas": "3.1.0",
+    "polars": "1.44.2",
+    "pyarrow": "26.0.0",
+    "matplotlib": "3.11.2",
+    "playwright": "1.58.0",
+    "browser": "145.0.7632.6",
+    "os": "Ubuntu 26.04; Chromium fallback ubuntu24.04-x64",
+    "font": "Yu Gothic",
+    "solver_time_limit_seconds": 1,
+    "solver_workers": 1,
+    "solver_seed": 0
+  },
+  "run": {
+    "kind": "executed_virtual_protocol",
+    "physical_devices": false,
+    "roots": 2,
+    "generations": 2,
+    "experiments": 8,
+    "tasks": 24,
+    "splits": 3,
+    "end_logical_minutes": 59,
+    "source": "example/experiments.json",
+    "snapshot_sha256": "f39680aec7da7f50fbabf6396a6dd9746a175bf9f47ab391082de482728f1da8",
+    "rendered_from_reloaded_final_snapshot": true
+  },
+  "verification": {
+    "related_tests": {
+      "tests": 61,
+      "success": 61,
+      "seconds": 29.391
+    },
+    "full_tests": {
+      "tests": 154,
+      "success": 149,
+      "errors": 5,
+      "seconds": 71.645,
+      "baseline_error_ids": [
+        "test_experiment_structure (test_experiment_loop.TestExperimentStructure.test_experiment_structure)",
+        "test_experiment_structure_graph (test_experiment_loop.TestExperimentStructure.test_experiment_structure_graph)",
+        "test_experiment_structure_task_generation (test_experiment_loop.TestExperimentStructure.test_experiment_structure_task_generation)",
+        "test_task_group (test_one_machine_problem_interval_task.TestClass.test_task_group)",
+        "test_task_generator (test_transition_manager.TestTransitionManager.test_task_generator)"
+      ],
+      "baseline_error_messages_match": true
+    },
+    "browser": {
+      "scenarios": 123,
+      "errors": [],
+      "requests": [
+        "file:///review.html"
+      ],
+      "browser": "145.0.7632.6",
+      "screenshot_selection": "A2",
+      "standalone": true
+    },
+    "reproduction": {
+      "byte_identical_files": {
+        "family-001-01.png": "ed5e393c42d5b8abef1f0f15cd88e2979cc009a82fe2f14d4adeb450e4321949",
+        "overview-01.svg": "ead65d73242f018ac0cf8b3ebf63707507197840713cfb6aae1cded54467b4fd",
+        "family-002-01.png": "91ae95a8c455687c2edc0d9b98f8cd470f631c1d5d8912629a716498acfcf936",
+        "review.html": "875342ab6968fbf3f4b1fd142d8b27c0d73cf7d599df538afec4ed0e11c6ac7f",
+        "family-002-01.svg": "1bb5c6c603b4615bed440f5f6d4a251e5da485044fc6bdcf0f864b45fc36100b",
+        "review-data.json": "6a8c1276f9460a751ef1ad6749b41e4e253f59c21f9eb89e7c5148be96766ba0",
+        "manifest.json": "39cd210c04c124a2a2ee5e793e16127cfc10508824ca8f11e954e7de4853e71e",
+        "overview-01.png": "70ed29c3b1d9bf51d5375faa7b02f4a6abecc92cb81258dfd629ffebcde3702f",
+        "family-001-01.svg": "013ee4d8762091bc67df49c8ad70103ec4c43a72fedecaea47d9522fb339eb05"
+      }
+    },
+    "inspected_figures": [
+      "overview-01.png",
+      "family-001-01.png",
+      "family-002-01.png",
+      "review.png"
+    ]
+  },
+  "failures_and_fixes": [
+    {
+      "failure": "Original HTML alone did not select; sibling JS required",
+      "verified": "Paired files selected 14 B2 artists; HTML alone selected 0 and summary stayed empty",
+      "fix": "Inline JS, data and SVG; 123 Chromium scenarios pass"
+    },
+    {
+      "failure": "SVG text intercepted clicks on some nodes",
+      "fix": "Disable pointer events on labels; actual clicks pass"
+    },
+    {
+      "failure": "Axis grid intercepted clicks on a task centered at 50",
+      "fix": "Draw task bars above the grid; all 24 task clicks pass"
+    },
+    {
+      "failure": "Playwright 1.58 rejected Ubuntu 26.04; browser then lacked nspr/nss/asound libraries",
+      "fix": "Explicit ubuntu24.04-x64 build override; dependencies extracted in /tmp; no system install or production dependency"
+    },
+    {
+      "failure": "Browser process communication denied inside workspace sandbox",
+      "fix": "Local browser verification executed with approved escalation"
+    }
+  ],
+  "limitations": [
+    "Final reservations, not physical start/end times",
+    "Old snapshots remain incomplete; missing tasks/birth times are not inferred",
+    "Wait reasons and full replanning history are not recorded",
+    "Trace storage grows with completed tasks; capacity not remeasured after this feature",
+    "No user comparison study; tested Chromium only"
+  ],
+  "screenshot_sha256": "8cabf6ed9f84f08028d4c2c651deec95941bc6508e4a60e4947af2b15be030d0"
+}

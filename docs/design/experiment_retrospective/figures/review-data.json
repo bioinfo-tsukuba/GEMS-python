@@ -1,0 +1,382 @@
+{
+  "version": 1,
+  "complete": true,
+  "omitted_tasks": 0,
+  "time_basis": "final_reservation",
+  "experiments": [
+    {
+      "id": "review-A",
+      "name": "A",
+      "born": 0,
+      "ended": 13,
+      "parent": null,
+      "reason": "split",
+      "family": "review-A",
+      "depth": 0,
+      "label": "A",
+      "pick": "e0"
+    },
+    {
+      "id": "306258f0-4ca7-5271-bd1c-be8e44d46d16",
+      "name": "A1",
+      "born": 13,
+      "ended": 30,
+      "parent": "review-A",
+      "reason": "complete",
+      "family": "review-A",
+      "depth": 1,
+      "label": "A1",
+      "pick": "e1"
+    },
+    {
+      "id": "9c8ec1ed-7695-5ce6-bb17-6afbdc03b3b8",
+      "name": "A2",
+      "born": 13,
+      "ended": 38,
+      "parent": "review-A",
+      "reason": "split",
+      "family": "review-A",
+      "depth": 1,
+      "label": "A2",
+      "pick": "e2"
+    },
+    {
+      "id": "525d275e-d979-581f-a95e-64d08d1ce03d",
+      "name": "A2a",
+      "born": 38,
+      "ended": 55,
+      "parent": "9c8ec1ed-7695-5ce6-bb17-6afbdc03b3b8",
+      "reason": "complete",
+      "family": "review-A",
+      "depth": 2,
+      "label": "A2a",
+      "pick": "e3"
+    },
+    {
+      "id": "0ba14905-5164-5deb-9414-25e67de80c52",
+      "name": "A2b",
+      "born": 38,
+      "ended": 59,
+      "parent": "9c8ec1ed-7695-5ce6-bb17-6afbdc03b3b8",
+      "reason": "complete",
+      "family": "review-A",
+      "depth": 2,
+      "label": "A2b",
+      "pick": "e4"
+    },
+    {
+      "id": "review-B",
+      "name": "B",
+      "born": 0,
+      "ended": 17,
+      "parent": null,
+      "reason": "split",
+      "family": "review-B",
+      "depth": 0,
+      "label": "B",
+      "pick": "e5"
+    },
+    {
+      "id": "f7811f36-2152-5930-b872-f880bdbfd62e",
+      "name": "B1",
+      "born": 17,
+      "ended": 51,
+      "parent": "review-B",
+      "reason": "complete",
+      "family": "review-B",
+      "depth": 1,
+      "label": "B1",
+      "pick": "e6"
+    },
+    {
+      "id": "22ec5d5b-ffaa-5d0c-987e-5651ed054d85",
+      "name": "B2",
+      "born": 17,
+      "ended": 34,
+      "parent": "review-B",
+      "reason": "complete",
+      "family": "review-B",
+      "depth": 1,
+      "label": "B2",
+      "pick": "e7"
+    }
+  ],
+  "tasks": [
+    {
+      "experiment": "f7811f36-2152-5930-b872-f880bdbfd62e",
+      "group": "0cb15981-8783-5452-ac7e-e66ecebe8158",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 38,
+      "end": 41,
+      "completed_at": 41,
+      "id": "0cb15981-8783-5452-ac7e-e66ecebe8158:0"
+    },
+    {
+      "experiment": "f7811f36-2152-5930-b872-f880bdbfd62e",
+      "group": "0cb15981-8783-5452-ac7e-e66ecebe8158",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 43,
+      "end": 47,
+      "completed_at": 47,
+      "id": "0cb15981-8783-5452-ac7e-e66ecebe8158:1"
+    },
+    {
+      "experiment": "f7811f36-2152-5930-b872-f880bdbfd62e",
+      "group": "0cb15981-8783-5452-ac7e-e66ecebe8158",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 49,
+      "end": 51,
+      "completed_at": 51,
+      "id": "0cb15981-8783-5452-ac7e-e66ecebe8158:2"
+    },
+    {
+      "experiment": "22ec5d5b-ffaa-5d0c-987e-5651ed054d85",
+      "group": "1592162a-7706-5923-a21b-05ee9b957fd3",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 21,
+      "end": 24,
+      "completed_at": 24,
+      "id": "1592162a-7706-5923-a21b-05ee9b957fd3:0"
+    },
+    {
+      "experiment": "22ec5d5b-ffaa-5d0c-987e-5651ed054d85",
+      "group": "1592162a-7706-5923-a21b-05ee9b957fd3",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 26,
+      "end": 30,
+      "completed_at": 30,
+      "id": "1592162a-7706-5923-a21b-05ee9b957fd3:1"
+    },
+    {
+      "experiment": "22ec5d5b-ffaa-5d0c-987e-5651ed054d85",
+      "group": "1592162a-7706-5923-a21b-05ee9b957fd3",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 32,
+      "end": 34,
+      "completed_at": 34,
+      "id": "1592162a-7706-5923-a21b-05ee9b957fd3:2"
+    },
+    {
+      "experiment": "0ba14905-5164-5deb-9414-25e67de80c52",
+      "group": "3a238c5a-71c6-5c93-852c-07776e26b7e9",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 46,
+      "end": 49,
+      "completed_at": 49,
+      "id": "3a238c5a-71c6-5c93-852c-07776e26b7e9:0"
+    },
+    {
+      "experiment": "0ba14905-5164-5deb-9414-25e67de80c52",
+      "group": "3a238c5a-71c6-5c93-852c-07776e26b7e9",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 51,
+      "end": 55,
+      "completed_at": 55,
+      "id": "3a238c5a-71c6-5c93-852c-07776e26b7e9:1"
+    },
+    {
+      "experiment": "0ba14905-5164-5deb-9414-25e67de80c52",
+      "group": "3a238c5a-71c6-5c93-852c-07776e26b7e9",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 57,
+      "end": 59,
+      "completed_at": 59,
+      "id": "3a238c5a-71c6-5c93-852c-07776e26b7e9:2"
+    },
+    {
+      "experiment": "review-A",
+      "group": "3e544ee3-7129-5f8c-bfab-e49570c44ca8",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 0,
+      "end": 3,
+      "completed_at": 3,
+      "id": "3e544ee3-7129-5f8c-bfab-e49570c44ca8:0"
+    },
+    {
+      "experiment": "review-A",
+      "group": "3e544ee3-7129-5f8c-bfab-e49570c44ca8",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 5,
+      "end": 9,
+      "completed_at": 9,
+      "id": "3e544ee3-7129-5f8c-bfab-e49570c44ca8:1"
+    },
+    {
+      "experiment": "review-A",
+      "group": "3e544ee3-7129-5f8c-bfab-e49570c44ca8",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 11,
+      "end": 13,
+      "completed_at": 13,
+      "id": "3e544ee3-7129-5f8c-bfab-e49570c44ca8:2"
+    },
+    {
+      "experiment": "9c8ec1ed-7695-5ce6-bb17-6afbdc03b3b8",
+      "group": "5350c685-42dc-54f0-9baa-b1607575aa9c",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 25,
+      "end": 28,
+      "completed_at": 28,
+      "id": "5350c685-42dc-54f0-9baa-b1607575aa9c:0"
+    },
+    {
+      "experiment": "9c8ec1ed-7695-5ce6-bb17-6afbdc03b3b8",
+      "group": "5350c685-42dc-54f0-9baa-b1607575aa9c",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 30,
+      "end": 34,
+      "completed_at": 34,
+      "id": "5350c685-42dc-54f0-9baa-b1607575aa9c:1"
+    },
+    {
+      "experiment": "9c8ec1ed-7695-5ce6-bb17-6afbdc03b3b8",
+      "group": "5350c685-42dc-54f0-9baa-b1607575aa9c",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 36,
+      "end": 38,
+      "completed_at": 38,
+      "id": "5350c685-42dc-54f0-9baa-b1607575aa9c:2"
+    },
+    {
+      "experiment": "306258f0-4ca7-5271-bd1c-be8e44d46d16",
+      "group": "76425ff3-695d-5441-a104-54b2c54eff40",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 17,
+      "end": 20,
+      "completed_at": 20,
+      "id": "76425ff3-695d-5441-a104-54b2c54eff40:0"
+    },
+    {
+      "experiment": "306258f0-4ca7-5271-bd1c-be8e44d46d16",
+      "group": "76425ff3-695d-5441-a104-54b2c54eff40",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 22,
+      "end": 26,
+      "completed_at": 26,
+      "id": "76425ff3-695d-5441-a104-54b2c54eff40:1"
+    },
+    {
+      "experiment": "306258f0-4ca7-5271-bd1c-be8e44d46d16",
+      "group": "76425ff3-695d-5441-a104-54b2c54eff40",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 28,
+      "end": 30,
+      "completed_at": 30,
+      "id": "76425ff3-695d-5441-a104-54b2c54eff40:2"
+    },
+    {
+      "experiment": "review-B",
+      "group": "8657c8a6-aac7-5e27-adfc-4b186150de2b",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 4,
+      "end": 7,
+      "completed_at": 7,
+      "id": "8657c8a6-aac7-5e27-adfc-4b186150de2b:0"
+    },
+    {
+      "experiment": "review-B",
+      "group": "8657c8a6-aac7-5e27-adfc-4b186150de2b",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 9,
+      "end": 13,
+      "completed_at": 13,
+      "id": "8657c8a6-aac7-5e27-adfc-4b186150de2b:1"
+    },
+    {
+      "experiment": "review-B",
+      "group": "8657c8a6-aac7-5e27-adfc-4b186150de2b",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 15,
+      "end": 17,
+      "completed_at": 17,
+      "id": "8657c8a6-aac7-5e27-adfc-4b186150de2b:2"
+    },
+    {
+      "experiment": "525d275e-d979-581f-a95e-64d08d1ce03d",
+      "group": "c1cd2c5d-5480-5221-b53f-0ebb7862a2d7",
+      "task_id": 0,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 42,
+      "end": 45,
+      "completed_at": 45,
+      "id": "c1cd2c5d-5480-5221-b53f-0ebb7862a2d7:0"
+    },
+    {
+      "experiment": "525d275e-d979-581f-a95e-64d08d1ce03d",
+      "group": "c1cd2c5d-5480-5221-b53f-0ebb7862a2d7",
+      "task_id": 1,
+      "machine": "processor",
+      "operation": "process",
+      "start": 47,
+      "end": 51,
+      "completed_at": 51,
+      "id": "c1cd2c5d-5480-5221-b53f-0ebb7862a2d7:1"
+    },
+    {
+      "experiment": "525d275e-d979-581f-a95e-64d08d1ce03d",
+      "group": "c1cd2c5d-5480-5221-b53f-0ebb7862a2d7",
+      "task_id": 2,
+      "machine": "imager",
+      "operation": "capture",
+      "start": 53,
+      "end": 55,
+      "completed_at": 55,
+      "id": "c1cd2c5d-5480-5221-b53f-0ebb7862a2d7:2"
+    }
+  ],
+  "machines": [
+    {
+      "id": "imager",
+      "name": "Imager"
+    },
+    {
+      "id": "processor",
+      "name": "Processor"
+    }
+  ],
+  "logical_end": 59,
+  "time_unit": "min"
+}

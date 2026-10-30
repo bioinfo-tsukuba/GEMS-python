@@ -203,8 +203,9 @@ Markdownレポートも集計JSONから再生成し、CSVの値が従来集計�
 ### 最終ソースと保存資料
 
 最終全試験の対象は `d5f0cdbab8c11429f818c615df7488aa94ec02e4`。
-計測対象 `a719506` の実装・入力生成・workerは以降も不変で、
-変更は再開、独立検査、集計、制御試験、文書に限る。
+計測対象 `a719506` の実装・入力生成・workerは、この節の検証時点までは不変で、
+当時の変更は再開、独立検査、集計、制御試験、文書に限る。
+後述の終了後可視化は実行管理に保存台帳を追加するため、既存の容量数値は旧測定対象に固定した結果として扱う。
 
 5つの既存エラーは `test_experiment_loop` の3件（HEK初期化）、
 `test_one_machine_problem_interval_task.test_task_group`（対話inputのEOF）、
@@ -220,3 +221,34 @@ Markdownレポートも集計JSONから再生成し、CSVの値が従来集計�
 
 保存コミット `8ca9080bf62a4e6c2b70fe73a0f830c5f627b183`。4209ファイルを圧縮内から読み出して全SHA-256を照合し、
 公開資料のSHA-256も一致した。保存ブランチは資料の固定参照用に残す。
+
+## 終了後の可視化の実装と検証
+
+実装対象 `4e5f6894692eba8b3ad95bc0f132cbe751b0f4ef`。①時間軸上の親子関係、③家系別の親子・時間図、④親子図と装置図の選択連動を通常の API / CLI として実装した。②と旧比較入力・描画器・試作を削除し、[使用方法と実行出力](../design/experiment_retrospective/README.md)へ置換した。図中は名前・装置・時間軸・最小限の凡例と操作欄に絞る。
+
+終了で削除されるTaskGroupとは別に、登録名・登録論理時刻と完了した作業の最終予約・装置を`retrospective_trace`へ残す。子の登録記録は分割の確定・ロールバックと一緒に扱う。結果と分割の再送で記録を増やさない。旧形式は明示的に不完全とし、欠落した時刻・作業を推測しない。実機の実測開始・終了は記録した予約と区別する。
+
+```bash
+MPLBACKEND=Agg MPLCONFIGDIR=volatile_issue24_work/mpl \
+  volatile_issue24_work/venv/bin/python3 -m unittest \
+  tests.test_retrospective tests.test_lifecycle_persistence tests.test_experiment_lifecycle \
+  tests.test_persistence_roundtrip tests.test_dataframe_backends tests.test_simulate_multi \
+  tests.test_lifecycle_capacity tests.test_lifecycle_capacity_recovery
+
+MPLBACKEND=Agg MPLCONFIGDIR=volatile_issue24_work/mpl \
+  volatile_issue24_work/venv/bin/python3 -m unittest discover -s tests
+```
+
+関連61件は29.391秒で成功。全154件は71.645秒、149成功、上記と同じ既存5エラー。変更前109件のログとエラーID・例外文言を照合した。全試験成功とは扱わない。Pandas/Polarsの全件終了・保存再読込、台帳の二重登録防止、分割確定障害のロールバック、旧JSON/pickleの欠落保持、任意の名前・UUID、ページをまたぐ祖先、登録時刻を検証した。
+
+仮想プロトコルをCP-SAT（上限1秒、worker 1、seed 0）で実行し、8 Experiment・24作業・3分割が59分で全件終了した。JSON/pickleの最終保存を再読込して描画し、掲載JSONから別プロセスで再生成した全9ファイルがバイト一致した。全体図・家系2図・実ブラウザ画面を目視し、入力保存の親子と装置の予約非重複も検査した。
+
+検証用 Playwright 1.58.0、Chromium 145.0.7632.6 で123項目成功。HTMLだけを別ディレクトリへコピーして開き、全8件×3範囲、全8箱と全24作業のクリック・Enter/Space、全体への解除、390px幅を確認した。SVG ID重複なし、ページエラーなし、HTML自体の読込み以外の通信なし。日本語UIのスクリーンショットには作業環境のWindowsフォントをfontconfigで参照した。フォント本体を配布しない。
+
+有用な失敗と修正:
+
+- 旧HTML単独では外部JavaScriptが読めず選択件数0、同梱JSありではB2の14要素を選択できることを実ブラウザで再現。新しいHTMLにJavaScript・データ・SVGを内包した。
+- SVG文字と目盛線によるクリック妨害を実操作で検出。文字のポインター設定と作業棒の描画順序を修正した。選択対象外の親子の線も薄くした。
+- Ubuntu 26.04 が検証用Playwrightの対応範囲外だったため、24.04向けビルドを明示し、不足したnspr/nss/asoundのライブラリを`/tmp`に展開して起動した。システムへインストールせず、製品依存を増やしていない。ブラウザのプロセス通信はサンドボックスで拒否されたため、承認されたローカル検証として実行した。
+
+[環境・入力・出力ハッシュと確認結果](../design/experiment_retrospective/verification.json)を保存した。計画変更の全履歴、待機理由、実機の実績、利用者の比較評価は今回の対象外。旧保存に失われた作業を後付けで復元しない。保存台帳の追加後の容量測定は未実施。既存の容量評価は`a719506`の固定結果として保持する。

@@ -1,110 +1,18 @@
 {
-  "design_fixture": true,
-  "observed_run": false,
-  "solver_called": false,
-  "sample_sha256": "d4ec10184d5efada9b6db7083958bcb9e4717c4e7e7080311ae1eaa69fc5a4a4",
-  "renderer_sha256": "1bc5b17a6f5c1b2949f9daad659eff1c14465bcd28ad101a8592f5fc95ccb2de",
-  "drawing_helpers_sha256": "62b2d59f9f3ec3171f71e8fdff5034aa980778c73e77397ab6a29ac4362e94af",
-  "font": {
-    "name": "Yu Gothic",
-    "file": "YuGothM.ttc",
-    "sha256": "cb2021bbfe40b21ec564848b8d702125661594e1b4f1eb2e77fd8a98b485cf19"
-  },
-  "matplotlib_version": "3.11.2",
-  "figures": [
-    {
-      "name": "01_time_lineage",
-      "title": "案①：親子のつながりを、時間軸の上で読む",
-      "files": [
-        {
-          "file": "01_time_lineage.png",
-          "sha256": "a147b70bcca9a56682cb6d13000aa015fdeb1aab7586006485a67b1dbf48a3e1"
-        },
-        {
-          "file": "01_time_lineage.svg",
-          "sha256": "d6ed8623bd3a0f1623b54a5d838fa6aaa3b09e5ccec540334f0838c12efc3228"
-        }
-      ]
-    },
-    {
-      "name": "02_lineage",
-      "title": "親子の対応：誰から誰が生まれたか",
-      "files": [
-        {
-          "file": "02_lineage.png",
-          "sha256": "e62e1a240a3428af67c30565af4f1c676384167f8ab01b1047a37008430b869f"
-        },
-        {
-          "file": "02_lineage.svg",
-          "sha256": "08b06c3b9d751145c8ab70ea1fd35cd42d363c39a3116593df1399da40ced3e7"
-        }
-      ]
-    },
-    {
-      "name": "03_device_schedule",
-      "title": "共有装置：どのExperimentが、いつ使ったか",
-      "files": [
-        {
-          "file": "03_device_schedule.png",
-          "sha256": "f82f41eed221bf0e2a4539a4706c63210269b99481594df3d38bf00b01995b11"
-        },
-        {
-          "file": "03_device_schedule.svg",
-          "sha256": "b0fb25ee428789f69491b60145b99cc9e163a80a8f0d382e949bc019a51f5d2f"
-        }
-      ]
-    },
-    {
-      "name": "04_family_a",
-      "title": "案③：親Aの家族だけを、1ページで振り返る",
-      "files": [
-        {
-          "file": "04_family_a.png",
-          "sha256": "458a2cce9a3db450e295ce0c7359f868d8ad7d3237f651b1d08c54ab5918a818"
-        },
-        {
-          "file": "04_family_a.svg",
-          "sha256": "17e4af6bc33ade79129585deeeac0c1fbc2ea4d038d5bc37ddf528260f17ff07"
-        }
-      ]
-    },
-    {
-      "name": "04_family_b",
-      "title": "案③：親Bの家族だけを、1ページで振り返る",
-      "files": [
-        {
-          "file": "04_family_b.png",
-          "sha256": "d7fb299c11ae1574bb54788e9caf4e2e4d95a823c6caa59b3262a0b619a132ca"
-        },
-        {
-          "file": "04_family_b.svg",
-          "sha256": "e66a89191d9feff23a3157f88c9eea2e2ad38ad92be844b03f1d1574956cb7d0"
-        }
-      ]
-    },
-    {
-      "name": "05_linked_selection",
-      "title": "案④：1つを選び、系譜と装置図を一緒にたどる",
-      "files": [
-        {
-          "file": "05_linked_selection.png",
-          "sha256": "786d5ce0023b5258ecaf75670a7cfaf449bab5748607c1e067656e13b23f4449"
-        },
-        {
-          "file": "05_linked_selection.svg",
-          "sha256": "9a44b25a76286236d96b11343f90c4f31e47d112d316c2b7344dc783f56cceb7"
-        }
-      ]
-    }
-  ],
-  "prototype": [
-    {
-      "file": "prototype.html",
-      "sha256": "e2387e7ba15c249f50cb322a1ad684324976e07c11e07d591138bd4a5cc6a7a9"
-    },
-    {
-      "file": "prototype.js",
-      "sha256": "06eb2a6dd3f693c71077d0a19974d13bcc534f2944396f0a537ed4a4ad61be27"
-    }
-  ]
+  "version": 1,
+  "time_basis": "final_reservation",
+  "complete": true,
+  "matplotlib": "3.11.2",
+  "source_sha256": "f39680aec7da7f50fbabf6396a6dd9746a175bf9f47ab391082de482728f1da8",
+  "font": "cb2021bbfe40b21ec564848b8d702125661594e1b4f1eb2e77fd8a98b485cf19",
+  "files": {
+    "overview-01.png": "70ed29c3b1d9bf51d5375faa7b02f4a6abecc92cb81258dfd629ffebcde3702f",
+    "overview-01.svg": "ead65d73242f018ac0cf8b3ebf63707507197840713cfb6aae1cded54467b4fd",
+    "family-001-01.png": "ed5e393c42d5b8abef1f0f15cd88e2979cc009a82fe2f14d4adeb450e4321949",
+    "family-001-01.svg": "013ee4d8762091bc67df49c8ad70103ec4c43a72fedecaea47d9522fb339eb05",
+    "family-002-01.png": "91ae95a8c455687c2edc0d9b98f8cd470f631c1d5d8912629a716498acfcf936",
+    "family-002-01.svg": "1bb5c6c603b4615bed440f5f6d4a251e5da485044fc6bdcf0f864b45fc36100b",
+    "review.html": "875342ab6968fbf3f4b1fd142d8b27c0d73cf7d599df538afec4ed0e11c6ac7f",
+    "review-data.json": "6a8c1276f9460a751ef1ad6749b41e4e253f59c21f9eb89e7c5148be96766ba0"
+  }
 }
