@@ -4,6 +4,8 @@ Issue [#24](https://github.com/bioinfo-tsukuba/GEMS-python/issues/24)の要件�
 [issue.md](issue.md)。終了したExperimentを管理対象から自動削除する機能と、
 親の履歴を引き継ぐ独立した子Experimentを一括登録する試料分割を対象とする。
 機能は未実装であり、この資料と比較図は実装完了の報告ではない。
+資料と再生成スクリプトは文書PR
+[#26](https://github.com/bioinfo-tsukuba/GEMS-python/pull/26)で管理する。
 
 比較図は次の3つを左右に並べる。
 

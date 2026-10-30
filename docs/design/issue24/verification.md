@@ -74,7 +74,7 @@ git diff --check
 Gitの作者情報が未設定で、初回コミットは`Author identity unknown`となった。
 直近の文書コミットで使われている`Codex <codex@openai.com>`を確認し、
 `git -c user.name=Codex -c user.email=codex@openai.com commit ...`で
-そのコマンドだけに同じ作者情報を指定する。永続的なGit設定は変更しない。
+そのコマンドだけに同じ作者情報を指定してコミットした。永続的なGit設定は変更していない。
 
 画像は掲載しない範囲に合わせ、初回生成物を
 `/tmp/gems-issue24-diagrams/three-way/`へ移動した。
@@ -106,6 +106,14 @@ IssueはOPENのまま、コメントは変更していない。
   `5312bf70014f588cdc3b237adc93a354b353b54d3c0fee408c2016d0e95bc36d`
 - 更新後本文SHA-256：
   `63c88c859f365c985e97925f8946e4d5654b9af2253f2000f977d5b6ccc7b994`
+
+## リポジトリへの保存
+
+要件原稿、生成スクリプト、検証記録、図のメタデータを
+`8513cce`としてコミットし、`docs/24-experiment-lifecycle`へpushした。
+文書PR [#26](https://github.com/bioinfo-tsukuba/GEMS-python/pull/26)を作成した。
+PRは要件と再現資料だけを扱い、画像・フォント・機能実装を含めない。
+マージはしていない。
 
 ## 残る作業
 
