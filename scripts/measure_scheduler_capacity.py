@@ -107,7 +107,8 @@ def make_case(pattern, size, directory, config):
                        experiment_uuid=f"capacity-{pattern}-{i:04d}")
             for i in range(size)
         ]
-        manager = Experiments(experiments, directory, machine_list=machines)
+        # Capacity budgets are fixed per solve, even though runtime now retries UNKNOWN.
+        manager = Experiments(experiments, directory, machine_list=machines, unknown_policy="stop")
     if pattern == "replanning":
         reference = 21 + size * 20
         manager.reference_time = reference

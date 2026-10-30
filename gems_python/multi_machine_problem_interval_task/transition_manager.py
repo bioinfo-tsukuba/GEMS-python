@@ -317,6 +317,9 @@ class Experiment:
         self.update_current_state_name_and_index(self.current_state_name)
         if self.current_task_group is None:
             self.current_task_group = self.generate_task_group_of_the_state()
+        else:
+            self.current_task_group.configure_task_group_settings(
+                self.experiment_name, self.experiment_uuid)
 
         # if self.shared_variable_history != DataFrame:
         #     pl.read_csv(self.shared_variable_history)
@@ -716,14 +719,14 @@ class Experiments(LifecycleManager):
         # TODO-DONE: TaskGroupに対応
         # Update task_group
 
-        if optimal_time_reference_time is not None:
-            self.reference_time = optimal_time_reference_time
         if result_id is not None and result_id in self.completed_results:
             # Check identity before resolving a group which may have been deleted.
             digest = fingerprint((task_group_uuid, task_id, new_result_of_experiment, update_type))
             if digest != self.completed_results[result_id]["fingerprint"]:
                 raise ValueError(f"Conflicting result ID: {result_id}")
             return None, None
+        if optimal_time_reference_time is not None:
+            self.reference_time = optimal_time_reference_time
         self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type,
                                             task_group_uuid=task_group_uuid, result_id=result_id)
         if self.manager_status == "STOPPED":

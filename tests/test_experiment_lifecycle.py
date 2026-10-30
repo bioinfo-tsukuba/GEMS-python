@@ -148,6 +148,38 @@ class TestExperimentLifecycle(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Conflicting result"):
             lab.record_task_result(group.task_group_uuid, 0, "final-result",
                                    frames.make_frame({"time": [2], "value": [99]}))
+        lab.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
+            None, 0, result, task_group_uuid=group.task_group_uuid,
+            result_id="final-result", optimal_time_reference_time=999)
+        self.assertEqual(lab.to_json(), before)
+
+    def test_file_result_resend_after_deletion_does_not_advance_step_or_clock(self):
+        import json
+        from pathlib import Path
+        for backend in ("pandas", "polars"):
+            with self.subTest(backend=backend):
+                lab = manager(Path(self.directory.name) / backend, backend)
+                advance(lab)
+                group = lab.task_groups[0]
+                directory = lab.save_dir()
+                directory.mkdir(parents=True, exist_ok=True)
+                csv = directory / "result.csv"
+                frames.write_csv(frames.make_frame({"time": [2], "value": [2]}, backend), csv)
+                response = dict(task_response="Completed", task_group_uuid=group.task_group_uuid,
+                                task_id=0, result_id="final-file", result_path=str(csv),
+                                schedule_reference_time=2)
+                (directory / "experiment_result.json").write_text(json.dumps(response))
+                with patch.object(lab, "proceed_to_next_step") as proceed:
+                    lab.auto_load()
+                    self.assertEqual(proceed.call_count, 1)
+                self.assertFalse(lab.experiments)
+                response["schedule_reference_time"] = 999
+                (directory / "experiment_result.json").write_text(json.dumps(response))
+                before = lab.to_json()
+                with patch.object(lab, "proceed_to_next_step") as proceed:
+                    lab.auto_load()
+                    proceed.assert_not_called()
+                self.assertEqual(lab.to_json(), before)
 
     def test_other_experiment_and_started_reservation_survive_parent_deletion(self):
         lab = manager(self.directory.name)
@@ -163,3 +195,53 @@ class TestExperimentLifecycle(unittest.TestCase):
         self.assertIn("parent", lab.ended_experiments)
         self.assertEqual((fixed.tasks[0].scheduled_time, fixed.tasks[0].allocated_machine_id), before)
         self.assertEqual(len(other.shared_variable_history), 0)
+
+    def test_invalid_child_task_rejected_before_request_is_accepted(self):
+        lab = manager(self.directory.name, split=True)
+        specs = child_specs()
+        specs[1].states[0].duration = -1
+        with self.assertRaisesRegex(PlanningError, "processing_time"):
+            lab.request_split("parent", "bad", specs)
+        self.assertEqual(len(lab.experiments), 1)
+        self.assertFalse(lab.split_requests)
+        self.assertFalse(lab.ended_experiments)
+
+    def test_second_generation_inherits_each_observation_once(self):
+        lab = manager(self.directory.name, split=True)
+        advance(lab)
+        advance(lab)
+        first = lab.experiments[0]
+        parent_values = frames.convert(first.history_for_state(), "polars")["value"].to_list()
+        for group in lab.task_groups:
+            if group.experiment_uuid == first.experiment_uuid:
+                for task in group.tasks:
+                    task.task_status = type(task.task_status).COMPLETED
+                group.status_update()
+        request = lab.request_split(first.experiment_uuid, "second-generation", child_specs(time=2))
+        lab.confirm_split(request.request_id)
+        for uuid in request.child_uuids:
+            child = lab._experiment(uuid)
+            self.assertEqual(frames.convert(child.inherited_history, "polars")["value"].to_list(),
+                             parent_values)
+            self.assertEqual(len(child.history_for_state()), len(parent_values) + 1)
+
+    def test_finite_culture_model_and_explicit_aliquot_initial_conditions(self):
+        from tests.simulators.lifecycle_cell_culture import build, run
+        from tests.simulators.cell_culture import logistic_growth
+        for backend in ("pandas", "polars"):
+            lab = build(self.directory.name, backend)
+            logs = run(lab)
+            self.assertEqual(logs[-1]["status"], "no_tasks")
+            self.assertEqual(len(lab.ended_experiments), 3)
+            event = next(iter(lab.split_requests.values()))
+            self.assertEqual(event.status, "COMMITTED")
+            for i, uuid in enumerate(event.child_uuids):
+                record = lab.ended_experiments[uuid]
+                history = frames.convert(record.history, "polars")
+                own = history.filter(history["generation"] == 1)
+                self.assertEqual(len(own), 3)
+                self.assertEqual(own["confluence"][0], (0.12, 0.18)[i])
+                expected = logistic_growth(own["confluence"][-2],
+                                          (own["time"][-1] - own["time"][-2]) / 60)
+                self.assertAlmostEqual(own["confluence"][-1], expected)
+                self.assertEqual(record.initial_conditions["volume"], 5.0)

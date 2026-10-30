@@ -1,0 +1,14 @@
+{
+  "total_runtime_seconds": 21600,
+  "planning_budgets_seconds": [1.0, 60.0],
+  "parent_counts": [1, 2, 4, 8, 16, 32, 64, 128],
+  "patterns": ["contention", "heterogeneous", "many_candidates", "mixed_penalties", "replanning"],
+  "boundary_repetitions": 3,
+  "variation_parents": 8,
+  "variation_child_counts": [4, 8],
+  "variation_group_intervals": [1, 4],
+  "generations": [1, 2],
+  "seed": 0,
+  "workers": 1,
+  "dataframe_backend": "pandas"
+}

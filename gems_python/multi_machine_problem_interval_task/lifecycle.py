@@ -143,8 +143,14 @@ class LifecycleManager:
                                         t.allocated_machine_id is not None) for t in g.tasks)]
 
     def _diagnostic(self, kind, reason, **details):
+        try:
+            inputs = encode((self.task_groups, self.machine_list))
+        except Exception as err:
+            # An unsupported value must not prevent STOP from being recorded.
+            inputs = {"serialization_error": f"{type(err).__name__}: {err}",
+                      "task_groups": repr(self.task_groups), "machines": repr(self.machine_list)}
         return dict(kind=kind, reason=str(reason), reference_time=self.reference_time,
-                    input=encode((self.task_groups, self.machine_list)), **details)
+                    input=inputs, **details)
 
     def _stop(self, kind, reason, **details):
         self.manager_status = "STOPPED"
@@ -395,6 +401,9 @@ class LifecycleManager:
             if any(u in self.ended_experiments or any(e.experiment_uuid == u for e in self.experiments)
                    for u in uuids):
                 raise ValueError("Child UUID collision")
+            # Preview protocol-defined task generation before accepting a request.
+            # These temporary children are never registered or executed.
+            self._build_children(parent, children, uuids, parent.history_for_state())
         except Exception as err:
             raise self._stop("INVALID_CHILD_SPECIFICATION", err) from err
         record = SplitRecord(request_id, parent_uuid, specification,
@@ -403,9 +412,24 @@ class LifecycleManager:
         parent.lifecycle_status = "SPLIT_PENDING"
         return record
 
+    def _build_children(self, parent, specifications, uuids, history):
+        from gems_python.multi_machine_problem_interval_task.transition_manager import Experiment
+        children = [
+            Experiment(spec.experiment_name, copy.deepcopy(spec.states), spec.current_state_name,
+                       shared_variable_history=frames.copy_frame(spec.initial_history),
+                       experiment_uuid=uuid, dataframe_backend=parent.dataframe_backend,
+                       _inherited_history=history, parent_uuid=parent.experiment_uuid,
+                       initial_conditions=copy.deepcopy(spec.initial_conditions),
+                       initial_condition_origins=copy.deepcopy(spec.initial_condition_origins))
+            for spec, uuid in zip(specifications, uuids)
+        ]
+        for child in children:
+            if child.current_task_group.tasks:
+                validate_inputs([child.current_task_group], self.reference_time)
+        return children
+
     def confirm_split(self, request_id, succeeded=True, *, reason=None, replan=True):
         """Confirm a completed virtual operation. Never invokes a device operation."""
-        from gems_python.multi_machine_problem_interval_task.transition_manager import Experiment
         record = self.split_requests[request_id]
         if record.status != "PENDING":
             if (record.status == "COMMITTED") != bool(succeeded):
@@ -428,18 +452,7 @@ class LifecycleManager:
         try:
             if fingerprint((record.parent_uuid, record.children)) != record.specification_hash:
                 raise ValueError(f"Split specification changed after request: {request_id}")
-            children = [
-                Experiment(spec.experiment_name, copy.deepcopy(spec.states), spec.current_state_name,
-                           shared_variable_history=frames.copy_frame(spec.initial_history),
-                           experiment_uuid=uuid, dataframe_backend=parent.dataframe_backend,
-                           _inherited_history=history, parent_uuid=parent.experiment_uuid,
-                           initial_conditions=copy.deepcopy(spec.initial_conditions),
-                           initial_condition_origins=copy.deepcopy(spec.initial_condition_origins))
-                for spec, uuid in zip(record.children, record.child_uuids)
-            ]
-            for child in children:
-                if child.current_task_group.tasks:
-                    validate_inputs([child.current_task_group], self.reference_time)
+            children = self._build_children(parent, record.children, record.child_uuids, history)
             ending = self._end_record(parent, request_id, "split", history)
             new_experiments = [e for e in self.experiments if e is not parent] + children
             new_groups = [g for g in self.task_groups if g.experiment_uuid != parent.experiment_uuid]
@@ -484,12 +497,14 @@ class LifecycleManager:
             raise ValueError(f"Unsupported lifecycle action: {type(action).__name__}")
         elif not pending and group.tasks:
             old = (experiment.current_state_name, experiment.current_state_index,
-                   experiment.current_task_group, copy.deepcopy(experiment.states))
+                   experiment.current_task_group, copy.deepcopy(experiment.states),
+                   experiment.task_group_sequence)
             try:
                 new = experiment.execute_one_step()
             except Exception:
                 (experiment.current_state_name, experiment.current_state_index,
-                 experiment.current_task_group, experiment.states) = old
+                 experiment.current_task_group, experiment.states,
+                 experiment.task_group_sequence) = old
                 raise
             if new.tasks:
                 self.task_groups.append(new)

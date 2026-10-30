@@ -123,6 +123,41 @@ class TestLifecyclePersistence(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "json:.*pickle:"):
             load_snapshot(directory, Experiments)
 
+    def test_process_exit_before_and_after_manifest_commit(self):
+        directory = Path(self.directory.name)
+        lab = manager(directory)
+        advance(lab)
+        save_snapshot(lab, directory)
+        old_generation = lab.to_json()
+        advance(lab)
+        updated = directory / "updated.json"
+        updated.write_text(lab.to_json())
+        code = """
+import os, sys
+from pathlib import Path
+import gems_python.common.persistence as persistence
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+directory = Path(sys.argv[1])
+lab = Experiments.from_json((directory / "updated.json").read_text())
+replace = persistence.os.replace
+def crash(source, destination):
+    if Path(destination).name == "snapshot_manifest.json":
+        if sys.argv[2] == "before": os._exit(77)
+        replace(source, destination)
+        os._exit(77)
+    return replace(source, destination)
+persistence.os.replace = crash
+persistence.save_snapshot(lab, directory)
+"""
+        for boundary in ("before", "after"):
+            process = subprocess.run([sys.executable, "-c", code, str(directory), boundary],
+                                     capture_output=True)
+            self.assertEqual(process.returncode, 77, process.stderr.decode())
+            restored = load_snapshot(directory, Experiments)
+            expected = old_generation if boundary == "before" else lab.to_json()
+            self.assertEqual(restored.to_json(), expected)
+        self.assertFalse(load_snapshot(directory, Experiments).experiments)
+
     def test_missing_new_progress_fields_fail_but_old_snapshot_migrates(self):
         lab = manager(self.directory.name)
         value = lab.to_dict()
@@ -149,6 +184,19 @@ class TestLifecyclePersistence(unittest.TestCase):
         self.assertEqual(restored.max_unknown_retries, 3)
         self.assertEqual(restored.experiments[0].experiment_uuid, "parent")
         restored.execute_scheduling()
+
+    def test_actual_main_json_and_pickle_migrate_and_continue_same_protocol(self):
+        from tests.simulators.cell_culture import observe as culture_observe
+        directory = Path(__file__).parent / "fixtures" / "issue24_main"
+        labs = [load_snapshot(directory, Experiments, source=s) for s in ("json", "pickle")]
+        self.assertTrue(equivalent(*labs))
+        for lab in labs:
+            self.assertEqual(lab.manager_status, "RUNNING")
+            self.assertFalse(lab.enable_split)
+            self.assertEqual(lab.experiments[0].current_state_name, "ObservationState")
+            self.assertEqual(len(lab.experiments[0].shared_variable_history), 1)
+            self.assertEqual(lab.simulate_one(observation_provider=culture_observe)["status"], "ok")
+        self.assertTrue(equivalent(*labs))
 
     def test_restore_in_fresh_process_retains_pending_split_and_history(self):
         lab = manager(self.directory.name, "polars", True)

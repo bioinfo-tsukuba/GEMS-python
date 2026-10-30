@@ -8,7 +8,9 @@
 ## 環境・基準
 
 Python 3.14.4、OR-Tools 9.15.6755、Pandas 3.1.0、Polars 1.44.2、
-PyArrow 26.0.0。既存の`/tmp/gems-result-latency-venv/bin/python`を使用。
+PyArrow 26.0.0。初回は`/tmp/gems-result-latency-venv/bin/python`を使用。
+一時領域の消失後、`/tmp/gems-issue24-venv/bin/python3`へ主要依存を同じ版で復元し、
+関連試験・比較元の全試験を再実行した。依存範囲は`pyproject.toml`に合わせる。
 `MPLBACKEND=Agg`、描画設定は`/tmp`。新しい依存は追加しない。
 
 比較元を`git archive`で`/tmp/gems-issue24-implementation`へ取り出して、
@@ -55,3 +57,24 @@ STOP中の結果受領、Pandas/Polars×JSON/pickle、別プロセス再開、
 最終の全テスト比較、有限の培養モデルの統合例、規模評価、
 Issueの完了条件との対応、最終PRの検証結果は継続して追記する。
 規模評価は最大21600秒。実機・同時書込み・不可逆操作の復旧は未検証かつ対象外。
+
+## 追加の受入確認
+
+復元環境で関連81件、25.387秒、成功。有限の仮想培養を2回観測してから
+明示的に2子へ取り分け、各子が2回観測して自己消去する例を両バックエンドで確認した。
+初期confluenceは手順指定の0.12/0.18、量は10から5/5の仮想単位で、
+履歴から算出するlogistic growthと一致する。物理的な量配分の自動推測はしない。
+2世代の継承、子の生成Taskの事前検査、結果ファイル再送時の時刻・step不変も検証した。
+
+保存のmanifest切替え直前／直後に別プロセスを`os._exit(77)`で終了させ、
+直前は旧世代、直後は新世代だけを復元できた。
+mainそのものから生成したJSON/pickleは`tests/fixtures/issue24_main`へ保存し、
+同じ培養手順を継続できる移行試験を追加した。
+
+規模評価器は`scripts/measure_experiment_lifecycle.py`、
+独立した保存入力・予約・系譜検査は`scripts/verify_experiment_lifecycle_capacity.py`。
+設定は`experiment_lifecycle_capacity_config.json`に固定する。
+計画入口から検査済み反映までを1秒/60秒判定し、同じ探索上限で再試行を無効化する。
+親1〜128の走査、8親で子4/8・群間隔1/2/4・2世代、5負荷と同条件のflat比較を行い、
+成功境界と次の失敗点を合計3回測る。前処理の履歴は決定的な完了済み入力であり、
+生物学的な実行時間や物理操作時間は測らない。

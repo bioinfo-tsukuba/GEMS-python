@@ -102,7 +102,7 @@ solverが矛盾箇所を特定できない場合はINFEASIBLE判定と入力を�
 ## 保存世代と旧保存
 
 `save_snapshot`はJSON/pickleを同じ世代の`.snapshot_generations/<id>/`に書込み、
-ファイル・ディレクトリを同期してから` snapshot_manifest.json`を原子的に切り替える。
+ファイル・ディレクトリを同期してから`snapshot_manifest.json`を原子的に切り替える。
 読込みはmanifestを一度選び、その世代のハッシュを検査する。
 書込み途中の世代は選ばず、既存の確定世代を維持する。
 両形式が使えなければ理由を表示し、世代を混ぜて復元しない。
