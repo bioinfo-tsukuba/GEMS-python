@@ -129,3 +129,42 @@ ParentState/ChildState、入力生成、条件抽出、worker、試行列挙はA
 親・機械・管理層の初期化は元の前処理タイマーに入っていないため、
 同じ入力ハッシュを確認する別プロセスの補足計測で示す。
 この補足時間を過去試行の全工程時間へ加算しない。
+
+再開後の関連85件は42.510秒で成功。
+`6055d8d`を`git archive`で隔離した全143件は70.196秒、比較元と同じ5エラーのみ。
+全試験でのエラーID一覧を比較して一致を確認した。
+期限切れの再開でsolverを呼ばず完了済み試行を保持すること、
+保存先が違う反復の保存・全工程時間を混ぜないことも追加2件で確認した。
+補足初期化の試運転は元の第1試行と入力ハッシュが一致した。
+
+現環境での再現コマンドは次のとおり。受入試験は規模計測から独立して実行する。
+
+```bash
+MPLBACKEND=Agg MPLCONFIGDIR=volatile_issue24_work/mpl \
+  volatile_issue24_work/venv/bin/python3 -m unittest \
+  tests.test_experiment_lifecycle tests.test_experiment_scheduling_policy \
+  tests.test_lifecycle_persistence tests.test_scheduler_capacity \
+  tests.test_lifecycle_capacity tests.test_cp_sat_scheduler \
+  tests.test_dataframe_backends tests.test_persistence_roundtrip \
+  tests.test_experiment_simulators
+
+MPLBACKEND=Agg MPLCONFIGDIR=volatile_issue24_work/mpl \
+  volatile_issue24_work/venv/bin/python3 -m scripts.measure_experiment_lifecycle \
+  --resume --config volatile_issue24_work/capacity-a719506/config.json \
+  --output volatile_issue24_work/capacity-a719506
+
+# 元の計測後、solverを呼ばずに補足初期化・出力検査・統計再生成を行う。
+MPLBACKEND=Agg MPLCONFIGDIR=volatile_issue24_work/mpl \
+  volatile_issue24_work/venv/bin/python3 -m scripts.measure_experiment_lifecycle \
+  --profile-all-initializations volatile_issue24_work/capacity-a719506
+volatile_issue24_work/venv/bin/python3 -m scripts.verify_experiment_lifecycle_capacity \
+  volatile_issue24_work/capacity-a719506
+MPLCONFIGDIR=volatile_issue24_work/mpl volatile_issue24_work/venv/bin/python3 \
+  -m scripts.analyze_experiment_lifecycle_capacity \
+  volatile_issue24_work/capacity-a719506 --output volatile_issue24_work/statistics
+```
+
+計測中の追加受入・全試験実行は短い併行負荷になったため、対象期間を別記する。
+反復は同じ決定的入力・seedの記述統計であり、独立な成功確率の推定ではない。
+RSSはfixture生成とflat化を含むプロセス全体のピークで、履歴だけの常駐メモリではない。
+群間隔の比較は分割前に合成した完了観測の量を変えるもので、実機の分割頻度の実測ではない。

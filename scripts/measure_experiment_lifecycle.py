@@ -317,6 +317,40 @@ def profile_initialization(job_file):
     job_file.with_name("initialization_profile.json").write_text(json.dumps(result, indent=2))
 
 
+def profile_all_initializations(output):
+    source = verify_resume_source(output)
+    rows = [json.loads(line) for line in (output / "results.jsonl").read_text().splitlines()]
+    budget = json.loads((output / "study_budget.json").read_text())
+    deadline = datetime.fromisoformat(budget["deadline"]).timestamp()
+    completed, skipped, failures = [], [], []
+    for row in rows:
+        directory = output / row["artifact_directory"]
+        if row["outcome"] in ("WORKER_ERROR", "WORKER_TIMEOUT_OR_ERROR"):
+            skipped.append(directory.name)
+            continue
+        if (directory / "initialization_profile.json").exists():
+            completed.append(directory.name)
+            continue
+        if time.time() >= deadline:
+            skipped.append(directory.name)
+            continue
+        with (directory / "initialization_profile.log").open("w") as log:
+            try:
+                subprocess.run(
+                    [sys.executable, "-m", "scripts.measure_experiment_lifecycle",
+                     "--profile-initialization", str((directory / "job.json").resolve())],
+                    stdout=log, stderr=subprocess.STDOUT, check=True,
+                    timeout=min(120, deadline-time.time()))
+                completed.append(directory.name)
+            except Exception as err:
+                failures.append(dict(directory=directory.name, error=str(err)))
+    summary = dict(source, completed=completed, skipped=skipped, failures=failures,
+                   deadline=budget["deadline"], finished=datetime.now(timezone.utc).isoformat())
+    (output / "initialization_profiles.json").write_text(json.dumps(summary, indent=2))
+    print(json.dumps(dict(profiles=len(completed), skipped=len(skipped), failures=failures)))
+    return summary
+
+
 def measure(config, output, resume=False):
     if config["seed"] != 0 or config["workers"] != 1 or config["dataframe_backend"] != "pandas":
         raise ValueError("This study uses seed=0, workers=1 and pandas; other settings need a separate study")
@@ -405,6 +439,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", type=Path)
     parser.add_argument("--profile-initialization", type=Path)
+    parser.add_argument("--profile-all-initializations", type=Path)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--output", type=Path)
@@ -413,6 +448,8 @@ if __name__ == "__main__":
         worker(args.worker)
     elif args.profile_initialization:
         profile_initialization(args.profile_initialization)
+    elif args.profile_all_initializations:
+        profile_all_initializations(args.profile_all_initializations)
     else:
         if args.output is None:
             parser.error("--output is required")

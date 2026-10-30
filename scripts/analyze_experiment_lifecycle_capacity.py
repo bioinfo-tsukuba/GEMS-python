@@ -15,6 +15,7 @@ from matplotlib.lines import Line2D
 KEYS = ("series", "pattern", "budget", "mode", "parents", "children",
         "group_interval", "generations")
 METRICS = ("planning_seconds", "preparation_seconds", "fixture_seconds",
+           "supplemental_initialization_seconds",
            "save_seconds", "total_pipeline_seconds", "measured_phase_seconds",
            "peak_rss_kib", "input_json_bytes", "own_history_rows",
            "inherited_history_rows", "archived_history_rows", "timing_penalty",
@@ -34,7 +35,20 @@ def summarize(rows):
                      on_time=sum(r["outcome"] == "VALID_ON_TIME" for r in group),
                      late=sum(r["outcome"] == "VALID_LATE" for r in group),
                      outcomes=json.dumps(dict(Counter(r["outcome"] for r in group)), sort_keys=True))
+        phases = sorted({r.get("storage_phase", "unspecified") for r in group})
+        entry["storage_phases"] = ";".join(phases)
         for metric in METRICS:
+            if metric in ("save_seconds", "total_pipeline_seconds", "measured_phase_seconds") \
+                    and len(phases) > 1:
+                # Keep I/O from tmpfs and the workspace filesystem separate.
+                entry[f"{metric}_by_storage_phase"] = json.dumps({
+                    phase: {name: function(values) for name, function in (
+                        ("min", min), ("median", statistics.median), ("max", max))}
+                    for phase in phases
+                    if (values := [r[metric] for r in group if r.get(metric) is not None and
+                                   r.get("storage_phase", "unspecified") == phase])
+                }, sort_keys=True)
+                continue
             values = [r[metric] for r in group if r.get(metric) is not None]
             if values:
                 for name, value in (("min", min(values)), ("median", statistics.median(values)),
@@ -59,6 +73,14 @@ def analyze(source, output):
     verified = json.loads((source / "verification.json").read_text())
     rows = [json.loads(line) for line in (source / "results.jsonl").read_text().splitlines()]
     assert len(rows) == verified["trial_count"]
+    profiles = 0
+    for row in rows:
+        profile = source / row["artifact_directory"] / "initialization_profile.json"
+        if profile.exists():
+            measurement = json.loads(profile.read_text())
+            assert measurement["input_hash"] == row["input_hash"]
+            row["supplemental_initialization_seconds"] = measurement["initialization_seconds"]
+            profiles += 1
     stats = summarize(rows)
     output.mkdir(parents=True, exist_ok=False)
     write_csv(output / "conditions.csv", stats)
@@ -66,6 +88,7 @@ def analyze(source, output):
     for row in rows:
         trial = {k: row[k] for k in (*KEYS, "repetition", "outcome", "artifact_directory")}
         trial.update({k: row.get(k) for k in METRICS})
+        trial["storage_phase"] = row.get("storage_phase", "unspecified")
         trial.update(row.get("dimensions", {}))
         trial["solver_status"] = ";".join(r["status"] for r in row.get("reports", []))
         trials.append(trial)
@@ -73,7 +96,9 @@ def analyze(source, output):
     metadata = json.loads((source / "metadata.json").read_text())
     (output / "summary.json").write_text(json.dumps(dict(
         source_commit=metadata["commit"], verification=verified,
-        timing=metadata["timing"], conditions=stats), indent=2))
+        timing=metadata["timing"], conditions=stats, initialization_profiles=profiles,
+        initialization_note="Supplemental cold-process measurements; excluded from original pipeline timers",
+        storage_note="I/O and pipeline metrics from different storage phases are not pooled"), indent=2))
     colors = dict(zip(sorted({r["pattern"] for r in rows}), plt.get_cmap("tab10").colors))
     budgets = sorted({r["budget"] for r in rows})
     fig, axes = plt.subplots(1, len(budgets), figsize=(13, 5.5), squeeze=False)
