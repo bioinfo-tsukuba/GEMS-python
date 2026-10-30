@@ -6,9 +6,11 @@ is never counted as an on-time success. Preconditioning observations are
 synthetic completed inputs, not timings of biological execution.
 """
 import argparse
+import ast
 import contextlib
 import copy
 from datetime import datetime, timezone
+import hashlib
 import io
 import json
 import logging
@@ -217,29 +219,140 @@ def jobs(config):
                        group_interval=2, generations=2)
 
 
-def measure(config, output):
+def measurement_signature(job):
+    return tuple(job[k] for k in ("series", "pattern", "budget", "parents", "children",
+                                  "group_interval", "generations", "mode", "repetition"))
+
+
+def verify_resume_source(output):
+    """Keep generation, timed work and dependencies fixed across driver recovery."""
+    root = Path(__file__).resolve().parents[1]
+    metadata = json.loads((output / "metadata.json").read_text())
+    commit = metadata["commit"]
+    files = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", commit],
+                                    cwd=root, text=True).splitlines()
+    fixed = [f for f in files if f.startswith("gems_python/")] + [
+        "scripts/measure_scheduler_capacity.py", "scripts/scheduler_capacity_config.json"]
+    hashes = {}
+    for name in fixed:
+        original = subprocess.check_output(["git", "show", f"{commit}:{name}"], cwd=root)
+        current = (root / name).read_bytes()
+        if original != current:
+            raise ValueError(f"Measurement source changed: {name}")
+        hashes[name] = hashlib.sha256(current).hexdigest()
+    original = subprocess.check_output(
+        ["git", "show", f"{commit}:scripts/measure_experiment_lifecycle.py"], cwd=root, text=True)
+    names = {"ParentState", "ChildState", "prepare", "conditions", "worker", "jobs"}
+    def fixed_ast(source):
+        return {node.name: ast.dump(node, include_attributes=False)
+                for node in ast.parse(source).body
+                if isinstance(node, (ast.ClassDef, ast.FunctionDef)) and node.name in names}
+    expected = fixed_ast(original)
+    actual = fixed_ast(Path(__file__).read_text())
+    if actual != expected or set(actual) != names:
+        raise ValueError("Input generation or timed measurement changed")
+    versions = {p: version(p) for p in metadata["versions"]}
+    if versions != metadata["versions"] or sys.version != metadata["python"]:
+        raise ValueError("Measurement Python or dependency versions changed")
+    environment = subprocess.check_output(
+        [sys.executable, "-m", "pip", "freeze"], text=True).splitlines()
+    if set(environment) != set((output / "environment.txt").read_text().splitlines()):
+        raise ValueError("Frozen measurement environment changed")
+    return dict(source_commit=commit, source_hashes=hashes, versions=versions,
+                timed_ast_sha256=hashlib.sha256(
+                    json.dumps(actual, sort_keys=True).encode()).hexdigest(),
+                driver_commit=subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], cwd=root, text=True).strip())
+
+
+def recover_measurement(output, config):
+    if json.loads((output / "config.json").read_text()) != config:
+        raise ValueError("Resume must use the original measurement config")
+    source = verify_resume_source(output)
+    ledger = output / "results.jsonl"
+    if not ledger.exists():
+        checkpoints = sorted(output.glob("checkpoint-*.jsonl"))
+        if not checkpoints:
+            raise ValueError("No preserved result ledger")
+        ledger.write_bytes(checkpoints[-1].read_bytes())
+    rows = [json.loads(line) for line in ledger.read_text().splitlines()]
+    if len({measurement_signature(row) for row in rows}) != len(rows):
+        raise ValueError("Duplicated trial in preserved ledger")
+    for row in rows:
+        artifact = output / row["artifact_directory"]
+        recorded = json.loads((artifact / "result.json").read_text())
+        if any(row[k] != v for k, v in recorded.items()):
+            raise ValueError(f"Preserved trial does not match ledger: {artifact.name}")
+        row.setdefault("storage_phase", "initial_tmpfs")
+    metadata = json.loads((output / "metadata.json").read_text())
+    budget = output / "study_budget.json"
+    deadline = (datetime.fromisoformat(json.loads(budget.read_text())["deadline"])
+                if budget.exists() else
+                datetime.fromtimestamp(datetime.fromisoformat(metadata["started"]).timestamp()
+                                       + config["total_runtime_seconds"], timezone.utc))
+    index = len(list(output.glob("resume-*.json"))) + 1
+    recovery = dict(source, started=datetime.now(timezone.utc).isoformat(),
+                    deadline=deadline.isoformat(), preserved_trials=len(rows),
+                    storage_phase="resume_workspace",
+                    storage_note="Initial 54 trials used /tmp tmpfs; resumed trials use workspace filesystem")
+    (output / f"resume-{index:02d}.json").write_text(json.dumps(recovery, indent=2))
+    ledger.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    return rows, max(0, deadline.timestamp() - time.time())
+
+
+def profile_initialization(job_file):
+    """Supplemental cold initialization; never added to the original pipeline timer."""
+    job = json.loads(job_file.read_text())
+    expected = json.loads(job_file.with_name("result.json").read_text())
+    started = time.perf_counter()
+    with contextlib.redirect_stdout(io.StringIO()):
+        lab, _, fixture_seconds = prepare(job, job_file.parent / "initialization-lab")
+    elapsed = time.perf_counter() - started
+    assert fingerprint(lab) == expected["input_hash"], "Supplemental input differs from measured input"
+    result = dict(initialization_seconds=elapsed-fixture_seconds,
+                  fixture_seconds=fixture_seconds, total_generation_seconds=elapsed,
+                  input_hash=expected["input_hash"], supplemental=True,
+                  started=datetime.now(timezone.utc).isoformat(),
+                  note="Fresh process, no solver; recorded separately from the measured trial")
+    job_file.with_name("initialization_profile.json").write_text(json.dumps(result, indent=2))
+
+
+def measure(config, output, resume=False):
     if config["seed"] != 0 or config["workers"] != 1 or config["dataframe_backend"] != "pandas":
         raise ValueError("This study uses seed=0, workers=1 and pandas; other settings need a separate study")
-    output.mkdir(parents=True, exist_ok=False)
-    (output / "config.json").write_text(json.dumps(config, indent=2))
-    metadata = dict(started=datetime.now(timezone.utc).isoformat(), python=sys.version,
+    if resume:
+        rows, remaining = recover_measurement(output, config)
+    else:
+        output.mkdir(parents=True, exist_ok=False)
+        (output / "config.json").write_text(json.dumps(config, indent=2))
+        metadata = dict(started=datetime.now(timezone.utc).isoformat(), python=sys.version,
                     commit=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                     dirty=bool(subprocess.check_output(["git", "status", "--porcelain"], text=True)),
                     versions={p: version(p) for p in ("ortools", "pandas", "polars", "pyarrow")},
                     platform=platform.platform(), processor=platform.processor(),
                     timing="manager planning entry through validated application",
                     retry=False, notes="synthetic completed observations; not physical execution")
-    (output / "metadata.json").write_text(json.dumps(metadata, indent=2))
-    deadline = time.monotonic() + config["total_runtime_seconds"]
-    rows, skipped = [], []
+        (output / "metadata.json").write_text(json.dumps(metadata, indent=2))
+        (output / "environment.txt").write_text(subprocess.check_output(
+            [sys.executable, "-m", "pip", "freeze"], text=True))
+        rows, remaining = [], config["total_runtime_seconds"]
+    deadline = time.monotonic() + remaining
+    skipped = []
+    completed = {measurement_signature(row) for row in rows}
+    existing = [int(p.name.split("-")[1]) for p in output.glob("trial-*") if p.is_dir()]
+    next_trial = max(existing, default=-1) + 1
 
     def run_pair(base, repetition):
+        nonlocal next_trial
         for mode in ("lifecycle", "flat"):
             job = dict(base, mode=mode, repetition=repetition)
+            if measurement_signature(job) in completed:
+                continue
             if time.monotonic() >= deadline:
                 skipped.append(job)
                 continue
-            directory = output / f"trial-{len(rows):04d}"
+            directory = output / f"trial-{next_trial:04d}"
+            next_trial += 1
             directory.mkdir()
             job_file = directory / "job.json"
             job_file.write_text(json.dumps(job))
@@ -253,7 +366,9 @@ def measure(config, output):
                 except Exception as err:
                     row = dict(job, outcome="WORKER_TIMEOUT_OR_ERROR", error=str(err))
             row["artifact_directory"] = directory.name
+            row["storage_phase"] = "resume_workspace" if resume else "initial"
             rows.append(row)
+            completed.add(measurement_signature(job))
             with (output / "results.jsonl").open("a") as stream:
                 stream.write(json.dumps(row) + "\n")
             print(f"{len(rows)} {base['pattern']} P={base['parents']} "
@@ -289,12 +404,16 @@ if __name__ == "__main__":
     from scripts.measure_experiment_lifecycle import ParentState, ChildState
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", type=Path)
+    parser.add_argument("--profile-initialization", type=Path)
+    parser.add_argument("--resume", action="store_true")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.worker:
         worker(args.worker)
+    elif args.profile_initialization:
+        profile_initialization(args.profile_initialization)
     else:
         if args.output is None:
             parser.error("--output is required")
-        measure(json.loads(args.config.read_text()), args.output)
+        measure(json.loads(args.config.read_text()), args.output, resume=args.resume)

@@ -220,3 +220,88 @@ assert not lab.experiments
 assert len(lab.ended_experiments) == 3
 """
         subprocess.run([sys.executable, "-c", code, str(path)], check=True, capture_output=True)
+
+    def test_fresh_process_checkpoint_matrix_both_formats_and_backends(self):
+        code = """
+import sys
+from pathlib import Path
+from unittest.mock import patch
+from gems_python.common.cp_sat_scheduler import schedule_task_groups
+from gems_python.common.persistence import load_snapshot
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+from gems_python.multi_machine_problem_interval_task.task_info import Machine
+from tests.lifecycle_fixtures import advance
+lab = load_snapshot(Path(sys.argv[1]), Experiments, source=sys.argv[2])
+checkpoint, backend = sys.argv[3:5]
+assert all(e.dataframe_backend == backend for e in lab.experiments)
+if checkpoint == "stopped":
+    assert lab.manager_status == "STOPPED"
+    assert lab.simulate_one()["status"] == "stopped"
+    lab.resume()
+elif checkpoint == "waiting":
+    assert lab.experiments[0].lifecycle_status == "WAITING_MACHINE"
+    original_uuid = lab.experiments[0].experiment_uuid
+    with patch.object(lab, "proceed_to_next_step"):
+        lab.add_machine(Machine(0, "m0"))
+    assert lab.experiments[0].lifecycle_status == "ACTIVE"
+    assert lab.experiments[0].experiment_uuid == original_uuid
+elif checkpoint == "retry":
+    limits = []
+    def tracked(groups, reference, machines, **kwargs):
+        limits.append(kwargs["solver_time_limit_seconds"])
+        return schedule_task_groups(groups, reference, machines, **kwargs)
+    with patch("gems_python.common.cp_sat_scheduler.schedule_task_groups", tracked):
+        lab.execute_scheduling()
+    assert limits == [10]
+elif checkpoint == "pending":
+    assert len(lab.experiments) == 1
+    assert next(iter(lab.split_requests.values())).status == "PENDING"
+elif checkpoint in ("committed", "ended"):
+    assert "parent" in lab.ended_experiments
+    event = next(iter(lab.split_requests.values()))
+    assert event.status == "COMMITTED"
+    lab.confirm_split(event.request_id)
+for _ in range(12): advance(lab)
+assert not lab.experiments
+assert len(lab.ended_experiments) == 3
+assert len(lab.split_requests) == 1
+assert all(record.settings["max_unknown_retries"] == 3 for record in lab.ended_experiments.values())
+"""
+        for backend in ("pandas", "polars"):
+            for checkpoint in ("before", "pending", "committed", "waiting", "retry", "stopped", "ended"):
+                with self.subTest(backend=backend, checkpoint=checkpoint), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    directory = Path(self.directory.name) / backend / checkpoint
+                    lab = manager(directory, backend, True)
+                    if checkpoint in ("pending", "committed", "ended"):
+                        advance(lab)
+                        if checkpoint == "pending":
+                            lab.simulate_one(observation_provider=observe)
+                        else:
+                            advance(lab)
+                        if checkpoint == "ended":
+                            for _ in range(10):
+                                advance(lab)
+                    elif checkpoint == "waiting":
+                        lab.machine_list.machines = []
+                        lab.execute_scheduling()
+                    elif checkpoint == "stopped":
+                        lab.execute_scheduling()
+                        lab._stop("TEST", "checkpoint")
+                    elif checkpoint == "retry":
+                        calls = []
+                        def interrupted(groups, reference, machines, **kwargs):
+                            calls.append(kwargs["solver_time_limit_seconds"])
+                            if len(calls) == 1:
+                                raise SolverFailure("UNKNOWN", {"status": "UNKNOWN"})
+                            raise KeyboardInterrupt("checkpoint between attempts")
+                        with patch("gems_python.common.cp_sat_scheduler.schedule_task_groups", interrupted), \
+                                self.assertRaises(KeyboardInterrupt):
+                            lab.execute_scheduling()
+                    save_snapshot(lab, directory / "saved")
+                    for source in ("json", "pickle"):
+                        process = subprocess.run(
+                            [sys.executable, "-c", code, str(directory / "saved"), source, checkpoint, backend],
+                            capture_output=True, timeout=30)
+                        self.assertEqual(process.returncode, 0,
+                                         process.stderr.decode() + process.stdout.decode()[-2000:])

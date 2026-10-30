@@ -5,6 +5,8 @@ import tempfile
 import unittest
 
 from gems_python.common.scheduling import validate_groups
+from gems_python.common.persistence import save_snapshot
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
 from gems_python.multi_machine_problem_interval_task.lifecycle import fingerprint
 from scripts.measure_experiment_lifecycle import prepare, conditions, worker
 from scripts.verify_experiment_lifecycle_capacity import verify
@@ -47,3 +49,10 @@ class TestLifecycleCapacity(unittest.TestCase):
             report = verify(root)
             self.assertEqual(report["verified_pairs"], 1)
             self.assertEqual(report["valid_outputs"], 2)
+            target = root / rows[0]["artifact_directory"]
+            corrupted = Experiments.from_json((target / "output.json").read_text())
+            corrupted.task_groups[-1].tasks[-1].processing_time += 1
+            (target / "output.json").write_text(corrupted.to_json())
+            save_snapshot(corrupted, target / "saved")
+            with self.assertRaisesRegex(AssertionError, "Planner changed task specification"):
+                verify(root)

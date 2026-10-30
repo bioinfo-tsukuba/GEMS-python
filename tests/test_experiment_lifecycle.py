@@ -140,6 +140,36 @@ class TestExperimentLifecycle(unittest.TestCase):
         lab.simulate_one(observation_provider=observe)
         self.assertEqual(lab.experiments[1].shared_variable_history.shape[0], 1)
 
+    def test_planning_stop_after_split_commit_retains_all_children_and_lineage(self):
+        from gems_python.common.planning_errors import SolverFailure
+        for status in ("UNKNOWN", "INFEASIBLE"):
+            with self.subTest(status=status):
+                lab = manager(self.directory.name, split=True)
+                lab.unknown_policy = "stop"
+                advance(lab)
+                lab.simulate_one(observation_provider=observe)
+                event = next(iter(lab.split_requests.values()))
+                with patch("gems_python.common.cp_sat_scheduler.schedule_task_groups",
+                           side_effect=SolverFailure(status, {"status": status})):
+                    if status == "UNKNOWN":
+                        lab.confirm_split(event.request_id)
+                    else:
+                        with self.assertRaises(PlanningError):
+                            lab.confirm_split(event.request_id)
+                self.assertEqual(event.status, "COMMITTED")
+                self.assertEqual(lab.manager_status, "STOPPED")
+                self.assertEqual({e.experiment_uuid for e in lab.experiments},
+                                 set(event.child_uuids))
+                self.assertEqual(set(lab.ended_experiments), {"parent"})
+                before = lab.to_json()
+                self.assertIs(lab.confirm_split(event.request_id), event)
+                self.assertEqual(lab.to_json(), before)
+                for restored in (Experiments.from_json(before),
+                                 Experiments.from_pickle(dumped=lab.to_pickle())):
+                    self.assertEqual(restored.manager_status, "STOPPED")
+                    self.assertEqual({e.experiment_uuid for e in restored.experiments},
+                                     set(event.child_uuids))
+
     def test_resend_last_result_after_parent_deleted_and_id_renumbered(self):
         lab = manager(self.directory.name)
         lab.execute_scheduling()

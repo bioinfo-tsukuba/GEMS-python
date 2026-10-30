@@ -13,6 +13,15 @@ from gems_python.common.serialization import equivalent
 from gems_python.multi_machine_problem_interval_task.lifecycle import fingerprint
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
 from scripts.measure_experiment_lifecycle import conditions
+from scripts.measure_scheduler_capacity import dimensions, quality
+
+
+def task_specifications(lab):
+    # Numeric group IDs may be assigned by planning; persistent IDs and physical
+    # specifications must remain unchanged.
+    return [(g.task_group_uuid, g.experiment_uuid, g.optimal_start_time, g.penalty_type, g.status,
+             [(t.task_id, t.processing_time, t.interval, t.optimal_machine_type, t.task_status)
+              for t in g.tasks]) for g in lab.task_groups]
 
 
 def verify(root):
@@ -33,7 +42,18 @@ def verify(root):
         source = Experiments.from_json((directory / "input.json").read_text())
         assert fingerprint(source) == row["input_hash"]
         assert fingerprint(conditions(source)) == row["condition_hash"]
+        assert dimensions(source) == row["dimensions"]
         target = Experiments.from_json((directory / "output.json").read_text())
+        assert fingerprint(task_specifications(source)) == fingerprint(task_specifications(target)), \
+            "Planner changed task specification"
+        assert {e.experiment_uuid for e in source.experiments} == \
+            {e.experiment_uuid for e in target.experiments}
+        assert fingerprint(source.ended_experiments) == fingerprint(target.ended_experiments)
+        assert fingerprint(source.split_requests) == fingerprint(target.split_requests)
+        for before, after in zip(source.experiments, target.experiments):
+            assert before.experiment_uuid == after.experiment_uuid
+            assert fingerprint(before.history_for_state()) == fingerprint(after.history_for_state())
+            assert fingerprint(before.states) == fingerprint(after.states)
         assert equivalent(target, load_snapshot(directory / "saved", Experiments))
         assert len(source.experiments) == row["parents"] * row["children"] ** row["generations"]
         assert len({e.experiment_uuid for e in source.experiments}) == len(source.experiments)
@@ -59,6 +79,8 @@ def verify(root):
             assert row["reports"][0]["valid"]
             assert row["reports"][0]["status"] in ("OPTIMAL", "FEASIBLE")
             assert (row["planning_seconds"] <= row["budget"]) == (row["outcome"] == "VALID_ON_TIME")
+            for key, value in quality(target).items():
+                assert row[key] == value, f"Invalid derived metric: {key}"
             counts["valid_outputs"] += 1
         else:
             assert (directory / "error.json").exists()

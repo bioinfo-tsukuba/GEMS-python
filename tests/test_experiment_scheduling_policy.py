@@ -5,7 +5,8 @@ from unittest.mock import patch
 from gems_python.common.cp_sat_scheduler import schedule_task_groups
 from gems_python.common.planning_errors import PlanningError, SolverFailure
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiment
-from gems_python.multi_machine_problem_interval_task.task_info import Machine, TaskStatus
+from gems_python.multi_machine_problem_interval_task.task_info import Machine, TaskStatus, Task, TaskGroup
+from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import LinearPenalty
 from tests.lifecycle_fixtures import manager, FiniteState, observe
 
 
@@ -26,6 +27,23 @@ class TestPlanningPolicy(unittest.TestCase):
             self.lab.add_machine(Machine(1, "imager"))
         self.assertEqual(other.lifecycle_status, "ACTIVE")
         self.assertEqual(other.experiment_uuid, "other")
+
+    def test_registration_checks_later_tasks_in_first_group_before_start(self):
+        group = TaskGroup(0, LinearPenalty(1), [Task(1, "available", 0), Task(1, "missing", 99)])
+        other = Experiment("two-task", [FiniteState()], "FiniteState",
+                           experiment_uuid="two-task", current_task_group=group)
+        with self.assertLogs(level="WARNING"):
+            self.lab.add_experiment(other, save_step=False)
+        self.assertEqual(other.lifecycle_status, "WAITING_MACHINE")
+        registered = self.lab._resolve_group(group_uuid=group.task_group_uuid)
+        self.assertTrue(all(t.scheduled_time is None for t in registered.tasks))
+        with self.assertRaisesRegex(RuntimeError, "blocked"):
+            self.lab.start_task(task_group_uuid=group.task_group_uuid, task_id=0)
+        self.assertEqual(self.lab.simulate_one(observation_provider=observe)["status"], "ok")
+        with patch.object(self.lab, "proceed_to_next_step"):
+            self.lab.add_machine(Machine(99, "new-kind"))
+        self.assertEqual(other.lifecycle_status, "ACTIVE")
+        self.assertTrue(all(t.allocated_machine_id is not None for t in registered.tasks))
 
     def _unknown(self, limits, success_after=None):
         def solver(groups, reference, machines, **kwargs):
