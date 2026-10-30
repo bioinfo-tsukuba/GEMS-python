@@ -1,0 +1,15 @@
+{
+  "issue": 24,
+  "kind": "conceptual design; not implemented behavior",
+  "font_sha256": "68a3fc98800b2a27b371f2fb79991daf3633bd89309d4ffaa6946fd587f375b5",
+  "image_sha256": "97b9e72c8fab2de28fcc4897189a5550df495e7458b7a06dd9976083cf314c7d",
+  "width": 2400,
+  "height": 1340,
+  "python": "3.14.4",
+  "pillow": "13.0.0",
+  "labels": {
+    "H": "Parent history retained as provenance, or the existing experiment history.",
+    "H1": "Child C1 observations after splitting.",
+    "H2": "Child C2 observations after splitting."
+  }
+}
