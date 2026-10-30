@@ -222,8 +222,10 @@ def analyze(source, output):
                     ("x", "none", "failure / mixed outcome"))]
     fig.legend(handles=handles, loc="upper center", ncol=4, fontsize=9)
     fig.tight_layout(rect=(0, 0, 1, .84))
-    for suffix in ("png", "svg"):
-        fig.savefig(output / f"planning.{suffix}", dpi=160)
+    with matplotlib.rc_context({"svg.hashsalt": "gems-issue24-lifecycle-capacity"}):
+        for suffix in ("png", "svg"):
+            options = {"metadata": {"Date": None}} if suffix == "svg" else {}
+            fig.savefig(output / f"planning.{suffix}", dpi=160, **options)
     plt.close(fig)
     write_report(source, output, stats, verified, metadata, profiles)
     print(json.dumps(dict(trials=len(rows), conditions=len(stats), source_commit=metadata["commit"])))
