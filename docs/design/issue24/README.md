@@ -18,8 +18,10 @@ Issue [#24](https://github.com/bioinfo-tsukuba/GEMS-python/issues/24)の要件�
 親履歴の出自参照と、子自身の観測を区別する。
 DataFrameの物理的なコピー方法やStateへの入力APIを確定した図ではない。
 
-生成PNGは確認用のローカル出力とし、Issue・PR・リポジトリには画像を掲載しない。
-このディレクトリには原稿、生成結果のメタデータ、検証記録を保持する。
+比較図は[comparison.png](figure/comparison.png)として保存し、Issue #24の本文に掲載する。
+Issueからは固定commit `32a5374e277a2bc9d02b91164cc29b5f8241d91b`の画像を参照する。
+このディレクトリには原稿、画像、生成結果のメタデータ、検証記録を保持する。
+フォントは同梱しない。
 
 ## 再生成
 

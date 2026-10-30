@@ -11,7 +11,7 @@ Experimentの自己消去・試料分割の機能実装は行っていない。
 - 要件：試料分割・履歴継承と、終了したExperimentの自己消去を実装対象にする。
 - 要件：自己消去は管理対象のExperimentの削除。UUID・履歴・終了理由は別記録に残す。
 - 要件：分割後の子は独立したExperiment。親を削除し、全子を一括登録する。
-- 要件：Issueは単独で読める本文へ更新する。比較図は確認用として再生成し、画像は掲載しない。
+- 要件：Issueは単独で読める本文へ更新する。初回の比較図は確認用として再生成し、掲載承認後にIssue本文へ追加する。
 - 既存仕様：通常の状態遷移は次のState名を返し、同じUUIDで進む。削除は別途明示的なAPI呼出し。
 - 設計方針：既存のState名や空Task群だけで一律に終了を判定しない。明示的な終了契約を定義する。
 - 未確定：終了API、継承履歴をStateへ渡す方法、子の初期観測・Stateの生成規則、分割量・容器IDの範囲。
@@ -76,15 +76,15 @@ Gitの作者情報が未設定で、初回コミットは`Author identity unknow
 `git -c user.name=Codex -c user.email=codex@openai.com commit ...`で
 そのコマンドだけに同じ作者情報を指定してコミットした。永続的なGit設定は変更していない。
 
-画像は掲載しない範囲に合わせ、初回生成物を
+初回は画像を掲載しない範囲だったため、生成物を
 `/tmp/gems-issue24-diagrams/three-way/`へ移動した。
 単純な`Path.rename`は異なるファイルシステム間のため`EXDEV`となり、
 `shutil.move`で移動を完了した。再生成物も別の出力先に保持した。
-フォント・画像はリポジトリへ追加せず、メタデータのみを
-[figure_metadata.json](figure_metadata.json)に記録する。
-一時出力先の永続性は保証しないため、保存したスクリプトと固定フォントから再生成する。
+初回はフォント・画像をリポジトリへ追加せず、メタデータのみを
+[figure_metadata.json](figure_metadata.json)に記録した。
+比較図の掲載時にPNGを追加した。フォントは同梱せず、固定フォントとスクリプトから再生成できる。
 
-## Issueへの反映
+## 初回の要件本文の反映
 
 書換え直前にIssue #24を再取得し、準備中に本文・タイトル・コメントが変更されていないことを確認した。
 
@@ -97,7 +97,7 @@ gh issue view 24 --repo bioinfo-tsukuba/GEMS-python \
   --json number,title,body,comments,url,state
 ```
 
-更新後のGitHub本文は[issue.md](issue.md)と完全一致し、タイトルも一致した。
+初回更新後のGitHub本文はその時点の[issue.md](issue.md)と完全一致し、タイトルも一致した。
 IssueはOPENのまま、コメントは変更していない。
 本文中に会話への言及、Mermaid、画像のMarkdown・HTMLが含まれないことを検査した。
 図の添付・コメント投稿は行っていない。
@@ -112,8 +112,46 @@ IssueはOPENのまま、コメントは変更していない。
 要件原稿、生成スクリプト、検証記録、図のメタデータを
 `8513cce`としてコミットし、`docs/24-experiment-lifecycle`へpushした。
 文書PR [#26](https://github.com/bioinfo-tsukuba/GEMS-python/pull/26)を作成した。
-PRは要件と再現資料だけを扱い、画像・フォント・機能実装を含めない。
+初回のPRは要件と再現資料だけを扱い、画像・フォント・機能実装を含めなかった。
+掲載承認後に比較図PNGを追加した。フォント・機能実装は含めない。
 マージはしていない。
+
+## 比較図の掲載（2026-10-30）
+
+掲載対象は、従来・自己消去・試料分割を左右に並べた承認済みPNG。
+画像のSHA-256は初回生成・表示確認時と一致した。
+`32a5374e277a2bc9d02b91164cc29b5f8241d91b`で
+[figure/comparison.png](figure/comparison.png)を保存し、文書ブランチへpushした。
+Issue本文では、この固定コミットの公開PNGを参照する。
+
+掲載前に最新のIssue本文・タイトル・コメントを取得し、準備中の同時更新がないことを確認した。
+本文の差分が「概念比較」の画像と説明文だけで、他の要件に変更がないことを確認した。
+
+```bash
+curl --fail --location \
+  --output /tmp/gems-issue24-diagrams/published-comparison.png \
+  https://raw.githubusercontent.com/bioinfo-tsukuba/GEMS-python/32a5374e277a2bc9d02b91164cc29b5f8241d91b/docs/design/issue24/figure/comparison.png
+
+gh api markdown --input /tmp/gems-issue24-diagrams/markdown-input.json
+
+gh issue edit 24 --repo bioinfo-tsukuba/GEMS-python \
+  --body-file docs/design/issue24/issue.md
+
+gh issue view 24 --repo bioinfo-tsukuba/GEMS-python \
+  --json number,title,body,comments,state,url
+```
+
+`markdown-input.json`は更新する本文、`mode: gfm`、
+`context: bioinfo-tsukuba/GEMS-python`を指定したGitHub Markdown APIの入力。
+
+- 固定コミットの公開PNGをダウンロードし、承認済みローカル画像とバイト単位で一致した。
+- GitHub Markdown APIのHTMLに、対応するaltを持つ比較画像が1つ出力された。
+- 掲載後のIssue本文を再取得し、画像・説明文を含む[issue.md](issue.md)と完全一致した。
+- タイトル・OPEN状態・コメントは掲載前と一致した。
+- 掲載後本文SHA-256：
+  `a055babdb31dec20a8294db9eba7ae7122537f2666053a2f608ad1b9bd7ffaf4`
+- 図のPNG・メタデータを照合し、文書リンクと差分の空白の検査が成功した。
+- 機能実装・生成スクリプトは変更していないため、実験処理のテストや図の再生成は繰り返していない。
 
 ## 残る作業
 

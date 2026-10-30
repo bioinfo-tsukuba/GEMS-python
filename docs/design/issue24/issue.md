@@ -43,6 +43,12 @@ Experimentの状態遷移と、管理対象からの削除が連動していな�
 
 子1と子2は、それぞれ独立したExperimentである。UUID、履歴、State、新規Taskを別々に持つ。装置は共有するため、スケジュールは他の活動中Experimentも含めてまとめて計算する。
 
+## 概念比較
+
+![Experimentの従来仕様・自己消去・試料分割の比較](https://raw.githubusercontent.com/bioinfo-tsukuba/GEMS-python/32a5374e277a2bc9d02b91164cc29b5f8241d91b/docs/design/issue24/figure/comparison.png)
+
+左から従来の仕様、終了時の自己消去、履歴を引き継ぐ試料分割。`H`は分割前の親履歴、`H1`・`H2`は分割後の各子の観測履歴を表す。自己消去・分割は追加する仕様の概念図である。
+
 ## 機能要件
 
 ### A. 終了したExperimentの自己消去
