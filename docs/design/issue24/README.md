@@ -7,6 +7,12 @@ Issue [#24](https://github.com/bioinfo-tsukuba/GEMS-python/issues/24)の要件�
 資料と再生成スクリプトは文書PR
 [#26](https://github.com/bioinfo-tsukuba/GEMS-python/pull/26)で管理する。
 
+通常のExperiment登録にも、登録を保持したまま開始を保留する仕組みを既定で適用する。
+機械未登録は該当Experimentだけを装置待ちにし、他の実験は継続する。
+`UNKNOWN`では警告と探索時間上限の倍増再試行を既定とし、再試行なしのSTOPも選べる。
+上限内で有効な計画が得られない場合や、制約矛盾・不正仕様がある場合は全体STOPとする。
+上限の具体値やSTOPからの再開方法は[issue.md](issue.md)の未確定事項に記載する。
+
 比較図は次の3つを左右に並べる。
 
 1. 従来：同じExperimentが状態遷移し、終了後の削除は手動。
