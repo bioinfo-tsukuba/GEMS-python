@@ -265,6 +265,10 @@ class Renderer:
             path = output / f"{name}.{suffix}"
             metadata = {"Software": "GEMS"} if suffix == "png" else {"Date": None, "Creator": "GEMS"}
             fig.savefig(path, dpi=140, metadata=metadata)
+            if suffix == "svg":
+                path.write_text("\n".join(line.rstrip() for line in
+                                          path.read_text(encoding="utf-8").splitlines()) + "\n",
+                                encoding="utf-8")
             paths.append(path)
         return paths
 
@@ -430,6 +434,7 @@ def render_retrospective(collection, output, *, font=None, time_unit="min"):
     files.append(data_path)
     manifest = dict(version=1, time_basis=data["time_basis"], complete=data["complete"],
                     matplotlib=matplotlib.__version__,
+                    renderer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                     source_sha256=hashlib.sha256(collection.to_json().encode()).hexdigest(),
                     font=(None if not font else hashlib.sha256(Path(font).read_bytes()).hexdigest()),
                     files={p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files})
