@@ -1,0 +1,33 @@
+{
+  "commit": "047e4a7406939f6ac3c8fbc3d52bc308f131b92f",
+  "branch": "fix/23-scheduler-capacity",
+  "dirty": false,
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "executable": "/tmp/gems-result-latency-venv/bin/python3",
+  "ortools": "9.15.6755",
+  "pandas": "3.1.0",
+  "polars": "1.44.2",
+  "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "cpu": "Intel(R) Core(TM) Ultra 7 265KF",
+  "logical_cpus": 20,
+  "memory": "MemTotal:       65654616 kB\nMemFree:        60340476 kB\nMemAvailable:   62544900 kB\nBuffers:           64948 kB\nCached:          3549064 kB\nSwapCached:            0 kB\nActive:          1185588 kB\nInactive:        3595268 kB\nActive(anon):     293736 kB\nInactive(anon):  1786740 kB\nActive(file):     891852 kB\nInactive(file):  1808528 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      16777216 kB\nSwapFree:       16777216 kB\nDirty:              1516 kB\nWriteback:             0 kB\nAnonPages:       1167732 kB\nMapped:           744116 kB\nShmem:            913780 kB\nKReclaimable:      64120 kB\nSlab:             169956 kB\nSReclaimable:      64120 kB\nSUnreclaim:       105836 kB\nKernelStack:       10456 kB\nPageTables:        26496 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49604524 kB\nCommitted_AS:    5671680 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       49668 kB\nVmallocChunk:          0 kB\nPercpu:            10272 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:    317440 kB\nFilePmdMapped:         0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       62464 kB\nDirectMap2M:     9179136 kB\nDirectMap1G:    66060288 kB\n",
+  "load_average": [
+    0.27880859375,
+    0.18994140625,
+    0.09130859375
+  ],
+  "started_at_utc": "2026-10-30T00:18:52.968523+00:00",
+  "dependencies": {
+    "ortools": "9.15.6755",
+    "pandas": "3.1.0",
+    "polars": "1.44.2",
+    "pyarrow": "26.0.0",
+    "simanneal": "0.5.0",
+    "matplotlib": "3.11.2"
+  },
+  "lock_sha256": "f83230caf91f70c0fa0c35434ce4c120262f8e48d907e24b4d802c335ba004b5",
+  "memory_measurement": "fresh worker ru_maxrss; includes imports; operation peak is cumulative",
+  "source_archive_commit": "bf457334a0bddc3a75ff6560726a80e3c42dbf80",
+  "repetitions": 3,
+  "boundary": "received DataFrame -> complete schedule JSON in memory"
+}

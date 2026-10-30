@@ -1,0 +1,11 @@
+ortools==9.15.6755
+pandas==3.1.0
+polars==1.44.2
+pyarrow==26.0.0
+simanneal==0.5.0
+matplotlib==3.11.2
+watchdog==4.0.2
+networkx==3.7
+scipy==1.18.1
+typing-extensions==4.16.0
+cmd2==2.7.0

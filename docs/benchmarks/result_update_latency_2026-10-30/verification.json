@@ -1,0 +1,18 @@
+{
+  "source_commit": "047e4a7406939f6ac3c8fbc3d52bc308f131b92f",
+  "trials": 30,
+  "valid_outputs": 27,
+  "unknown_responses": 3,
+  "solver_calls": 30,
+  "condition_count": 10,
+  "repetitions": 3,
+  "paired_inputs_events": "same restored input hash and event at both limits",
+  "source_files": "four measured files agree with recorded clean source commit",
+  "output_checks": "JSON hash/size, task/type compatibility, fixed fields, physical nonoverlap",
+  "time_checks": "one search, requested limit, phase sum, independent linear quantiles",
+  "focused_tests": "65 tests passed in 18.082 s (tests.txt)",
+  "regeneration": "trial_metrics.csv, statistics.json and README.md identical at a separate output path",
+  "figure_review": "PNG inspected; success/failure markers and units verified",
+  "environment_setup_failure": "python -m venv failed because ensurepip was unavailable; bootstrapped SHA-verified official PyPI pip wheel in /tmp and installed pinned primary dependencies",
+  "remaining_limits": "first result, group midpoint, already decoded DataFrame; no device/network/drawing/file IO/complex scientific analysis in timing"
+}
