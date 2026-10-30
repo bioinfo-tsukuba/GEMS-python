@@ -132,6 +132,8 @@ manifestがない旧保存は従来の2ファイル方式で読む。
 有限の培養と明示的な取り分け例は
 `tests/simulators/lifecycle_cell_culture.py`の`build` / `run`で再現できる。
 既存の予約検査・DataFrame・保存・仮想実行試験も回す。
+[分割後の規模評価](benchmarks/experiment_lifecycle_capacity/README.md)と
+[実装・検証記録](benchmarks/issue24_verification.md)に結果・再現方法を記載する。
 機能は単一プロセスの管理層を対象にする。
 実機分割、不可逆操作のexactly-once保証、強制中断、物理的復旧、
 複数プロセスからの同時書込みは対象外。

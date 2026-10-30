@@ -30,6 +30,8 @@ for missing machine types, and bounded retries when a plan remains unknown.
 Sample splitting with independent children and inherited provenance is available
 with `enable_split=True` (disabled by default). See the
 [lifecycle contract and examples](docs/experiment_lifecycle.md).
+The [capacity evaluation](docs/benchmarks/experiment_lifecycle_capacity/README.md)
+records paired workloads, timing limits, verification, and reproducible evidence.
 
 ## Prerequisites
 - Python 3.14.4 (the repository's `.python-version`)
