@@ -44,6 +44,13 @@ def verify(root):
         assert fingerprint(conditions(source)) == row["condition_hash"]
         assert dimensions(source) == row["dimensions"]
         target = Experiments.from_json((directory / "output.json").read_text())
+        assert fingerprint(source.machine_list) == fingerprint(target.machine_list), \
+            "Planner changed registered machines"
+        fields = ("reference_time", "solver_time_limit_seconds", "unknown_policy",
+                  "max_unknown_retries", "enable_split", "lifecycle_version")
+        assert fingerprint(tuple(getattr(source, name) for name in fields)) == \
+            fingerprint(tuple(getattr(target, name) for name in fields)), \
+            "Planner changed clock or policy settings"
         assert fingerprint(task_specifications(source)) == fingerprint(task_specifications(target)), \
             "Planner changed task specification"
         assert {e.experiment_uuid for e in source.experiments} == \
@@ -55,8 +62,10 @@ def verify(root):
             fields = ("experiment_name", "current_state_name", "current_state_index",
                       "dataframe_backend", "parent_uuid", "initial_conditions",
                       "initial_condition_origins", "task_group_sequence")
-            assert fingerprint(tuple(getattr(before, name) for name in fields)) == \
-                fingerprint(tuple(getattr(after, name) for name in fields)), \
+            assert fingerprint((tuple(getattr(before, name) for name in fields),
+                                before.current_task_group.task_group_uuid)) == \
+                fingerprint((tuple(getattr(after, name) for name in fields),
+                             after.current_task_group.task_group_uuid)), \
                 "Planner changed scientific experiment settings"
             assert fingerprint((before.shared_variable_history, before._inherited_history)) == \
                 fingerprint((after.shared_variable_history, after._inherited_history)), \

@@ -7,6 +7,7 @@ import unittest
 from gems_python.common.scheduling import validate_groups
 from gems_python.common.persistence import save_snapshot
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+from gems_python.multi_machine_problem_interval_task.task_info import Machine
 from gems_python.multi_machine_problem_interval_task.lifecycle import fingerprint
 from scripts.measure_experiment_lifecycle import prepare, conditions, worker
 from scripts.verify_experiment_lifecycle_capacity import verify
@@ -51,6 +52,12 @@ class TestLifecycleCapacity(unittest.TestCase):
             self.assertEqual(report["valid_outputs"], 2)
             target = root / rows[0]["artifact_directory"]
             original = (target / "output.json").read_text()
+            corrupted = Experiments.from_json(original)
+            corrupted.machine_list.machines.append(Machine(0, "forged-device"))
+            (target / "output.json").write_text(corrupted.to_json())
+            save_snapshot(corrupted, target / "saved")
+            with self.assertRaisesRegex(AssertionError, "changed registered machines"):
+                verify(root)
             corrupted = Experiments.from_json(original)
             corrupted.experiments[0].initial_conditions["container_id"] = "unexpected"
             (target / "output.json").write_text(corrupted.to_json())
