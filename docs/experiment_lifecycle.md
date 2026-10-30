@@ -1,5 +1,7 @@
 # Experimentの終了・分割・保留
 
+[README](../README.md#experiment-lifecycle) · [終了後の可視化](experiment_retrospective.md) · [保存・再開](persistence.md)。
+
 Issue #24。対象は`multi_machine_problem_interval_task`の仮想実験。
 既存の`transition_function(history) -> str`は維持する。
 State名や空のTask群だけで終了を推測しない。
@@ -128,12 +130,12 @@ manifestがない旧保存は従来の2ファイル方式で読む。
 ## 検証と対象外
 
 受入試験は`test_experiment_lifecycle`、`test_experiment_scheduling_policy`、
-`test_lifecycle_persistence`、`test_lifecycle_capacity`。
+`test_lifecycle_persistence`、`test_retrospective`。
 有限の培養と明示的な取り分け例は
 `tests/simulators/lifecycle_cell_culture.py`の`build` / `run`で再現できる。
 既存の予約検査・DataFrame・保存・仮想実行試験も回す。
-[分割後の規模評価](benchmarks/experiment_lifecycle_capacity/README.md)と
-[実装・検証記録](benchmarks/issue24_verification.md)に結果・再現方法を記載する。
+[分割後の規模評価](https://github.com/bioinfo-tsukuba/GEMS-python/blob/8ca9080bf62a4e6c2b70fe73a0f830c5f627b183/docs/benchmarks/experiment_lifecycle_capacity_2026-10-30/README.md)と
+[固定した実装・検証記録](https://github.com/bioinfo-tsukuba/GEMS-python/blob/cd78405f3c66061c3b71b72623a83540aaca83fb/docs/benchmarks/issue24_verification.md)に過去の結果・再現方法を記載する。
 機能は単一プロセスの管理層を対象にする。
 実機分割、不可逆操作のexactly-once保証、強制中断、物理的復旧、
 複数プロセスからの同時書込みは対象外。
@@ -142,4 +144,4 @@ manifestがない旧保存は従来の2ファイル方式で読む。
 
 `lab.render_retrospective("review", font="/path/to/font.ttf", time_unit="min")`で、時間軸上の親子関係、家系別の親子・時間図、選択が連動する親子図・装置図を出力する。全件終了後に呼び、出力先は新しいディレクトリにする。
 
-登録名・登録論理時刻と、完了したTaskの最終予約・装置を`retrospective_trace`に保存し、TaskGroup削除後も再読込して描ける。棒は予約であり実機の実測区間ではない。旧保存の不足した時刻や作業は復元せず、警告付きの部分的な表示にする。詳細と実行例は[終了後の可視化](design/experiment_retrospective/README.md)を参照。
+登録名・登録論理時刻と、完了したTaskの最終予約・装置を`retrospective_trace`に保存し、TaskGroup削除後も再読込して描ける。棒は予約であり実機の実測区間ではない。旧保存の不足した時刻や作業は復元せず、警告付きの部分的な表示にする。詳細と実行例は[終了後の可視化](experiment_retrospective.md)を参照。

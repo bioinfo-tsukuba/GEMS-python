@@ -30,8 +30,29 @@ for missing machine types, and bounded retries when a plan remains unknown.
 Sample splitting with independent children and inherited provenance is available
 with `enable_split=True` (disabled by default). See the
 [lifecycle contract and examples](docs/experiment_lifecycle.md).
-The [capacity evaluation](docs/benchmarks/experiment_lifecycle_capacity/README.md)
-records paired workloads, timing limits, verification, and reproducible evidence.
+
+### Review completed experiments
+
+After all experiments finish, generate lineage timelines, family pages, and an
+interactive view linking experiment selection to machine reservations:
+
+```python
+manager.render_retrospective("review", time_unit="min")
+```
+
+Open `review/review.html` in a browser. It works as a single file.
+See the [post-run visualization guide](docs/experiment_retrospective.md) for
+saved runs, selection controls, output files, and Japanese fonts.
+
+To try the [small runnable example](examples/experiment_retrospective.py):
+
+```bash
+MPLBACKEND=Agg poetry run python -m scripts.run_experiment_retrospective_example \
+  --output /tmp/gems-review-example
+```
+
+Open `/tmp/gems-review-example/figures/review.html`. The example generates its
+own data; use a new output directory each time.
 
 ## Prerequisites
 - Python 3.14.4 (the repository's `.python-version`)

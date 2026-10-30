@@ -6,7 +6,7 @@ from pathlib import Path
 
 from gems_python.common.persistence import load_snapshot, save_snapshot
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
-from tests.simulators.retrospective_review import run
+from examples.experiment_retrospective import run
 
 
 def main():

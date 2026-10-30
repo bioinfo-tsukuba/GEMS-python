@@ -1,4 +1,8 @@
-"""Finite two-root, two-generation run for exercising the real review feature."""
+"""Small virtual protocol: two roots, two generations, two shared machines.
+
+Run through ``python -m scripts.run_experiment_retrospective_example`` so the
+State class retains this importable module name in saved snapshots.
+"""
 from pathlib import Path
 
 from gems_python.common import dataframes as frames

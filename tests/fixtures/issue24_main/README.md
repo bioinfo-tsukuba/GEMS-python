@@ -6,7 +6,7 @@ They use the importable `tests.simulators.cell_culture` protocol and Polars.
 The parent has completed passage and is waiting for its first observation.
 
 Recreate from a separate archive of that commit, with the dependencies recorded
-in `docs/benchmarks/issue24_verification.md`:
+in the [archived verification record](https://github.com/bioinfo-tsukuba/GEMS-python/blob/cd78405f3c66061c3b71b72623a83540aaca83fb/docs/benchmarks/issue24_verification.md):
 
 ```python
 from pathlib import Path
@@ -20,3 +20,7 @@ save_snapshot(lab, lab.parent_dir_path)
 
 The persisted output directory is deliberately retained. Reading these fixtures
 must not create that directory, invoke constructors, or start an experiment.
+
+These approximately 7 KB are regression-test inputs for old-version
+compatibility. Generated test outputs and the rest of the verification evidence
+are archived rather than added to the main tree.

@@ -11,7 +11,7 @@ from gems_python.common.serialization import equivalent
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
 from gems_python.visualization.retrospective import Renderer, review_data
 from tests.lifecycle_fixtures import advance, manager, observe
-from tests.simulators.retrospective_review import run
+from examples.experiment_retrospective import run
 
 
 class TestRetrospective(unittest.TestCase):
