@@ -99,3 +99,18 @@ class TestCapacityRecovery(unittest.TestCase):
         self.assertEqual(json.loads(summary["save_seconds_by_storage_phase"]),
                          {"initial_tmpfs": {"min": .01, "median": .01, "max": .01},
                           "resume_workspace": {"min": 10, "median": 10, "max": 10}})
+
+    def test_worker_failure_before_dimensions_does_not_hide_valid_repeat(self):
+        valid = dict(series="scan", pattern="contention", budget=1.0, mode="lifecycle",
+                     parents=1, children=2, group_interval=2, generations=1,
+                     outcome="VALID_ON_TIME", dimensions={"active_experiments": 2},
+                     planning_seconds=.1)
+        failed = {k: v for k, v in valid.items()
+                  if k not in ("dimensions", "planning_seconds")}
+        failed["outcome"] = "WORKER_ERROR"
+        summary = summarize([failed, valid])[0]
+        self.assertEqual(summary["repetitions"], 2)
+        self.assertEqual(summary["on_time"], 1)
+        self.assertEqual(summary["active_experiments"], 2)
+        self.assertEqual(json.loads(summary["outcomes"]),
+                         {"WORKER_ERROR": 1, "VALID_ON_TIME": 1})

@@ -50,7 +50,22 @@ class TestLifecycleCapacity(unittest.TestCase):
             self.assertEqual(report["verified_pairs"], 1)
             self.assertEqual(report["valid_outputs"], 2)
             target = root / rows[0]["artifact_directory"]
-            corrupted = Experiments.from_json((target / "output.json").read_text())
+            original = (target / "output.json").read_text()
+            corrupted = Experiments.from_json(original)
+            corrupted.experiments[0].initial_conditions["container_id"] = "unexpected"
+            (target / "output.json").write_text(corrupted.to_json())
+            save_snapshot(corrupted, target / "saved")
+            with self.assertRaisesRegex(AssertionError, "scientific experiment settings"):
+                verify(root)
+            corrupted = Experiments.from_json(original)
+            experiment = corrupted.experiments[0]
+            experiment.shared_variable_history = experiment.history_for_state()
+            experiment._inherited_history = None
+            (target / "output.json").write_text(corrupted.to_json())
+            save_snapshot(corrupted, target / "saved")
+            with self.assertRaisesRegex(AssertionError, "provenance or own observations"):
+                verify(root)
+            corrupted = Experiments.from_json(original)
             corrupted.task_groups[-1].tasks[-1].processing_time += 1
             (target / "output.json").write_text(corrupted.to_json())
             save_snapshot(corrupted, target / "saved")

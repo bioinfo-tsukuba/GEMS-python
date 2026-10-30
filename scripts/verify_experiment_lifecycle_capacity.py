@@ -52,6 +52,15 @@ def verify(root):
         assert fingerprint(source.split_requests) == fingerprint(target.split_requests)
         for before, after in zip(source.experiments, target.experiments):
             assert before.experiment_uuid == after.experiment_uuid
+            fields = ("experiment_name", "current_state_name", "current_state_index",
+                      "dataframe_backend", "parent_uuid", "initial_conditions",
+                      "initial_condition_origins", "task_group_sequence")
+            assert fingerprint(tuple(getattr(before, name) for name in fields)) == \
+                fingerprint(tuple(getattr(after, name) for name in fields)), \
+                "Planner changed scientific experiment settings"
+            assert fingerprint((before.shared_variable_history, before._inherited_history)) == \
+                fingerprint((after.shared_variable_history, after._inherited_history)), \
+                "Planner changed provenance or own observations"
             assert fingerprint(before.history_for_state()) == fingerprint(after.history_for_state())
             assert fingerprint(before.states) == fingerprint(after.states)
         assert equivalent(target, load_snapshot(directory / "saved", Experiments))
@@ -86,6 +95,9 @@ def verify(root):
             assert (directory / "error.json").exists()
             assert target.manager_status == "STOPPED"
             assert target.stop_diagnostic["kind"] == row["outcome"]
+            if row["outcome"] in ("UNKNOWN", "INFEASIBLE", "MODEL_INVALID"):
+                assert row["reports"][0]["status"] == row["outcome"]
+                assert not row["reports"][0]["valid"]
             counts["preserved_planning_failures"] += 1
         key = tuple(row[k] for k in ("series", "pattern", "budget", "parents", "children",
                                     "group_interval", "generations", "repetition"))

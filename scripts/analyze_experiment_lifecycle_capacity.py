@@ -54,8 +54,9 @@ def summarize(rows):
                 for name, value in (("min", min(values)), ("median", statistics.median(values)),
                                     ("max", max(values))):
                     entry[f"{metric}_{name}"] = value
-        dimensions = group[0].get("dimensions", {})
-        assert all(r.get("dimensions", {}) == dimensions for r in group)
+        known_dimensions = [r["dimensions"] for r in group if "dimensions" in r]
+        dimensions = known_dimensions[0] if known_dimensions else {}
+        assert all(value == dimensions for value in known_dimensions)
         entry.update(dimensions)
         output.append(entry)
     return output
@@ -67,6 +68,88 @@ def write_csv(path, rows):
         writer = csv.DictWriter(stream, fields)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def write_report(source, output, stats, verified, metadata, profiles):
+    boundaries = json.loads((source / "boundaries.json").read_text())
+    lines = [
+        "# Issue #24: 分割後の計画全体時間",
+        "",
+        f"計測対象commit `{metadata['commit']}`。{verified['trial_count']}試行を記録し、"
+        f"{verified.get('verified_pairs', 0)}組の物理条件を照合した。",
+        f"全条件の計測完了: `{verified['fully_measured']}`。期限等によるスキップ: {verified['skipped']}。",
+        f"判定内訳: `{json.dumps(verified['outcomes'], sort_keys=True)}`。",
+        "",
+        "計画時間は管理層の入口から検査済み反映まで。CP-SAT探索上限を1秒/60秒に設定し、"
+        "全体時間もそれぞれ1秒/60秒以内である場合だけ時間内成功とする。再試行は無効。",
+        "有効な時間超過は解なし・実行不能と区別する。最適化が探索上限まで続いた場合、"
+        "有効な解を返しても構築・検査等を含む全体時間は上限を超え得る。",
+        "",
+        "## 基本条件の反復確認",
+        "",
+        "1親→2子・1世代。以下の規模は3反復が全て時間内だった最大の確認点であり、"
+        "処理能力の限界や施設での保証値ではない。上限付近の揺れも判定に含む。",
+        "",
+        "| 負荷 | 全体時間条件 | 確認済み親数 | 活動中の子数 | 次の反復確認点（親数、時間内/回数） |",
+        "| --- | ---: | ---: | ---: | --- |",
+    ]
+    for boundary in boundaries:
+        parents = boundary["maximum_confirmed_on_time_parents"]
+        later = sorted((int(n), values) for n, values in boundary["tested"].items()
+                       if len(values) >= 3 and (parents is None or int(n) > parents))
+        following = (f"{later[0][0]}, {later[0][1].count('VALID_ON_TIME')}/{len(later[0][1])}"
+                     if later else "測定上限／未確認")
+        lines.append(f"| {boundary['pattern']} | {boundary['budget']:g}秒 | "
+                     f"{parents if parents is not None else '未確認'} | "
+                     f"{parents*2 if parents is not None else '—'} | {following} |")
+    lines += [
+        "",
+        "## 8親・2子・1世代の追加費用",
+        "",
+        "秒数は中央値。反復数・最小/最大、遅延・ペナルティ・flat比較はCSVに記録する。",
+        "初期化は別プロセスの補足計測で、元試行の全工程時間には加算しない。"
+        f"入力ハッシュが一致した補足計測は{profiles}件。",
+        "",
+        "| 負荷 | 条件 | 計画全体（時間内/回数） | 分割要求・確定 | 補足初期化 | 保存（保存先別） | ピークRSS MiB |",
+        "| --- | ---: | ---: | ---: | ---: | --- | ---: |",
+    ]
+    for row in stats:
+        if not (row["series"] == "scan_and_boundary" and row["mode"] == "lifecycle"
+                and row["parents"] == 8):
+            continue
+        def median(name, divisor=1):
+            value = row.get(f"{name}_median")
+            return "—" if value is None else f"{value/divisor:.4g}"
+        save = median("save_seconds")
+        if "save_seconds_by_storage_phase" in row:
+            save = "; ".join(f"{phase}: {value['median']:.4g}" for phase, value in
+                            json.loads(row["save_seconds_by_storage_phase"]).items())
+        else:
+            save = f"{row['storage_phases']}: {save}"
+        planning = row.get("planning_seconds_median")
+        planning_text = "—" if planning is None else f"{planning:.6g}"
+        lines.append(f"| {row['pattern']} | {row['budget']:g}秒 | "
+                     f"{planning_text} ({row['on_time']}/{row['repetitions']}) | "
+                     f"{median('preparation_seconds')} | {median('supplemental_initialization_seconds')} | "
+                     f"{save} | {median('peak_rss_kib', 1024)} |")
+    lines += [
+        "",
+        "## 資料と範囲",
+        "",
+        "- [各試行CSV](trials.csv)、[条件別CSV](conditions.csv)、[集計JSON](summary.json)。",
+        "- [計画時間の図](planning.png)。線は中央値、反復点のバーは最小/最大。"
+        "塗り丸は全反復時間内、白丸は有効な時間超過／時間判定混在、×は失敗を含む。",
+        "- 基本走査は親1/2/4/8/16/32/64/128。8親で子4/8、群間隔1/4、2世代を別条件として比較。",
+        "- 群間隔は分割前の合成した完了観測量の比較で、実機での分割頻度ではない。",
+        "- 初期tmpfsと再開後のワークスペースの保存・全工程時間は混ぜて集計しない。",
+        "- RSSはfixture生成・flat化を含むプロセスピークで、履歴だけの常駐量ではない。",
+        "- 決定的な入力・seed 0・solver 1 worker・Pandasでの記述統計。"
+        "成功確率や任意の実験手順・設備・継続更新を保証しない。",
+        "- 全工程タイマーは当該試行の初期化、入力/出力化、独立検査、保存も含む。"
+        "前処理＋計画＋保存の合計とは異なる。",
+        "",
+    ]
+    (output / "README.md").write_text("\n".join(lines))
 
 
 def analyze(source, output):
@@ -97,7 +180,7 @@ def analyze(source, output):
     (output / "summary.json").write_text(json.dumps(dict(
         source_commit=metadata["commit"], verification=verified,
         timing=metadata["timing"], conditions=stats, initialization_profiles=profiles,
-        initialization_note="Supplemental cold-process measurements; excluded from original pipeline timers",
+        initialization_note="Supplemental cold-process measurements; not added to original pipeline timers",
         storage_note="I/O and pipeline metrics from different storage phases are not pooled"), indent=2))
     colors = dict(zip(sorted({r["pattern"] for r in rows}), plt.get_cmap("tab10").colors))
     budgets = sorted({r["budget"] for r in rows})
@@ -142,6 +225,7 @@ def analyze(source, output):
     for suffix in ("png", "svg"):
         fig.savefig(output / f"planning.{suffix}", dpi=160)
     plt.close(fig)
+    write_report(source, output, stats, verified, metadata, profiles)
     print(json.dumps(dict(trials=len(rows), conditions=len(stats), source_commit=metadata["commit"])))
     return stats
 
