@@ -101,6 +101,11 @@ during operational updates. Figures and raw records are retained on a dedicated
 archive branch and linked from Issue #23 / PR #25. A static plan's success does
 not guarantee continued updates at the same size.
 
+The received-result response measurement starts with an already decoded result
+DataFrame and ends with the updated schedule serialized to JSON. It uses one
+search and excludes the simulation's planning before the result arrives;
+see the same evaluation document for timing boundaries and archived results.
+
 Cyclical rest is a **group-start penalty**: if the start falls in an inclusive
 rest range of its cycle, the configured maximum penalty applies. It does not
 forbid a task from running through a rest range. Scheduling times and cycle
