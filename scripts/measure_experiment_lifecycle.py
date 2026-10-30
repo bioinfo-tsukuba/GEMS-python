@@ -280,9 +280,12 @@ def recover_measurement(output, config):
         raise ValueError("Duplicated trial in preserved ledger")
     for row in rows:
         artifact = output / row["artifact_directory"]
-        recorded = json.loads((artifact / "result.json").read_text())
-        if any(row[k] != v for k, v in recorded.items()):
-            raise ValueError(f"Preserved trial does not match ledger: {artifact.name}")
+        if (artifact / "result.json").exists():
+            recorded = json.loads((artifact / "result.json").read_text())
+            if any(row[k] != v for k, v in recorded.items()):
+                raise ValueError(f"Preserved trial does not match ledger: {artifact.name}")
+        elif row["outcome"] != "WORKER_TIMEOUT_OR_ERROR":
+            raise ValueError(f"Preserved trial result missing: {artifact.name}")
         row.setdefault("storage_phase", "initial_tmpfs")
     metadata = json.loads((output / "metadata.json").read_text())
     budget = output / "study_budget.json"
@@ -296,6 +299,9 @@ def recover_measurement(output, config):
                     storage_phase="resume_workspace",
                     storage_note="Initial 54 trials used /tmp tmpfs; resumed trials use workspace filesystem")
     (output / f"resume-{index:02d}.json").write_text(json.dumps(recovery, indent=2))
+    if (output / "completion.json").exists():
+        (output / f"completion-before-resume-{index:02d}.json").write_bytes(
+            (output / "completion.json").read_bytes())
     ledger.write_text("".join(json.dumps(row) + "\n" for row in rows))
     return rows, max(0, deadline.timestamp() - time.time())
 
@@ -427,6 +433,26 @@ def measure(config, output, resume=False):
                             children=2, group_interval=2, generations=1)
                 for repetition in range(1, config["boundary_repetitions"]):
                     run_pair(base, repetition)
+            # A scan success at the wall-time limit can be an unstable candidate.
+            # Confirm lower observed successes if that candidate does not repeat.
+            candidates = sorted({r["parents"] for r in valid}, reverse=True)
+            for parents in candidates:
+                repeated = [r for r in rows if r["series"] in ("scan", "boundary")
+                            and r["mode"] == "lifecycle" and r["pattern"] == pattern
+                            and r["budget"] == budget and r["parents"] == parents]
+                if (len(repeated) >= config["boundary_repetitions"] and
+                        all(r["outcome"] == "VALID_ON_TIME" for r in repeated)):
+                    break
+                base = dict(series="boundary", pattern=pattern, budget=budget, parents=parents,
+                            children=2, group_interval=2, generations=1)
+                for repetition in range(1, config["boundary_repetitions"]):
+                    run_pair(base, repetition)
+                repeated = [r for r in rows if r["series"] in ("scan", "boundary")
+                            and r["mode"] == "lifecycle" and r["pattern"] == pattern
+                            and r["budget"] == budget and r["parents"] == parents]
+                if (len(repeated) >= config["boundary_repetitions"] and
+                        all(r["outcome"] == "VALID_ON_TIME" for r in repeated)):
+                    break
     (output / "completion.json").write_text(json.dumps(dict(
         fully_measured=not skipped, skipped=skipped, trial_count=len(rows),
         finished=datetime.now(timezone.utc).isoformat()), indent=2))

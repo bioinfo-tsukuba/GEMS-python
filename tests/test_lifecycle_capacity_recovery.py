@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import contextlib
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -10,6 +12,34 @@ from scripts.measure_experiment_lifecycle import DEFAULT_CONFIG, measure, recove
 
 
 class TestCapacityRecovery(unittest.TestCase):
+    def test_unstable_largest_scan_success_checks_lower_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "study"
+            config = json.loads(DEFAULT_CONFIG.read_text())
+            config.update(patterns=["contention"], parent_counts=[1, 2, 4],
+                          planning_budgets_seconds=[1.0], total_runtime_seconds=60,
+                          variation_child_counts=[], variation_group_intervals=[])
+            def recorded_worker(command, **kwargs):
+                path = Path(command[-1])
+                job = json.loads(path.read_text())
+                unstable = job["series"] == "boundary" and job["parents"] == 4
+                path.with_name("result.json").write_text(json.dumps(dict(
+                    job, outcome="VALID_LATE" if unstable else "VALID_ON_TIME")))
+            with patch("scripts.measure_experiment_lifecycle.subprocess.run",
+                       side_effect=recorded_worker), \
+                    patch("scripts.measure_experiment_lifecycle.subprocess.check_output",
+                          return_value="test-fixture\n"), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                rows = measure(config, root)
+            repeats = {parents: [r["outcome"] for r in rows
+                                 if r["parents"] == parents and r["mode"] == "lifecycle"
+                                 and r["series"] in ("scan", "boundary")]
+                       for parents in (1, 2, 4)}
+            self.assertEqual(repeats[4], ["VALID_ON_TIME", "VALID_LATE", "VALID_LATE"])
+            self.assertEqual(repeats[2], ["VALID_ON_TIME"] * 3)
+            self.assertEqual(len(repeats[1]), 1)
+            self.assertTrue(json.loads((root / "completion.json").read_text())["fully_measured"])
+
     def test_expired_resume_keeps_completed_trials_without_running_solver(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

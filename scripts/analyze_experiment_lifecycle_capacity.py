@@ -111,7 +111,19 @@ def analyze(source, output):
                                 key=lambda r: r["active_experiments"])
                 ax.plot([r["active_experiments"] for r in points],
                         [r["planning_seconds_median"] for r in points],
-                        color=color, linestyle=style, marker="o", markersize=3)
+                        color=color, linestyle=style, linewidth=1)
+                for point in points:
+                    success = point["on_time"] == point["repetitions"]
+                    failed = point["on_time"] + point["late"] < point["repetitions"]
+                    ax.plot(point["active_experiments"], point["planning_seconds_median"],
+                            color=color, marker="x" if failed else "o", markersize=4,
+                            markerfacecolor=color if success else "none")
+                    if point["repetitions"] > 1:
+                        median = point["planning_seconds_median"]
+                        ax.errorbar(point["active_experiments"], median,
+                                    yerr=[[median-point["planning_seconds_min"]],
+                                          [point["planning_seconds_max"]-median]],
+                                    color=color, capsize=2, linewidth=.8)
         ax.axhline(budget, color="black", linestyle=":", linewidth=1)
         ax.set(xscale="log", yscale="log", xlabel="Active child experiments",
                ylabel="Total planning seconds (median)", title=f"{budget:g}s total-time condition")
@@ -119,8 +131,14 @@ def analyze(source, output):
     handles = [Line2D([0], [0], color=color, label=pattern) for pattern, color in colors.items()]
     handles += [Line2D([0], [0], color="black", linestyle=style, label=mode)
                 for mode, style in (("lifecycle", "-"), ("flat", "--"))]
-    fig.legend(handles=handles, loc="upper center", ncol=4)
-    fig.tight_layout(rect=(0, 0, 1, .87))
+    handles += [Line2D([0], [0], color="black", linestyle="none", marker=marker,
+                       markerfacecolor=face, label=label)
+                for marker, face, label in (
+                    ("o", "black", "all on time"),
+                    ("o", "none", "valid, late / mixed timing"),
+                    ("x", "none", "failure / mixed outcome"))]
+    fig.legend(handles=handles, loc="upper center", ncol=4, fontsize=9)
+    fig.tight_layout(rect=(0, 0, 1, .84))
     for suffix in ("png", "svg"):
         fig.savefig(output / f"planning.{suffix}", dpi=160)
     plt.close(fig)
