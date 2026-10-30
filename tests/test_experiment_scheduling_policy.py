@@ -96,6 +96,7 @@ class TestPlanningPolicy(unittest.TestCase):
             self.lab.execute_scheduling()
         self.assertEqual(solver.call_count, 1)
         self.assertEqual(self.lab.manager_status, "STOPPED")
+        self.assertIn("not identified", self.lab.stop_diagnostic["reason"])
 
     def test_stopped_accepts_in_progress_result_without_transition_until_resume(self):
         self.lab.execute_scheduling()

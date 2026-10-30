@@ -21,6 +21,8 @@ def lifecycle_action(self, history, context):
 
 終了では未完了の必要Taskがないことを確認し、Experimentを実行管理から削除する。
 `lab.ended_experiments[uuid]`には履歴・終了理由・論理時刻・要求ID・初期条件と由来を残す。
+`EndRecord.settings`にはState群の設定・最終進捗、履歴バックエンド、
+管理層の探索・再試行・分割設定をコピーとして残す。
 物理試料の廃棄や履歴の消去は行わない。`EndRecord.history`はコピーを返す。
 全実験終了は正常な`no_tasks`となる。
 
@@ -107,6 +109,8 @@ solverが矛盾箇所を特定できない場合はINFEASIBLE判定と入力を�
 書込み途中の世代は選ばず、既存の確定世代を維持する。
 両形式が使えなければ理由を表示し、世代を混ぜて復元しない。
 片方だけ有効なら既存の`source="auto"`と同じく警告してその形式を読む。
+manifest確定後に互換用出力の書込みだけが失敗した場合も、確定世代は読込み可能。
+保存例外だけを根拠に旧世代が選ばれたとは判断せず、manifestと読込み結果を確認する。
 
 ルートの`experiments.json`／`experiments.pkl`も互換用出力として残す。
 manifestがある場合、これらは読込みの正本ではない。
@@ -124,7 +128,10 @@ manifestがない旧保存は従来の2ファイル方式で読む。
 ## 検証と対象外
 
 受入試験は`test_experiment_lifecycle`、`test_experiment_scheduling_policy`、
-`test_lifecycle_persistence`。既存の予約検査・DataFrame・保存・仮想実行試験も回す。
+`test_lifecycle_persistence`、`test_lifecycle_capacity`。
+有限の培養と明示的な取り分け例は
+`tests/simulators/lifecycle_cell_culture.py`の`build` / `run`で再現できる。
+既存の予約検査・DataFrame・保存・仮想実行試験も回す。
 機能は単一プロセスの管理層を対象にする。
 実機分割、不可逆操作のexactly-once保証、強制中断、物理的復旧、
 複数プロセスからの同時書込みは対象外。

@@ -46,8 +46,8 @@ def validate_inputs(groups, reference_time, machines=None):
         if group.is_completed() and any(not task.completed for task in group.tasks):
             raise ValueError("Completed group contains unfinished tasks; call status_update()")
         for task in group.tasks:
-            _integer(task.processing_time, "processing_time", nonnegative=True)
-            _integer(task.interval, "interval", nonnegative=True)
+            _integer(task.processing_time, f"Task {task.task_id} processing_time", nonnegative=True)
+            _integer(task.interval, f"Task {task.task_id} interval", nonnegative=True)
             if machines is not None and not task.completed and not group.is_completed():
                 if not any(m.machine_type == task.optimal_machine_type
                            for m in machine_by_id.values()):

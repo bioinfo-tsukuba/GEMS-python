@@ -27,6 +27,11 @@ class TestExperimentLifecycle(unittest.TestCase):
         ending = lab.ended_experiments["parent"]
         self.assertEqual(len(ending.history), 2)
         self.assertEqual(ending.reason, "protocol complete")
+        self.assertEqual(ending.settings["protocol_states"][0].limit, 2)
+        self.assertEqual(ending.settings["max_unknown_retries"], 3)
+        settings_copy = ending.settings
+        settings_copy["protocol_states"][0].limit = 99
+        self.assertEqual(ending.settings["protocol_states"][0].limit, 2)
         self.assertEqual(lab.simulate_one()["status"], "no_tasks")
         self.assertIs(lab.request_finish("parent", ending.request_id, ending.reason), ending)
         with self.assertRaises(ValueError):
@@ -245,3 +250,4 @@ class TestExperimentLifecycle(unittest.TestCase):
                                           (own["time"][-1] - own["time"][-2]) / 60)
                 self.assertAlmostEqual(own["confluence"][-1], expected)
                 self.assertEqual(record.initial_conditions["volume"], 5.0)
+                self.assertEqual(record.settings["protocol_states"][0].generation, 1)

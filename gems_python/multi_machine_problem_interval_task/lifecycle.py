@@ -93,11 +93,16 @@ class EndRecord:
     initial_conditions: dict
     initial_condition_origins: dict
     parent_uuid: str | None
+    _settings: dict = field(default_factory=dict)
     feature_version: int = FEATURE_VERSION
 
     @property
     def history(self):
         return frames.copy_frame(self._history)
+
+    @property
+    def settings(self):
+        return copy.deepcopy(self._settings)
 
 
 @dataclass
@@ -270,7 +275,10 @@ class LifecycleManager:
                 progress.reports.append(attempt_record(report))
                 if err.status != "UNKNOWN":
                     progress.complete = True
-                    raise self._stop(err.status, err, solver=err.diagnostics) from err
+                    reason = str(err)
+                    if err.status == "INFEASIBLE":
+                        reason += "; conflicting constraints were not identified by the solver; inspect diagnostic input"
+                    raise self._stop(err.status, reason, solver=err.diagnostics) from err
                 LOGGER.warning("UNKNOWN: attempt %s, search limit %ss", attempt, effective_limit)
                 for group in eligible:
                     e = self._experiment(group.experiment_uuid, optional=True)
@@ -333,7 +341,13 @@ class LifecycleManager:
                          experiment.history_for_state() if history is None else history,
                          copy.deepcopy(experiment.initial_conditions),
                          copy.deepcopy(experiment.initial_condition_origins),
-                         experiment.parent_uuid)
+                         experiment.parent_uuid,
+                         {"protocol_states": copy.deepcopy(experiment.states),
+                          "dataframe_backend": experiment.dataframe_backend,
+                          "solver_time_limit_seconds": self.solver_time_limit_seconds,
+                          "unknown_policy": self.unknown_policy,
+                          "max_unknown_retries": self.max_unknown_retries,
+                          "enable_split": self.enable_split})
 
     def request_finish(self, experiment_uuid, request_id, reason):
         if not isinstance(request_id, str) or not request_id or not isinstance(reason, str) or not reason:
