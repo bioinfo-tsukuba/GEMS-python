@@ -1,0 +1,15 @@
+{
+  "valid_outputs": 338,
+  "verified_inputs": 344,
+  "verified_snapshots": 344,
+  "preserved_planning_failures": 6,
+  "verified_pairs": 172,
+  "outcomes": {
+    "VALID_ON_TIME": 88,
+    "VALID_LATE": 250,
+    "UNKNOWN": 6
+  },
+  "trial_count": 344,
+  "fully_measured": true,
+  "skipped": 0
+}

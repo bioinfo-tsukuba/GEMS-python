@@ -1,0 +1,8 @@
+{
+  "raw_files_checked": 4209,
+  "all_hashes_matched": true,
+  "duplicate_members": false,
+  "raw_archive_bytes": 30484554,
+  "raw_archive_sha256": "c4ffdca9f9b1eb4a6578b569b7e40bf07cece89c649aeb07db5902a5faab2275",
+  "verification": "Streamed every regular archive member and compared its SHA-256 with raw-manifest.json"
+}

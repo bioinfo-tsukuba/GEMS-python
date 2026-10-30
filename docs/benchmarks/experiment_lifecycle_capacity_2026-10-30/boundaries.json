@@ -1,0 +1,354 @@
+[
+  {
+    "pattern": "contention",
+    "budget": 1.0,
+    "maximum_confirmed_on_time_parents": 2,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "8": [
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  },
+  {
+    "pattern": "contention",
+    "budget": 60.0,
+    "maximum_confirmed_on_time_parents": 2,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "8": [
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  },
+  {
+    "pattern": "heterogeneous",
+    "budget": 1.0,
+    "maximum_confirmed_on_time_parents": 2,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "8": [
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  },
+  {
+    "pattern": "heterogeneous",
+    "budget": 60.0,
+    "maximum_confirmed_on_time_parents": 4,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "8": [
+        "VALID_ON_TIME",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  },
+  {
+    "pattern": "many_candidates",
+    "budget": 1.0,
+    "maximum_confirmed_on_time_parents": 4,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "8": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "UNKNOWN"
+      ]
+    }
+  },
+  {
+    "pattern": "many_candidates",
+    "budget": 60.0,
+    "maximum_confirmed_on_time_parents": 4,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "8": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  },
+  {
+    "pattern": "mixed_penalties",
+    "budget": 1.0,
+    "maximum_confirmed_on_time_parents": 2,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "8": [
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "UNKNOWN"
+      ],
+      "128": [
+        "UNKNOWN"
+      ]
+    }
+  },
+  {
+    "pattern": "mixed_penalties",
+    "budget": 60.0,
+    "maximum_confirmed_on_time_parents": 2,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "8": [
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  },
+  {
+    "pattern": "replanning",
+    "budget": 1.0,
+    "maximum_confirmed_on_time_parents": 2,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "8": [
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  },
+  {
+    "pattern": "replanning",
+    "budget": 60.0,
+    "maximum_confirmed_on_time_parents": 2,
+    "tested": {
+      "1": [
+        "VALID_ON_TIME"
+      ],
+      "2": [
+        "VALID_ON_TIME",
+        "VALID_ON_TIME",
+        "VALID_ON_TIME"
+      ],
+      "4": [
+        "VALID_LATE",
+        "VALID_LATE",
+        "VALID_LATE"
+      ],
+      "8": [
+        "VALID_LATE"
+      ],
+      "16": [
+        "VALID_LATE"
+      ],
+      "32": [
+        "VALID_LATE"
+      ],
+      "64": [
+        "VALID_LATE"
+      ],
+      "128": [
+        "VALID_LATE"
+      ]
+    }
+  }
+]
