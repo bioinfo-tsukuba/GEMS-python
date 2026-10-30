@@ -216,8 +216,9 @@ class Renderer:
             parent = self.records.get(record["parent"])
             if parent and parent["id"] in positions:
                 px, py = parent["depth"], positions[parent["id"]]
-                ax.plot([px + .38, px + .49, px + .49, x - .38],
-                        [py, py, y, y], color=color, linewidth=1.5, zorder=1)
+                edge = ax.plot([px + .38, px + .49, px + .49, x - .38],
+                               [py, py, y, y], color=color, linewidth=1.5, zorder=1)[0]
+                self.tag(edge, record, "edge", record["label"])
             box = ax.add_patch(FancyBboxPatch((x - .38, y - .24), .76, .48,
                                boxstyle="round,pad=.015", facecolor="white",
                                edgecolor=color, linewidth=1.5, zorder=2))
