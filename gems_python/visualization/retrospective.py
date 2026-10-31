@@ -336,7 +336,7 @@ function render() {
       node.setAttribute("aria-pressed", String(selected === node.dataset.exp));
   });
   choice.value = selected;
-  document.getElementById("selected").textContent = selected ? records.get(selected).label : "全体";
+  document.getElementById("selected").textContent = selected ? records.get(selected).label : "All";
 }
 function choose(pick) { selected = records.has(pick) ? pick : ""; render(); }
 choice.addEventListener("change", () => choose(choice.value));
@@ -362,11 +362,11 @@ def interactive(renderer, output):
     renderer.tree(tree, [.04, .08, .92, .86], rows)
     device = renderer.figure(len(renderer.data["machines"]), width=16)
     renderer.devices(device)
-    options = '<option value="">全体</option>' + "".join(
+    options = '<option value="">All</option>' + "".join(
         f'<option value="{e["pick"]}">{html.escape(e["label"])}</option>' for e in rows)
     encoded = json.dumps(renderer.data, ensure_ascii=False).replace("<", "\\u003c").replace("&", "\\u0026")
     document = f"""<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Experiment</title><style>
 body{{margin:0;background:#f4f6f8;color:#243444;font-family:system-ui,sans-serif}}
 main{{max-width:1400px;margin:auto;padding:16px}}
@@ -379,11 +379,11 @@ svg{{display:block;width:100%;height:auto;min-width:750px}}
 [data-exp]:focus-visible path{{stroke:#172b4d!important;stroke-width:3!important}}select:focus-visible,button:focus-visible{{outline:3px solid #0072b2}}
 </style></head><body><main>
 <div class="controls"><select id="choice" aria-label="Experiment">{options}</select>
-<select id="scope" aria-label="範囲"><option value="relatives">祖先・子孫</option><option value="family">家系</option><option value="self">選択のみ</option></select>
-<button id="reset">全体</button><span id="selected" class="sr-only" aria-live="polite"></span></div>
-<div class="panel" id="lineage" aria-label="親子">{renderer.inline(tree, "tree-")}</div>
-<div class="panel" id="schedule" aria-label="装置・予約時間">{renderer.inline(device, "schedule-")}</div>
-<noscript>JavaScript を有効にしてください。</noscript>
+<select id="scope" aria-label="Scope"><option value="relatives">Ancestors + descendants</option><option value="family">Family</option><option value="self">Selected only</option></select>
+<button id="reset">All</button><span id="selected" class="sr-only" aria-live="polite"></span></div>
+<div class="panel" id="lineage" aria-label="Lineage">{renderer.inline(tree, "tree-")}</div>
+<div class="panel" id="schedule" aria-label="Machines and reservations">{renderer.inline(device, "schedule-")}</div>
+<noscript>Enable JavaScript.</noscript>
 </main><script>const DATA = {encoded};
 {JAVASCRIPT}</script></body></html>"""
     path = output / "review.html"

@@ -2,7 +2,7 @@
 
 ![GEMS logo](assets/logo.png)
 
-> **推奨 / Recommended scheduler: Google OR-Tools (`"o"`, the default).**
+> **Recommended scheduler: Google OR-Tools (`"o"`, the default).**
 > In 168 feasible comparisons across 64 synthetic scheduling patterns,
 > OR-Tools had a lower (better) timing-penalty score in 110, tied in 58, and
 > had a higher score in 0. See the
@@ -20,7 +20,7 @@ This document describes how to set up the environment, run tests, simulate exper
 
 All three experiment managers support JSON and pickle snapshots with concrete
 State classes, settings, progress, task times, and shared references preserved.
-See [保存・復元とreloadの仕様](docs/persistence.md) for usage, automatic selection,
+See [saving, restoring, and reload](docs/persistence.md) for usage, automatic selection,
 legacy compatibility, and verification results.
 
 ## Experiment lifecycle
