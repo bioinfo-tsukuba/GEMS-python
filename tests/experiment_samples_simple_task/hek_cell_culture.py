@@ -15,7 +15,7 @@ from tests.experiment_samples_simple_task.curve import calculate_optimal_time_fr
 #     40, // SAMPLING
 # ];
 
-# TODO: 増殖曲線の予測（Passageによるリセットも考慮に入れたもの）を実装する
+# TODO: Implement growth-curve prediction, including resets caused by Passage
 # def logistic(t, r, N0, K=1):
 #     return K / (1 + (K/N0 - 1) * np.exp(-r * t))
 
@@ -84,7 +84,7 @@ class PassageState(State):
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
         optimal_time: float = calculate_optimal_time_from_df(df, target_density=PASSAGE_DENSITY)
         return OneMachineTaskLocalInformation(
-            optimal_time=int(optimal_time),  # 現在の時間
+            optimal_time=int(optimal_time),  # Current time
             processing_time=PROCESSING_TIME["PassageState"],
             penalty_type=LinearPenalty(penalty_coefficient=100),
             experiment_operation="Passage"
@@ -115,7 +115,7 @@ class GetImageState(State):
         optimal_time = int(current_time) + OPERATION_INTERVAL
         return OneMachineTaskLocalInformation(
             optimal_time=optimal_time,
-            processing_time=10,  # 定義済みの処理時間（例: 10分）
+            processing_time=10,  # Predefined processing time (example: 10 minutes)
             penalty_type=LinearPenalty(penalty_coefficient=1),
             experiment_operation="Getimage"
         )

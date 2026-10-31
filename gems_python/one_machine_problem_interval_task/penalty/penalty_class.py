@@ -7,17 +7,17 @@ from .config import PENALTY_MAXIMUM
 
 class PenaltyType(SerializationMixin, ABC):
     """
-    抽象基底クラス:PenaltyType
-    各種ペナルティタイプの基底クラスであり、calculate_penaltyメソッドを実装する必要があります。
+    Abstract base class: PenaltyType
+    Base class for penalty types; subclasses must implement calculate_penalty.
     """
 
     @abstractmethod
     def calculate_penalty(self, scheduled_time: int, optimal_time: int) -> int:
         """
-        ペナルティを計算する抽象メソッド
-        :param scheduled_time: スケジュールされたタイミング
-        :param optimal_time: 最適なタイミング
-        :return: 計算されたペナルティ
+        Abstract method for calculating a penalty
+        :param scheduled_time: Scheduled time
+        :param optimal_time: Optimal time
+        :return: Calculated penalty
         """
         pass
 
@@ -25,8 +25,8 @@ class PenaltyType(SerializationMixin, ABC):
 @dataclass
 class NonePenalty(PenaltyType):
     """
-    クラス：NonePenalty
-    ペナルティなしのタイプ。常にペナルティは0です。
+    Class: NonePenalty
+    No-penalty type; the penalty is always 0.
     """
 
     def calculate_penalty(self, scheduled_time: int, optimal_time: int) -> int:

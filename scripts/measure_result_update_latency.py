@@ -191,18 +191,18 @@ def summarize(output):
     rows = [json.loads(line) for line in (output / "results.jsonl").read_text().splitlines()]
     summary = []
     lines = [
-        "# 実験結果受領→スケジュールJSON生成の時間",
+        "# Time from experiment result receipt to schedule JSON generation",
         "",
-        "受信済みDataFrameをアプリへ渡した時点から、開始済み仕事の固定、履歴更新・完了処理・"
-        "必要な状態遷移とタスク生成、CP-SAT再計画、スケジュールJSON生成までを計時しました。",
-        "プロセス起動・入力準備・機器通信・描画・ファイル保存は含みません。",
-        "結果受領前の再計画は実行しません。CP-SATは各応答につき1回です。",
+        "Timing starts when a received DataFrame is passed to the application and covers fixing started work, updating history, completion processing, "
+        "required state transitions and task generation, CP-SAT replanning, and schedule JSON generation.",
+        "Process startup, input preparation, hardware communication, rendering and file saving are excluded.",
+        "No replanning occurs before result receipt. CP-SAT runs once per response.",
         "",
-        "前回保存された有効計画に対する最初の結果イベントを再生しています。"
-        "各条件3回、同じ入力・seedです。継続8更新の測定ではなく、応答時間の記述統計です。",
-        "初回イベントが群末尾でない条件では、状態遷移・次群生成の分岐は実行されません。",
+        "The first result event for the previously saved valid plan is replayed. "
+        "Each condition has three repetitions with identical input and seed. These are descriptive response-time statistics, not a measurement of eight continued updates.",
+        "For conditions whose first event is not at the end of a group, state-transition and next-group-generation branches do not execute.",
         "",
-        "| 負荷 | 規模 | 探索上限（秒） | 有効スケジュール/試行 | 成功応答 中央値 / p95 / 最大（秒） | 失敗応答 中央値（秒） |",
+        "| Workload | Scale | Search limit (seconds) | Valid schedules/trials | Successful response median / p95 / maximum (seconds) | Failed response median (seconds) |",
         "| --- | ---: | ---: | ---: | --- | ---: |",
     ]
     for pattern in PATTERN_SIZES:
@@ -232,13 +232,13 @@ def summarize(output):
                          f"{text} | {failed} |")
     lines += [
         "",
-        "失敗応答はスケジュールの返却成功として数えません。UNKNOWNは解未発見で、"
-        "実行不能の証明ではありません。p95は3点の線形補間で将来の保証ではありません。",
-        "JSONは全タスクのID・機械ID・開始時刻・処理時間・進捗と基準時刻を含みます。"
-        "返却APIのdebug出力の整形も計時内に含まれます。",
+        "Failed responses do not count as successful schedule returns. UNKNOWN means no solution was found; "
+        "it does not prove infeasibility. The p95 is linearly interpolated from three points and does not guarantee future performance.",
+        "JSON includes all task IDs, machine IDs, start times, processing times, progress and reference time. "
+        "Formatting debug output from the return API is included in timing.",
         "",
-        "入力・イベント・全探索記録・成功/失敗JSON・環境を保持しています。"
-        "旧評価の運用時間は結果受領前の探索も含むため、本表へ混ぜていません。",
+        "Inputs, events, all search records, successful/failed JSON and environment information are retained. "
+        "Operational times from the previous evaluation include search before result receipt and are not pooled into this table.",
         "",
     ]
     (output / "summary.json").write_text(json.dumps(summary, indent=2))

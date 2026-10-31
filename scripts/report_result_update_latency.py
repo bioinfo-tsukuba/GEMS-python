@@ -90,24 +90,24 @@ def report(root):
     fig.savefig(root / "response_latency.svg")
     plt.close(fig)
     lines = [
-        "# 実験結果受領→スケジュールJSON生成",
+        "# Experiment result receipt to schedule JSON generation",
         "",
-        f"実測ソース: `{env['commit']}`。保存計画の参照: `{env['source_archive_commit']}`。",
-        f"開始: `{env['started_at_utc']}`。CPU: {env['cpu']}、CP-SAT worker 1 / seed 0。",
-        "依存版とインストール全一覧は環境ファイルへ記録しました。",
+        f"Measured source: `{env['commit']}`. Saved plan reference: `{env['source_archive_commit']}`.",
+        f"Started: `{env['started_at_utc']}`. CPU: {env['cpu']}, CP-SAT worker 1 / seed 0.",
+        "Dependency versions and the full installed-package list are recorded in the environment file.",
         "",
-        "受信済みDataFrameをアプリへ渡してから、開始済み仕事の固定、履歴更新・完了処理、"
-        "必要な状態遷移・タスク生成、CP-SAT再計画、全スケジュールJSON生成までを計時しました。",
-        "起動・入力準備・機器通信・描画・ファイル保存は含みません。デバッグ出力はメモリ上に捕捉します。"
-        "既存更新APIを一度呼び、結果受領前の再計画を挟まず、探索は各応答1回です。",
+        "Timing starts when a received DataFrame is passed to the application and covers fixing started work, updating history, completion processing, "
+        "required state transitions and task generation, CP-SAT replanning, and full schedule JSON generation.",
+        "Startup, input preparation, hardware communication, rendering and file saving are excluded. Debug output is captured in memory. "
+        "The existing update API is called once, with no replanning before result receipt and one search per response.",
         "",
-        "今回の入力は、前回の有効計画における最初の結果イベントです。"
-        "すべて群途中のため、状態遷移・次群生成の分岐は今回の実測では実行されていません。"
-        "その分岐は別の小規模回帰テストで確認しました。複雑な実験解析処理も模擬していません。",
+        "Inputs are the first result events from the previous valid plans. "
+        "All events occur partway through groups, so state-transition and next-group-generation branches were not exercised in these measurements. "
+        "Those branches were checked in separate small regression tests. Complex experiment analysis is also not simulated.",
         "",
-        "![結果受領後の応答時間](response_latency.png)",
+        "![Response time after result receipt](response_latency.png)",
         "",
-        "| 負荷 | 規模 | 探索秒 | 成功/試行 | 成功応答 中央値 / p95 / 最大（秒） | うち探索 中央値（秒） | その他 中央値（秒） | 失敗応答 中央値（秒） |",
+        "| Workload | Scale | Search seconds | Successes/trials | Successful response median / p95 / maximum (seconds) | Search component median (seconds) | Other components median (seconds) | Failed response median (seconds) |",
         "| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |",
     ]
     for row in condition_stats:
@@ -122,29 +122,29 @@ def report(root):
             f"{value(row['non_search_seconds'])} | {value(failure)} |")
     lines += [
         "",
-        f"同じ受信済み結果・同じ計画を1/60秒に渡した各{env['repetitions']}反復の記述統計です。"
-        "p95は少数点の線形補間で、将来の保証ではありません。"
-        "中央値の内訳を別々に集計するため、内訳中央値の和は総時間中央値と厳密には一致しない場合があります。",
-        "UNKNOWNの時間はスケジュール生成成功の時間へ混ぜていません。",
+        f"These are descriptive statistics from {env['repetitions']} repetitions each, passing the same received result and plan to the 1-second / 60-second settings. "
+        "The p95 is linearly interpolated from few points and does not guarantee future performance. "
+        "Component medians are aggregated separately, so their sum may not exactly equal the total-time median.",
+        "UNKNOWN timings are not pooled with successful schedule-generation timings.",
         "",
-        "旧運用の約2/120秒は受領前の探索も含みます。本測定は受領後の1回の探索を計時しています。"
-        "この初回成功は継続更新の成功を保証しません。",
+        "The previous operational times of about 2/120 seconds include search before receipt. This measurement times one search after receipt. "
+        "Success on this first response does not guarantee successful continued updates.",
         "",
-        "trial_metrics.csvは全試行、statistics.jsonは条件別の中央値・四分位範囲・p95・"
-        "最小最大・平均・標本標準偏差です。raw_results.tar.gzに入力・出力・探索・失敗・"
-        "ログを保持しています。入力ハッシュ・出力ハッシュ・環境・検証も併記しています。",
+        "trial_metrics.csv contains all trials; statistics.json contains per-condition medians, interquartile ranges, p95, "
+        "minima, maxima, means and sample standard deviations. raw_results.tar.gz retains inputs, outputs, searches, failures and "
+        "logs. Input/output hashes, environment information and verification are also provided.",
         "",
         "```bash",
         "MPLCONFIGDIR=/tmp/gems-latency-mpl MPLBACKEND=Agg poetry run python \\",
         "  scripts/measure_result_update_latency.py \\",
         "  --output /tmp/gems-result-latency-new --repetitions 3",
         "",
-        "# 保存された結果を再集計・図示するだけの場合",
+        "# Reaggregate and plot saved results only",
         "poetry run python -m scripts.report_result_update_latency /tmp/gems-result-latency-new",
         "poetry run python -m scripts.verify_result_update_latency /tmp/gems-result-latency-new",
         "```",
         "",
-        "新規測定には約15分の探索を要します。出力先は新しいディレクトリを指定します。",
+        "New measurements require about 15 minutes of search. Choose a new output directory.",
         "",
     ]
     (root / "README.md").write_text("\n".join(lines))

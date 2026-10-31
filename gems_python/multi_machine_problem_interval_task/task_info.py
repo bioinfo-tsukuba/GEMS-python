@@ -54,13 +54,13 @@ class Task:
     task_id : int
         The unique identifier for the task. Defaults to None.
     """
-    processing_time: int  # タスクの処理時間
+    processing_time: int  # Task processing time
     experiment_operation: str
-    optimal_machine_type: int # タスクの最適なマシンタイプ
-    interval: int = field(default=0)        # タスク間のインターバル、最初のタスクにはインターバルはない
-    task_status: TaskStatus = TaskStatus.NOT_STARTED  # タスクのステータス
-    allocated_machine_id: str = field(default=None)  # タスクが割り当てられたマシンのID
-    scheduled_time: int = field(default=None)  # タスクの開始時刻
+    optimal_machine_type: int # Optimal machine type for the task
+    interval: int = field(default=0)        # Interval before the task; the first task starts at the group time plus its interval
+    task_status: TaskStatus = TaskStatus.NOT_STARTED  # Task status
+    allocated_machine_id: str = field(default=None)  # ID of the machine assigned to the task
+    scheduled_time: int = field(default=None)  # Task start time
     task_id: int = field(default=None)
 
     @classmethod
@@ -142,39 +142,39 @@ class TaskGroupStatus(Enum):
 
 @dataclass
 class TaskGroup:
-    optimal_start_time: int      # 最適な開始時刻
-    penalty_type: Type[PenaltyType] # ペナルティの種類
-    tasks: List[Task] = field(default_factory=list)  # タスクのリスト
-    status: TaskGroupStatus = TaskGroupStatus.NOT_STARTED  # デフォルトで未開始
-    task_group_id: int = field(default=None) # グループ番号. Experiments 生成時に割り当て
-    experiment_name: str = field(default=None)  # 実験の名前. Experiment 生成時に割り当て
-    experiment_uuid: str = field(default=None)  # 実験のUUID. Experiment 生成時に割り当て
+    optimal_start_time: int      # Optimal start time
+    penalty_type: Type[PenaltyType] # Penalty type
+    tasks: List[Task] = field(default_factory=list)  # List of tasks
+    status: TaskGroupStatus = TaskGroupStatus.NOT_STARTED  # Not started by default
+    task_group_id: int = field(default=None) # Group ID assigned when Experiments is created
+    experiment_name: str = field(default=None)  # Experiment name assigned when Experiment is created
+    experiment_uuid: str = field(default=None)  # Experiment UUID assigned when Experiment is created
     task_group_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
     lifecycle_version: int = 1
 
 
     def __post_init__(self):
-        # タスクのIDを割り当て
+        # Assign task IDs
         self._allocate_task_id()
 
     def is_completed(self) -> bool:
-        # タスク群が完了しているかどうかを確認
+        # Check whether the task group has completed
         return self.status == TaskGroupStatus.COMPLETED
     
     def is_in_progress(self) -> bool:
-        # タスク群が進行中かどうかを確認
+        # Check whether the task group is in progress
         return self.status == TaskGroupStatus.IN_PROGRESS
     
     def is_not_started(self) -> bool:
-        # タスク群が未開始かどうかを確認
+        # Check whether the task group has not started
         return self.status == TaskGroupStatus.NOT_STARTED
     
     def is_error(self) -> bool:
-        # タスク群がエラーかどうかを確認
+        # Check whether the task group has an error
         return self.status == TaskGroupStatus.ERROR
     
     def status_update(self):
-        # タスク群のステータスを更新
+        # Update task group status
         if all(task.task_status == TaskStatus.COMPLETED for task in self.tasks):
             self.status = TaskGroupStatus.COMPLETED
         elif any((task.task_status == TaskStatus.COMPLETED or task.task_status == TaskStatus.IN_PROGRESS) for task in self.tasks):
@@ -190,12 +190,12 @@ class TaskGroup:
         """
         if start_time is None:
             start_time = self.optimal_start_time
-        # タスクのスケジュールを計算
+        # Calculate the task schedule
         if self.status != TaskGroupStatus.NOT_STARTED:
             print(f"Task group {self.task_group_id} is already in progress.", file=sys.stderr)
             return
 
-        # 最適な開始時刻に合わせて、タスクの開始時刻を設定
+        # Set task start times relative to the optimal start time
         current_time = start_time
         for task in self.tasks:
             current_time += task.interval
@@ -352,7 +352,7 @@ class TaskGroup:
             plt.savefig(save_dir / f"{file_name}.pdf")
             plt.savefig(save_dir / f"{file_name}.svg")
 
-    # --以下のメソッドは、scheduling に関するものである。
+    # --The following methods handle scheduling.
 
     @classmethod
     def set_task_group_ids(cls, task_groups: List['TaskGroup']) -> List['TaskGroup']:
@@ -376,7 +376,7 @@ class TaskGroup:
 
     @classmethod
     def find_task_group(cls, task_groups: List['TaskGroup'], group_id: int) -> int:
-        # 指定されたグループ番号に一致するタスク群のインデックスを探す
+        # Find the task group index matching the specified group ID
         for index, group in enumerate(task_groups):
             if group.task_group_id == group_id:
                 return index
@@ -395,11 +395,11 @@ class TaskGroup:
             List['TaskGroup']: Updated task groups.
         """        
 
-        # タスク群を追加
+        # Add the task group
         task_groups.append(group)
-        # タスク群のidを割り当て
+        # Assign the task group ID
         task_groups = cls.set_task_group_ids(task_groups)
-        # タスク群のスケジュールを更新
+        # Update the task group schedule
         if reschedule:
             task_groups = cls.schedule_task_groups(task_groups, machines, reference_time=0)
         
@@ -453,11 +453,11 @@ class TaskGroup:
             print(f"Task {task_id} in task group {group_id} has already started. (status: {task.task_status})")
             return
 
-        # タスクを開始としてマーク
+        # Mark the task as started
         task_groups[group_index].tasks[task_index].task_status = TaskStatus.IN_PROGRESS
         print(f"Started task {task_id} in task group {group_id}.")
 
-        # タスク群のステータスを更新
+        # Update task group status
         task_groups[group_index].status_update()
 
         return task_groups
@@ -481,14 +481,14 @@ class TaskGroup:
             print(f"Task {task_id} in task group {group_id} has already completed. (status: {task.task_status})")
             return
 
-        # タスクを開始としてマーク
+        # Mark the task as completed
         task_groups[group_index].tasks[task_index].task_status = TaskStatus.COMPLETED
         print(f"Completed task {task_id} in task group {group_id}.")
 
-        # タスク群のステータスを更新
+        # Update task group status
         task_groups[group_index].status_update()
 
-        # 全てのタスクが終了しているかをチェック
+        # Check whether all tasks have completed
         if task_groups[group_index].is_completed():
             print(f"All tasks in task group {group_id} are completed.")
 
@@ -502,7 +502,7 @@ class TaskGroup:
     @classmethod
     @measured_schedule
     def schedule_task_groups_simulated_annealing(cls, task_groups: List['TaskGroup'], machines: MachineList, reference_time: int, *, diagnostics=None) -> List['TaskGroup']:
-        # TODO: MachineListを使って、マシンのペナルティを計算する
+        # TODO: Calculate machine penalties using MachineList
         print(f"{reference_time=}")
         """
 
@@ -521,7 +521,7 @@ class TaskGroup:
                 random move or swap
                 """
                 temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
-                # PASS: ここで、タスクのスケジュールを変更する
+                # PASS: Change the task schedule here
                 movable = [i for i, group in enumerate(self.state) if group.is_not_started()]
                 if not movable:
                     return
@@ -530,7 +530,7 @@ class TaskGroup:
                     scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
                     scheduled_time += random.randint(-int(temp), int(temp))
                     scheduled_time = max(reference_time, scheduled_time)
-                    #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
+                    #  TODO Handle CyclicalRestPenalty and CyclicalRestPenaltyWithLinear penalty types
                     # print(f"SIMBEF{datetime.fromtimestamp(60*(scheduled_time)).astimezone()}")
                     if isinstance(self.state[a].penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
                         scheduled_time = self.state[a].penalty_type.adjust_time_candidate_to_rest_range(scheduled_time)
@@ -539,7 +539,7 @@ class TaskGroup:
 
             def energy(self):
                 """Calculates the total penalty for the current state."""
-                # PASS: ここで、タスクのペナルティを計算する
+                # PASS: Calculate the task penalty here
                 total_penalty = 0
                 for task_group in self.state:
                     total_penalty += task_group.penalty_type.calculate_penalty(
@@ -837,19 +837,19 @@ def main():
 
 
 
-    # # タスクをスケジュール
-    # # 本来できない操作
+    # # Schedule the task
+    # # An operation that should not be allowed
     # task_scheduler.task_groups[1].schedule_tasks(0)
     # for task in task_scheduler.task_groups[1].tasks:
     #     print(task.scheduled_time)
-    # # タスクを終了
+    # # Complete the task
     # # task_scheduler.complete_task(1, 0)
     # # task_scheduler.complete_task(1, 1)
     # # task_scheduler.complete_task(1, 2)
     # task_scheduler.complete_task(2, 0)
     # task_scheduler.set_schedule_reference_time(2)
 
-    # # タスクをスケジュール
+    # # Schedule the task
     # task_scheduler.schedule_greedy()
     # for group in task_scheduler.task_groups:
     #     print(group.task_group_id)
@@ -860,15 +860,15 @@ def main():
     # js = original.to_json()
     # js_file_name = "volatile_task_scheduler.json"
 
-    # # JSON形式で保存
+    # # Save in JSON format
     # with open(js_file_name, "w") as f:
     #     f.write(js)
 
-    # # JSON形式で読み込み
+    # # Load from JSON format
     # with open(js_file_name, "r") as f:
     #     js = f.read()
 
-    # # JSON形式からTaskSchedulerオブジェクトを復元
+    # # Restore the TaskScheduler object from JSON
     # read = original.from_json(js)
 
     # print(f"ori:\n{original}")
@@ -881,15 +881,15 @@ def main():
     # js = original.to_json()
     # js_file_name = "volatile_task_scheduler.json"
 
-    # # JSON形式で保存
+    # # Save in JSON format
     # with open(js_file_name, "w") as f:
     #     f.write(js)
 
-    # # JSON形式で読み込み
+    # # Load from JSON format
     # with open(js_file_name, "r") as f:
     #     js = f.read()
 
-    # # JSON形式からTaskSchedulerオブジェクトを復元
+    # # Restore the TaskScheduler object from JSON
     # read = original.from_json(js)
 
     # print(f"ori:\n{original}")
