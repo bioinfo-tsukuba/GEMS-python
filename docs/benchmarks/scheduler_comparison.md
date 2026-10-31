@@ -1,11 +1,11 @@
 # Scheduler comparison for local version 0.1.4
 
-2026-10-28 に、従来の既定値であった焼きなまし (`s`) と新しい既定値
-OR-Tools CP-SAT (`o`) を比較した。グループ型の2系統には順次配置 (`f`)
-も参考として含めた。結果は固定した小規模入力に対するもので、一般的な実行速度や
-解品質の保証ではない。
+On 2026-10-28, the previous default, simulated annealing (`s`), was compared
+with the new default, OR-Tools CP-SAT (`o`). Sequential placement (`f`) was
+also included as a reference for both group variants. Results use fixed,
+small inputs and do not guarantee general runtime or solution quality.
 
-## 再実行
+## Reproduction
 
 ```bash
 MPLCONFIGDIR=/tmp/gems-mpl poetry run python scripts/compare_schedulers.py \
@@ -14,112 +14,120 @@ MPLCONFIGDIR=/tmp/gems-mpl poetry run python -m unittest \
   tests.test_cp_sat_scheduler tests.test_experiment_simulators -q
 ```
 
-出力は [実行別CSV](scheduler_2026-10-28/runs.csv)、
-[入力・実行別JSON](scheduler_2026-10-28/runs.json)、
-[時刻ペナルティ](scheduler_2026-10-28/penalties.png)、
-[実機IDの重複時間](scheduler_2026-10-28/overlap.png)、
-[実行時間](scheduler_2026-10-28/runtime.png)、
-[線形ペナルティのガント図](scheduler_2026-10-28/gantt.png)。
-図中の `Rest` は `CyclicalRestPenalty`、`Rest+Linear` は
-`CyclicalRestPenaltyWithLinear` を指す。ペナルティ値の縦軸は symlog、
-実行時間の縦軸は対数表示とした。
+The original output directory contained per-run CSV
+(`scheduler_2026-10-28/runs.csv`), input and per-run JSON
+(`scheduler_2026-10-28/runs.json`), timing penalties
+(`scheduler_2026-10-28/penalties.png`), individual machine-ID overlap
+(`scheduler_2026-10-28/overlap.png`), runtime
+(`scheduler_2026-10-28/runtime.png`), and a Gantt chart for linear penalties
+(`scheduler_2026-10-28/gantt.png`). These generated files are not tracked.
+The reproduction command writes the same filenames under `--output-dir`.
+In the figures, `Rest` means `CyclicalRestPenalty` and `Rest+Linear` means
+`CyclicalRestPenaltyWithLinear`. Penalty values use a symlog vertical axis;
+runtimes use a logarithmic vertical axis.
 
-## 比較条件
+## Comparison conditions
 
-- Python 3.14.4、リポジトリのロック済み依存関係を使用。詳細バージョンと入力値は
-  JSON に記録した。
-- 全ケースで参照時刻は0分。単一タスク型は最適開始
-  `10, 12, 15, 18` 分、処理時間 `6, 5, 4, 5` 分。単一機械グループ型は
-  最適開始 `10, 12, 14` 分で、各グループに
-  `(先行間隔2分, 処理5分) → (先行間隔3分, 処理4分)` を設定した。
-  複数機械グループ型は最適開始 `10, 11, 12, 13` 分、機械タイプ0を
-  2台 (`m0`, `m1`) 配置し、各グループに
-  `(先行間隔2分, 処理5分) → (先行間隔2分, 処理3分)` を設定した。
-- 焼きなましは既存実装の10万ステップ、Tmax 25000、Tmin 1を変更せず、
-  Python の乱数シード `0, 1, 2` で実行した。CP-SAT は既存の5秒制限、
-  1ワーカー、シード0を使用した。各方式に毎回新しい同一入力を渡した。
-- **時刻ペナルティ**は実行後の開始時刻から各型の
-  `calculate_penalty()` を呼び直して合計した。グループ型の評価時刻は
-  `先頭タスク開始時刻 − 先頭の先行間隔` とした。**重複時間**は実際に付いた
-  機械IDごとに、同時に2件以上稼働した超過件数の分数を合計した。
-  割当が欠けたタスクとグループ内間隔のずれも別に数えた。
-- 焼きなましの内部評価は重複に10万を掛けたソフトペナルティを使うが、
-  OR-Tools は重複を禁止する。そのため内部目的値を直接比較せず、
-  上記の共通指標を使用した。従来の複数機械用
-  `eval_machine_penalty()` は機械タイプの同時稼働数を調べ、
-  個別の機械IDの重複は調べない。
+- Python 3.14.4 and the repository's locked dependencies. Detailed versions
+  and input values were recorded in JSON.
+- Reference time was 0 minutes in all cases. Simple tasks had optimal starts
+  at `10, 12, 15, 18` minutes and processing times of `6, 5, 4, 5` minutes.
+  Single-machine groups had optimal starts at `10, 12, 14` minutes, each with
+  `(preceding interval 2 minutes, processing 5 minutes) → (preceding interval 3 minutes, processing 4 minutes)`.
+  Multi-machine groups had optimal starts at `10, 11, 12, 13` minutes, two
+  type-0 machines (`m0`, `m1`), and each group had
+  `(preceding interval 2 minutes, processing 5 minutes) → (preceding interval 2 minutes, processing 3 minutes)`.
+- Simulated annealing retained the existing implementation's 100,000 steps,
+  Tmax 25000 and Tmin 1, with Python random seeds `0, 1, 2`. CP-SAT used the
+  existing five-second limit, one worker and seed 0. Each method received
+  fresh, identical input for every run.
+- **Timing penalty** was recomputed from scheduled start times by summing each
+  type's `calculate_penalty()`. Group evaluation time was
+  `first task start time − first preceding interval`. **Overlap time** summed
+  excess concurrent task counts in minutes for each assigned machine ID when
+  two or more tasks ran simultaneously. Missing assignments and incorrect
+  within-group intervals were counted separately.
+- Simulated annealing's internal score uses a soft overlap penalty multiplied
+  by 100,000, while OR-Tools prohibits overlap. The common metrics above were
+  therefore used instead of directly comparing internal objectives. The old
+  multi-machine `eval_machine_penalty()` checks concurrent usage by machine
+  type, rather than overlap on individual machine IDs.
 
-## 全ペナルティ型の定義と検証
+## Definitions and verification of all penalty types
 
-`t` は上記の評価時刻、`t*` は最適時刻、`c` は係数。
-この比較では線形係数3、範囲型は下限 `−2` / 上限 `2` と
-下限係数4 / 上限係数2、循環型は開始0・周期20分・休止範囲
-`[10, 14]` 分を用いた。循環型の休止範囲は**両端を含む**。
+`t` is the evaluation time above, `t*` the optimal time, and `c` a coefficient.
+This comparison used linear coefficient 3; range bounds `−2` / `2` with lower /
+upper coefficients 4 / 2; and cyclical start 0, period 20 minutes and rest range
+`[10, 14]` minutes. Both endpoints of the cyclical rest range are **inclusive**.
 
-| 型 | `calculate_penalty()` による評価 |
+| Type | Evaluation by `calculate_penalty()` |
 | --- | --- |
-| `NonePenalty` | 常に0 |
-| `LinearPenalty` | `c × |t − t*|` |
-| `LinearWithRangePenalty` | `t − t*` が下限未満なら `下限係数 × (下限 − (t − t*))`、上限超過なら `上限係数 × ((t − t*) − 上限)`、範囲内は0 |
-| `CyclicalRestPenalty` | 循環開始以降、評価時刻の位相が休止範囲内なら100万、それ以外は0 |
-| `CyclicalRestPenaltyWithLinear` | 循環開始前は0、休止範囲内は100万、それ以外は `c × |t − t*|` |
+| `NonePenalty` | Always 0 |
+| `LinearPenalty` | `c × \|t − t*\|` |
+| `LinearWithRangePenalty` | If `t − t*` is below the lower bound: `lower coefficient × (lower bound − (t − t*))`; above the upper bound: `upper coefficient × ((t − t*) − upper bound)`; otherwise 0 |
+| `CyclicalRestPenalty` | From the cyclical start onward, 1,000,000 if the evaluation-time phase is within the rest range; otherwise 0 |
+| `CyclicalRestPenaltyWithLinear` | Before the cyclical start: 0; within the rest range: 1,000,000; otherwise `c × \|t − t*\|` |
 
-資源の重複ペナルティは上記5型と別に、旧焼きなましの評価値へ
-`10万 × 旧実装の重複量` として加算される。今回の比較では
-実際に割り当てられた機械IDで重複時間を計算し直した。
-2台の同型機械がある場合、同じ `m0` に0～5分と1～6分の
-タスクを割り当てても、旧複数機械用 `eval_machine_penalty()` は0を返す。
-実機IDでの重複は4分であり、この差も自動テストで固定した。
+Separately from these five types, the old annealing score adds a resource-overlap
+penalty of `100,000 × overlap quantity in the old implementation`. This
+comparison recomputed overlap using the actual assigned machine IDs.
+With two machines of the same type, assigning tasks at 0–5 and 1–6 minutes to
+the same `m0` still makes the old multi-machine `eval_machine_penalty()` return
+0. Individual machine-ID overlap is four minutes; an automated test fixes this
+case as a regression check.
 
-3系統の全5型について、循環開始前から2周期以上を含む各26時刻、
-計390条件で既存 `calculate_penalty()` と CP-SAT 内の `_cost()`
-の値が一致した。別の公開API経由の15ケースでは、CP-SAT の解の
-状態、重複、割当、グループ内間隔を検査した。ここでの循環休止は
-**開始時刻だけ**を評価する既存の定義に従う。
-処理区間全体を休止中に実行不可とする制約ではない。
+Across all five types in three variants, 26 evaluation times each, covering
+before the cyclical start and more than two cycles, gave 390 conditions where
+existing `calculate_penalty()` and CP-SAT `_cost()` agreed. Another 15 cases
+through the public API checked CP-SAT solution status, overlap, assignments
+and within-group intervals. Cyclical rest follows the existing definition,
+which evaluates **start times only**. It does not prohibit execution throughout
+a processing interval that overlaps a rest period.
 
-## 観測結果
+## Observed results
 
-時刻ペナルティは小さいほどよい。`s` は3シードの最小～最大を示す。
-括弧内は実機ID上の重複分数。`f` は単一タスク型には存在しない。
-重複がある値は、実機ID上で実行可能なスケジュールの評価値ではない。
+Lower timing penalties are better. `s` shows the minimum–maximum across three
+seeds. Parentheses give overlap minutes on individual machine IDs. `f` is
+unavailable for simple tasks. Values with overlap do not represent schedules
+feasible on individual machine IDs.
 
-| 系統 | 型 | OR-Tools `o` | 焼きなまし `s` | 順次配置 `f` |
+| Variant | Type | OR-Tools `o` | Simulated annealing `s` | Sequential placement `f` |
 | --- | --- | ---: | ---: | ---: |
-| 単一タスク | None | 0 (0) | 0 (0) | — |
-| 単一タスク | Linear | 27 (0) | 51 (0) | — |
-| 単一タスク | Range | 10 (0) | 22 (0) | — |
-| 単一タスク | Rest | 0 (0) | 1,000,000 (0) | — |
-| 単一タスク | Rest+Linear | 30 (0) | 1,000,051 (0) | — |
-| 単一機械グループ | None | 0 (0) | 0 (0) | 0 (0) |
-| 単一機械グループ | Linear | 60 (0) | 75–90 (0) | 90 (0) |
-| 単一機械グループ | Range | 44 (0) | 46–52 (0) | 52 (0) |
-| 単一機械グループ | Rest | 0 (0) | 0 (0) | 0 (0) |
-| 単一機械グループ | Rest+Linear | 69 (0) | 81 (0) | 81 (0) |
-| 複数機械グループ | None | 0 (0) | 0 (4) | 0 (4) |
-| 複数機械グループ | Linear | 42 (0) | 48 (4) | 48 (4) |
-| 複数機械グループ | Range | 16 (0) | 24 (4) | 24 (4) |
-| 複数機械グループ | Rest | 0 (0) | 0 (0–5) | 2,000,000 (4) |
-| 複数機械グループ | Rest+Linear | 45 (0) | 84–93 (3) | 2,000,048 (4) |
+| Simple task | None | 0 (0) | 0 (0) | — |
+| Simple task | Linear | 27 (0) | 51 (0) | — |
+| Simple task | Range | 10 (0) | 22 (0) | — |
+| Simple task | Rest | 0 (0) | 1,000,000 (0) | — |
+| Simple task | Rest+Linear | 30 (0) | 1,000,051 (0) | — |
+| Single-machine group | None | 0 (0) | 0 (0) | 0 (0) |
+| Single-machine group | Linear | 60 (0) | 75–90 (0) | 90 (0) |
+| Single-machine group | Range | 44 (0) | 46–52 (0) | 52 (0) |
+| Single-machine group | Rest | 0 (0) | 0 (0) | 0 (0) |
+| Single-machine group | Rest+Linear | 69 (0) | 81 (0) | 81 (0) |
+| Multi-machine group | None | 0 (0) | 0 (4) | 0 (4) |
+| Multi-machine group | Linear | 42 (0) | 48 (4) | 48 (4) |
+| Multi-machine group | Range | 16 (0) | 24 (4) | 24 (4) |
+| Multi-machine group | Rest | 0 (0) | 0 (0–5) | 2,000,000 (4) |
+| Multi-machine group | Rest+Linear | 45 (0) | 84–93 (3) | 2,000,048 (4) |
 
-`o` の15実行はすべてソルバー状態 `OPTIMAL`、実機IDの重複0分、
-機械タイプに合わない割当0件、グループ内の間隔違反0件だった。
-`s` は45実行中14実行で実機IDが重複し、`f` は10実行中5実行で
-重複した。重複はすべて複数機械グループ型で発生した。
-線形型の1例では、`f` と `s` が `m0` に割り当てた
-グループ2の先頭タスクが22～27分、グループ3の先頭タスクが
-23～28分で、4分間重なる。タイプ0の2台分の容量には収まるが、
-個別の `m0` では同時実行できない。旧実装の機械タイプ単位の
-評価関数と、順次配置時の機械ID割当がこの差の原因である。
-焼きなましは初期配置後に時刻を変更しても機械IDを再割当しない。
+All 15 `o` runs had solver status `OPTIMAL`, zero machine-ID overlap minutes,
+zero assignments to the wrong machine type, and zero within-group interval
+violations. Machine IDs overlapped in 14 of 45 `s` runs and 5 of 10 `f` runs.
+All overlap occurred in the multi-machine group variant. In one linear case,
+the first tasks of groups 2 and 3, assigned to `m0` by `f` and `s`, ran at
+22–27 and 23–28 minutes, overlapping for four minutes. This fits the total
+capacity of two type-0 machines but cannot run concurrently on the individual
+`m0`. The old machine-type evaluation function and machine-ID assignment during
+sequential placement cause this difference. Annealing does not reassign machine
+IDs after changing times from the initial placement.
 
-15ケースの1回あたり壁時計時間の中央値は `o` が0.00631秒、
-45実行の `s` が2.98115秒、10実行の `f` が0.00013秒だった。
-これは入力の大きさ、ソルバーの5秒制限、焼きなましの10万ステップ
-に依存する測定値である。
+Median wall-clock time per call was 0.00631 seconds for 15 `o` runs,
+2.98115 seconds for 45 `s` runs, and 0.00013 seconds for 10 `f` runs.
+These measurements depend on input size, the solver's five-second limit
+and annealing's 100,000 steps.
 
-## 制約
+## Limitations
 
-固定した1種類の小規模入力を各型で使った。乱数シードは3個であり、
-焼きなましの結果分布全体は推定していない。実行時間は1台の開発環境での
-壁時計時間であり、各手法の一般的な性能を示さない。
+Each type used one fixed, small input configuration. Three random seeds do
+not estimate the full distribution of annealing results. Runtime is wall-clock
+time on one development machine and does not establish general performance
+for any method.
