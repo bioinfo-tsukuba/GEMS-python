@@ -19,7 +19,7 @@ import matplotlib.lines as mlines
 import matplotlib.path as mpath
 
 import matplotlib
-matplotlib.use('Agg')  # 非インタラクティブバックエンドに設定
+matplotlib.use('Agg')  # Use a noninteractive backend
 
 
 @dataclass
@@ -41,11 +41,11 @@ class Task:
     task_id : int
         The unique identifier for the task. Defaults to None.
     """
-    processing_time: int  # タスクの処理時間
+    processing_time: int  # Task processing time
     experiment_operation: str
-    interval: int = field(default=0)        # タスク間のインターバル、最初のタスクにはインターバルはない
-    completed: bool = False  # タスクが終了したかどうか
-    scheduled_time: int = field(default=None)  # タスクの開始時刻
+    interval: int = field(default=0)        # Interval before the task; the first task starts at the group time plus its interval
+    completed: bool = False  # Whether the task has completed
+    scheduled_time: int = field(default=None)  # Task start time
     task_id: int = field(default=None)
 
     def is_completed(self) -> bool:
@@ -72,37 +72,37 @@ class TaskGroupStatus(Enum):
 
 @dataclass
 class TaskGroup:
-    optimal_start_time: int      # 最適な開始時刻
-    penalty_type: Type[PenaltyType] # ペナルティの種類
-    tasks: List[Task] = field(default_factory=list)  # タスクのリスト
-    status: TaskGroupStatus = TaskGroupStatus.NOT_STARTED  # デフォルトで未開始
-    task_group_id: int = field(default=None) # グループ番号. Experiments 生成時に割り当て
-    experiment_name: str = field(default=None)  # 実験の名前. Experiment 生成時に割り当て
-    experiment_uuid: str = field(default=None)  # 実験のUUID. Experiment 生成時に割り当て
+    optimal_start_time: int      # Optimal start time
+    penalty_type: Type[PenaltyType] # Penalty type
+    tasks: List[Task] = field(default_factory=list)  # List of tasks
+    status: TaskGroupStatus = TaskGroupStatus.NOT_STARTED  # Not started by default
+    task_group_id: int = field(default=None) # Group ID assigned when Experiments is created
+    experiment_name: str = field(default=None)  # Experiment name assigned when Experiment is created
+    experiment_uuid: str = field(default=None)  # Experiment UUID assigned when Experiment is created
 
 
     def __post_init__(self):
-        # タスクのIDを割り当て
+        # Assign task IDs
         self._allocate_task_id()
 
     def is_completed(self) -> bool:
-        # タスク群が完了しているかどうかを確認
+        # Check whether the task group has completed
         return self.status == TaskGroupStatus.COMPLETED
     
     def is_in_progress(self) -> bool:
-        # タスク群が進行中かどうかを確認
+        # Check whether the task group is in progress
         return self.status == TaskGroupStatus.IN_PROGRESS
     
     def is_not_started(self) -> bool:
-        # タスク群が未開始かどうかを確認
+        # Check whether the task group has not started
         return self.status == TaskGroupStatus.NOT_STARTED
     
     def is_error(self) -> bool:
-        # タスク群がエラーかどうかを確認
+        # Check whether the task group has an error
         return self.status == TaskGroupStatus.ERROR
     
     def status_update(self):
-        # タスク群のステータスを更新
+        # Update task group status
         if all(task.completed for task in self.tasks):
             self.status = TaskGroupStatus.COMPLETED
         elif any(task.completed for task in self.tasks):
@@ -118,12 +118,12 @@ class TaskGroup:
         """
         if start_time is None:
             start_time = self.optimal_start_time
-        # タスクのスケジュールを計算
+        # Calculate the task schedule
         if self.status != TaskGroupStatus.NOT_STARTED:
-            # print(f"タスク群 {self.task_group_id} はすでに進行しています。")
+            # print(f"Task group {self.task_group_id} is already in progress.")
             return
 
-        # 最適な開始時刻に合わせて、タスクの開始時刻を設定
+        # Set task start times relative to the optimal start time
         current_time = start_time
         for i in range(len(self.tasks)):
             current_time += self.tasks[i].interval
@@ -160,7 +160,7 @@ class TaskGroup:
                 earliest_task = task
         return earliest_task
 
-    # --以下のメソッドは、scheduling に関するものである。
+    # --The following methods handle scheduling.
 
     @classmethod
     def set_task_group_ids(cls, task_groups: List['TaskGroup']) -> List['TaskGroup']:
@@ -181,7 +181,7 @@ class TaskGroup:
 
     @classmethod
     def find_task_group(cls, task_groups: List['TaskGroup'], group_id: int) -> int:
-        # 指定されたグループ番号に一致するタスク群のインデックスを探す
+        # Find the task group index matching the specified group ID
         for index, group in enumerate(task_groups):
             if group.task_group_id == group_id:
                 return index
@@ -200,11 +200,11 @@ class TaskGroup:
             List['TaskGroup']: Updated task groups.
         """        
 
-        # タスク群を追加
+        # Add the task group
         task_groups.append(group)
-        # タスク群のidを割り当て
+        # Assign the task group ID
         task_groups = cls.set_task_group_ids(task_groups)
-        # タスク群のスケジュールを更新
+        # Update the task group schedule
         if reschedule:
             task_groups = cls.schedule_task_groups(task_groups, reference_time=0)
         
@@ -221,11 +221,11 @@ class TaskGroup:
         """
         group_index = cls.find_task_group(task_groups, group_id)
         if group_index is None:
-            print(f"タスク群 {group_id} が存在しません。")
+            print(f"Task group {group_id} does not exist.")
             return
         
         task_groups.pop(group_index)
-        print(f"タスク群 {group_id} を削除しました。")
+        print(f"Deleted task group {group_id}.")
         return task_groups
     
     @classmethod
@@ -239,12 +239,12 @@ class TaskGroup:
         """
         group_index = cls.find_task_group(task_groups, group_id)
         if group_index is None:
-            print(f"タスク群 {group_id}が存在しません。")
+            print(f"Task group {group_id} does not exist.")
             return
 
         task_index = Task.find_task(task_groups[group_index].tasks, task_id)
         if task_index is None:
-            print(f"タスク群 {group_id}にタスク {task_id}が存在しません。")
+            print(f"Task group {group_id} does not contain task {task_id}.")
             return
         
         return group_index, task_index
@@ -264,19 +264,19 @@ class TaskGroup:
 
         task = task_groups[group_index].tasks[task_index]
         if task.completed:
-            print(f"タスク群 {group_id} のタスク {task_id} は既に終了しています。")
+            print(f"Task group {group_id}: task {task_id} has already completed.")
             return
 
-        # タスクを終了としてマーク
+        # Mark the task as completed
         task_groups[group_index].tasks[task_index].completed = True
-        print(f"タスク群 {group_id} のタスク {task_id} が終了しました")
+        print(f"Task group {group_id}: task {task_id} has completed")
 
-        # タスク群のステータスを更新
+        # Update task group status
         task_groups[group_index].status_update()
 
-        # 全てのタスクが終了しているかをチェック
+        # Check whether all tasks have completed
         if task_groups[group_index].is_completed():
-            print(f"タスク群 {group_id} が全て終了しました")
+            print(f"All tasks in task group {group_id} have completed")
 
         return task_groups
 
@@ -294,25 +294,25 @@ class TaskGroup:
         """
         Schedule all the groups one by one group.
         """
-        # すでに終わっているタスクも含めてゼロの位置を決める
-        # スケジュールするやつの基準はそれはそれで決める
-        # 例えば、available_reference_time
+        # Determine the time origin, including completed tasks
+        # Determine the scheduling reference separately
+        # For example, available_reference_time
 
-        # タスク群をNOT_STARTEDを最後にして、開始時刻の昇順にソート
+        # Sort task groups by start time, with NOT_STARTED groups last
         task_groups = task_groups.copy()
         task_groups.sort(key=lambda group: (group.is_not_started(), group.optimal_start_time))
         
-        # タスク群を順番にスケジュール
+        # Schedule task groups sequentially
         scheduled_groups = list()
         for group in task_groups:
             diff = 0
             scheduled_groups.append(group.task_group_id)
             while True:
-                # もし、スケジュール基準時刻がタスク群の最適な開始時刻よりも遅い場合、スケジュール基準時刻を最適な開始時刻に設定
-                # そうでない場合、スケジュール基準時刻を最適な開始時刻に設定
-                # スケジュール基準時刻より遅い範囲で、タスク群のスケジュールを試行（0, 1, -1, 2, -2, ...）
-                # ちょっと遅いが、とりあえず実装はこれでいいかも
-                #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
+                # If the reference is later than the optimal start, begin the search at the reference
+                # Otherwise, begin the search at the optimal start time
+                # Try group start offsets (0, 1, -1, 2, -2, ...) without going before the reference
+                # This search may be slow; retained as the current implementation
+                #  TODO Handle CyclicalRestPenalty and CyclicalRestPenaltyWithLinear penalty types
                 time_candidate = max(reference_time, group.optimal_start_time + diff)
                 # print(f"{datetime.fromtimestamp(time_candidate*60).astimezone()}")
                 if isinstance(group.penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
@@ -354,7 +354,7 @@ class TaskGroup:
                 random move or swap
                 """
                 temp = max(1, int(self.step_count/self.steps * (self.Tmax - self.Tmin) + self.Tmin))
-                # PASS: ここで、タスクのスケジュールを変更する
+                # PASS: Change the task schedule here
                 if len(self.state) == 0:
                     return
                 for i in range(min(temp, len(self.state))):
@@ -362,7 +362,7 @@ class TaskGroup:
                     scheduled_time = self.state[a].tasks[0].scheduled_time - self.state[a].tasks[0].interval
                     scheduled_time += random.randint(-int(temp), int(temp))
                     scheduled_time = max(reference_time, scheduled_time)
-                    #  TODO Penalty type がCyclicalRestPenalty または CyclicalRestPenaltyWithLinearのときに対応する
+                    #  TODO Handle CyclicalRestPenalty and CyclicalRestPenaltyWithLinear penalty types
                     # print(f"SIMBEF{datetime.fromtimestamp(60*(scheduled_time)).astimezone()}")
                     if isinstance(self.state[a].penalty_type, (CyclicalRestPenalty, CyclicalRestPenaltyWithLinear)):
                         scheduled_time = self.state[a].penalty_type.adjust_time_candidate_to_rest_range(scheduled_time)
@@ -371,7 +371,7 @@ class TaskGroup:
 
             def energy(self):
                 """Calculates the total penalty for the current state."""
-                # PASS: ここで、タスクのペナルティを計算する
+                # PASS: Calculate the task penalty here
                 total_penalty = 0
                 for task_group in self.state:
                     total_penalty += task_group.penalty_type.calculate_penalty(

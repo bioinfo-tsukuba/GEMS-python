@@ -22,7 +22,7 @@ class PluginManager:
         if not os.path.exists(self.mode_path):
             os.makedirs(self.mode_path, exist_ok=True)
             print(f"Mode directory {self.mode_path} created.")
-        self.plugin_timestamps = {}  # ファイルの最終更新時刻を保持
+        self.plugin_timestamps = {}  # Track file modification times
         sys.path.append(str(self.module_path))
         self.mode = "stop"
 
@@ -52,7 +52,7 @@ class PluginManager:
         for file_path in Path(self.module_path).glob('*.py'):
             last_modified = os.path.getmtime(file_path)
             if file_path not in self.plugin_timestamps or self.plugin_timestamps[file_path] < last_modified:
-                # 新しいか更新されたプラグインのみをロード
+                # Load only new or updated plugins
                 self.load_plugin(file_path)
                 self.plugin_timestamps[file_path] = last_modified
 
@@ -64,7 +64,7 @@ class PluginManager:
                 mode = file.read().strip().lower()
                 return mode
         except FileNotFoundError:
-            # mode.txtを作成する
+            # Create mode.txt
             with open(mode_file, "w") as file:
                 file.write(self.mode)
             print(f"Mode file {mode_file} not found. Created mode file with mode {self.mode}.")
@@ -80,30 +80,30 @@ class PluginManager:
             if mode == "help":
                 self.display_help()
             else:
-                # モードに対応するメソッドを動的に取得
+                # Resolve the method for the mode dynamically
                 mode_method_name = f"mode_{mode}"
                 mode_method = getattr(self, mode_method_name, None)
 
                 if callable(mode_method):
                     print(f"Running mode '{mode}'...")
                     mode_method()
-                    self.mode = mode  # 有効なモードの場合のみ現在のモードを更新
+                    self.mode = mode  # Update the current mode only if it is valid
                 else:
                     print(f"Unknown mode: {mode}")
 
-            # インターバルの間隔を待機
+            # Wait for the polling interval
             print(f"Checking mode every {interval} seconds...")
             time.sleep(interval)
 
     def display_help(self):
         """Display all available modes and their descriptions."""
         print("Available modes and descriptions:")
-        # クラス内のすべてのメソッドを調べ、'mode_'で始まるものを探す
+        # Find all class methods whose names start with 'mode_'
         for name, method in inspect.getmembers(self, predicate=inspect.ismethod):
             if name.startswith("mode_"):
-                # メソッド名から 'mode_' を取り除いてモード名を取得
+                # Remove 'mode_' from the method name to get the mode name
                 mode_name = name[5:]
-                # メソッドのdocstringから説明を取得
+                # Read the description from the method docstring
                 description = inspect.getdoc(method) or "No description"
                 print(f" - {mode_name}: {description}")
 
@@ -112,7 +112,7 @@ class PluginManager:
         print("Proceeding to next step...")
         self.experiments.proceed_to_next_step()  
 
-    # モードごとの処理を以下に定義します
+    # Define handlers for each mode below
 
     def mode_loop(self):
         """
@@ -141,7 +141,7 @@ class PluginManager:
             with open(command_file, "r") as file:
                 experiment_generator_function = file.read().strip()
                 print(f"Add experiment command: {experiment_generator_function}")
-            # ファイルを読み取ったら削除
+            # Delete the file after reading it
             os.remove(command_file)
         except FileNotFoundError:
             print(f"Add experiment command file {command_file} not found.")
@@ -171,7 +171,7 @@ class PluginManager:
         """
         Show the list of experiments.
         """
-        # 実験クラスの表示メソッド
+        # Experiment display method
         if hasattr(self.experiments, 'list'):
             self.experiments.list()
         else:
@@ -185,13 +185,13 @@ class PluginManager:
         The command must be an experiment UUID.
         'mode_delete_experiment.txt' is deleted automatically after reading.
         """
-        # 引数が指定されていない場合はファイルから読み取る
+        # Read from the file if no argument was supplied
         command_file = self.mode_path / "mode_delete_experiment.txt"
         try:
             with open(command_file, "r") as file:
                 experiment_uuid = file.read().strip()
                 print(f"Delete experiment UUID: {experiment_uuid}")
-            # ファイルを読み取ったら削除
+            # Delete the file after reading it
             os.remove(command_file)
             if experiment_uuid:
                 try:
@@ -221,17 +221,17 @@ class PluginManager:
         try:
             with open(command_file, "r") as file:
                 lines = file.readlines()
-                # 空行やコメント行を除外
+                # Exclude blank lines and comments
                 commands = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
                 if not commands:
                     print(f"Add experiments command file {command_file} is empty.")
                     return
                 print(f"Experiment commands to add: {commands}")
-            # ファイルを読み取ったら削除
+            # Delete the file after reading it
             os.remove(command_file)
         except FileNotFoundError:
             print(f"Add experiments command file {command_file} not found.")
-            # templateファイルを作成する
+            # Create the template file
             command_template_file = Path(str(command_file).replace(".txt", "_template.txt"))
             command_template = f"# Write commands in 'module.class' format to {command_file}.\n"
             command_template += "# Example:\n"
@@ -283,17 +283,17 @@ class PluginManager:
         try:
             with open(command_file, "r") as file:
                 lines = file.readlines()
-                # 空行やコメント行を除外
+                # Exclude blank lines and comments
                 uuids = [line.strip() for line in lines if line.strip() and not line.strip().startswith('#')]
                 if not uuids:
                     print(f"Delete experiments command file {command_file} is empty.")
                     return
                 print(f"Experiment UUIDs to delete: {uuids}")
-            # ファイルを読み取ったら削除
+            # Delete the file after reading it
             os.remove(command_file)
         except FileNotFoundError:
             print(f"Delete experiments command file {command_file} not found.")
-            # templateファイルを作成する
+            # Create the template file
             command_template_file = Path(str(command_file).replace(".txt", "_template.txt"))
             command_template = f"# Write UUIDs to {command_file}.\n"
             command_template += "# Example:\n"

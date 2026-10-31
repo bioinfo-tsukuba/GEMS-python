@@ -229,7 +229,7 @@ class Experiment(SerializationMixin):
         highlight_nodes = [self.current_state_name]
 
         # Draw the graph
-        plt.figure(figsize=(8, 10))  # 画像サイズを指定
+        plt.figure(figsize=(8, 10))  # Set the figure size
         pos = nx.spring_layout(G, seed=100, k=0.5)
         node_color = ["skyblue" if node not in highlight_nodes else "orange" for node in G.nodes()]
         node_size = [1000 if node not in highlight_nodes else 1500 for node in G.nodes()]
@@ -480,7 +480,7 @@ class Experiments(SerializationMixin):
             self.tasks[index].task_id = index
 
 
-    # TODO: スケジュール→実行→結果の受取→状態の更新→次のTaskを出力→スケジュール…(もっと早くできる)
+    # TODO: Schedule -> execute -> receive results -> update state -> generate next Task -> schedule... (could be faster)
     def delete_task_with_task_id(self, task_id: int):
         new_tasks = list()
         for task in range(len(self.tasks)):

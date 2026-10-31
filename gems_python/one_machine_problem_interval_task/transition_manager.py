@@ -90,8 +90,8 @@ class State(SerializationMixin, ABC):
 
     def dummy_output(self, df: DataFrame, task_group_id: int, task_id: int) -> DataFrame:
         """
-        ダミー出力を返す基礎メソッド。各State派生クラスでoverrideしてシミュレーション用の結果を生成すること。
-        未実装の場合は例外を投げてシミュレーション時に気付けるようにする。
+        Base method for dummy output. Override in each State subclass to generate simulation results.
+        Raise an exception if unimplemented so simulation exposes the missing method.
         """
         raise NotImplementedError(
             f"{self.__class__.__name__}.dummy_output(df, task_group_id, task_id) is not implemented."
@@ -239,7 +239,7 @@ class Experiment:
         highlight_nodes = [self.current_state_name]
 
         # Draw the graph
-        plt.figure(figsize=(8, 10))  # 画像サイズを指定
+        plt.figure(figsize=(8, 10))  # Set the figure size
         pos = nx.spring_layout(G, seed=100, k=0.5)
         node_color = ["skyblue" if node not in highlight_nodes else "orange" for node in G.nodes()]
         node_size = [1000 if node not in highlight_nodes else 1500 for node in G.nodes()]
@@ -251,7 +251,7 @@ class Experiment:
             plt.text(0.05, 0.95, f'Nodes {hide_nodes} are hidden', transform=plt.gca().transAxes, 
                     fontsize=8, verticalalignment='top', bbox=dict(facecolor='red', alpha=0.5))
 
-        plt.axis('off')  # 軸を非表示に
+        plt.axis('off')  # Hide the axes
         if save_path is not None:
             plt.savefig(save_path)
         else:
@@ -331,7 +331,7 @@ class Experiment:
         self.current_task_group = new_task_group
 
     def execute_one_step(self) -> TaskGroup:
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         """
         Execute one step of the experiment.
         :return: Task 
@@ -354,7 +354,7 @@ class Experiment:
         return task_group
     
     def generate_task_group_of_the_state(self) -> TaskGroup:
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         """
         Generate a task group of the current state.
         :return: Generated task group.
@@ -411,7 +411,7 @@ class Experiments:
     def __post_init__(self):
         self.solver_time_limit_seconds = validate_time_limit(self.solver_time_limit_seconds)
         self.parent_dir_path = Path(self.parent_dir_path)
-        # TODO: TaskGroupに対応
+        # TODO: Support TaskGroup
         if self.parent_dir_path.exists():
             if not self.parent_dir_path.is_dir():
                 raise ValueError(f"parent_dir_path must be a directory: {self.parent_dir_path}")
@@ -475,7 +475,7 @@ class Experiments:
 
 
     def delete_experiment_with_experiment_uuid(self, experiment_uuid: str) -> Union[None, ValueError]:
-        # TODO: TaskGroupに対応
+        # TODO: Support TaskGroup
         """
         Delete the experiment with the input experiment_uuid.
         """
@@ -525,7 +525,7 @@ class Experiments:
 
         os.makedirs(save_path, exist_ok=True)
         save_snapshot(self, save_path)
-        # TODO: TaskGroupに対応
+        # TODO: Support TaskGroup
         tasks = [task.to_json() for task in self.task_groups]
         # print(f"{tasks=}")
         # for task in self.tasks:
@@ -556,7 +556,7 @@ class Experiments:
             reference_time: int = None,
             *, solver_time_limit_seconds: float | None = None,
             ):
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         """
         Execute the scheduling of the tasks.
         :param scheduling_method: 'o' for OR-Tools, 's' for simulated annealing, or 'f' for sequential scheduling.
@@ -598,7 +598,7 @@ class Experiments:
         """
         TODO: explanation
         """
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         # Update task_group
         task_group_index = TaskGroup.find_task_group(self.task_groups, task_group_id)
         experiment_uuid = self.task_groups[task_group_index].experiment_uuid
@@ -645,7 +645,7 @@ class Experiments:
         solver_time_limit_seconds = validate_time_limit(
             self.solver_time_limit_seconds if solver_time_limit_seconds is None
             else solver_time_limit_seconds)
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         # Update task_group
 
         if optimal_time_reference_time is not None:
@@ -875,11 +875,11 @@ class Experiments:
         group_index = TaskGroup.find_task_group(self.task_groups, earliest_group_id)
         tg = self.task_groups[group_index]
 
-        # 対応する Experiment を見つける
+        # Find the corresponding Experiment
         exp_index = next(i for i, e in enumerate(self.experiments) if e.experiment_uuid == tg.experiment_uuid)
         exp = self.experiments[exp_index]
 
-        # 現在の State からダミー出力を生成
+        # Generate dummy output from the current State
         state_index = exp.get_current_state_index_from_current_state_name()
         state = exp.states[state_index]
         before_state_name = exp.current_state_name
@@ -904,7 +904,7 @@ class Experiments:
         except Exception as err:
             return {"status": "error", "error": f"dummy_output_failed: {err!r}", "state": before_state_name}
 
-        # 本番と同経路で更新→遷移→再スケジュール
+        # Use the production path: update, transition, then reschedule
         try:
             for scheduled_group in self.task_groups:
                 if scheduled_group.is_not_started() and any(

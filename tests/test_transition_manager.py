@@ -12,11 +12,11 @@ from tests.experiment_samples_simple_task.hek_cell_culture import HekCellCulture
 class State_1(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 簡単な実装例として、DataFrameの行数を返す
+        # Return the next State name
         return "State_2"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        # Build task information with a fixed processing time and penalty
         task_name = "example_task"
         task_count = df.height
         pelalty_type = LinearPenalty(10)
@@ -32,11 +32,11 @@ class State_1(State):
 class State_2(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 簡単な実装例として、DataFrameの行数を返す
+        # Return the next State name
         return "State_3"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        # Build task information with a fixed processing time and penalty
         task_name = "example_task"
         task_count = df.height
         pelalty_type = LinearWithRangePenalty(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
@@ -52,11 +52,11 @@ class State_2(State):
 class State_3(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 簡単な実装例として、DataFrameの行数を返す
+        # Return the next State name
         return "State_1"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        # Build task information with a fixed processing time and penalty
         task_name = "example_task"
         task_count = df.height
         pelalty_type = LinearWithRangePenalty(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
@@ -72,14 +72,14 @@ class State_3(State):
 class State_4(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 簡単な実装例として、DataFrameの行数を返す
+        # Return the next State name
         if True:
             return "State_1"
         else:
             return "State_3"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        # Build task information with a fixed processing time and penalty
         task_name = "example_task"
         task_count = df.height
         pelalty_type = LinearWithRangePenalty(lower=-20, upper=40, lower_coefficient=10, upper_coefficient=20)
@@ -95,11 +95,11 @@ class State_4(State):
 class State___1(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 簡単な実装例として、DataFrameの行数を返す
+        # Simple implementation example: return the DataFrame row count
         return "State___1"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        # Simple implementation example: return the task name, row count and first column data
         task_name = "example_task"
         task_count = df.height
         pelalty_type = LinearPenalty(10)
@@ -114,11 +114,11 @@ class State___1(State):
 class State___2(State):
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 簡単な実装例として、DataFrameの行数を返す
+        # Simple implementation example: return the DataFrame row count
         return "State___2"
 
     def task_generator(self, df: pl.DataFrame) -> OneMachineTaskLocalInformation:
-        # 簡単な実装例として、タスク名、行数、最初の列のデータを返す
+        # Simple implementation example: return the task name, row count and first column data
         task_name = "example_task"
         task_count = df.height
         pelalty_type = NonePenalty()
@@ -132,20 +132,20 @@ class State___2(State):
 @dataclass
 class MyExperiment1(Experiment):
     """
-    TODO: 継承元のクラス名を表示できるのであれば行いたい
-    ベースとなるプロトコル→今のプロトコルのようにしたい
+    TODO: Display the base class name if possible
+    Show the relationship as base protocol -> current protocol
     """
 @dataclass
 class MyExperiment2(Experiment):
     """
-    TODO: 継承元のクラス名を表示できるのであれば行いたい
-    ベースとなるプロトコル→今のプロトコルのようにしたい
+    TODO: Display the base class name if possible
+    Show the relationship as base protocol -> current protocol
     """
 
 
 class TestTransitionManager(unittest.TestCase):
     def setUp(self):
-        # テスト用のDataFrameを作成
+        # Create a DataFrame for the test
         self.df = pl.DataFrame({
             "col1": [1, 2, 3],
             "col2": [4, 5, 6]
@@ -328,8 +328,8 @@ class HarvestingState(State):
 @dataclass
 class ExperimentStructureExample(Experiment):
     """
-    TODO: 継承元のクラス名を表示できるのであれば行いたい
-    ベースとなるプロトコル→今のプロトコルのようにしたい
+    TODO: Display the base class name if possible
+    Show the relationship as base protocol -> current protocol
     """
     def __init__(self):
         # Define the experiment using the states

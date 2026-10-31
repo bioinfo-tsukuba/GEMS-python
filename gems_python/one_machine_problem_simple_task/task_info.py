@@ -130,35 +130,35 @@ class OneMachineTask(SerializationMixin):
         fig, ax = plt.subplots()
         tasks = sorted(tasks, key=lambda x: x.scheduled_time)
 
-        # ガントチャートのデータを準備
+        # Prepare Gantt chart data
         for task in tasks:
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, edgecolor='black')
 
-        # 軸のラベルを設定
+        # Set axis labels
         ax.set_xlabel('Time')
         ax.set_ylabel('Task')
 
-        # time軸の最大値と最小値を設定
+        # Set the minimum and maximum of the time axis
         max_time = max(task.scheduled_time + task.processing_time for task in tasks)
         max_time = max(max(task.optimal_time + task.processing_time for task in tasks), max_time) + 5
         min_time = min(task.scheduled_time for task in tasks)
         min_time = min(min(task.optimal_time for task in tasks), min_time) - 5
         ax.set_xlim(min_time, max_time)
 
-        # タスクごとに異なる色を設定
+        # Assign a different color to each task
         colors = plt.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, color=colors(i), edgecolor='black')
 
-        # 凡例を設定
+        # Set the legend
         patches = [mpatches.Patch(color=colors(i), label=task.experiment_operation) for i, task in enumerate(tasks)]
         plt.legend(handles=patches)
 
-        # グラフを表示
+        # Display the plot
         if save_path is not None:
             plt.savefig(save_path)
         else:
@@ -175,40 +175,40 @@ class OneMachineTask(SerializationMixin):
         fig, ax = plt.subplots()
         tasks = sorted(tasks, key=lambda x: x.scheduled_time)
 
-        # ガントチャートのデータを準備
+        # Prepare Gantt chart data
         for task in tasks:
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             optimal_start = task.optimal_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, edgecolor='black', alpha=0.7)
 
-            # optimal_timeとscheduled_timeの差を表す線を追加
+            # Add a line showing the difference between optimal_time and scheduled_time
             if start_time != optimal_start:
                 ax.plot([optimal_start, start_time], [task.experiment_operation, task.experiment_operation], 'r--', linewidth=2)
 
-        # 軸のラベルを設定
+        # Set axis labels
         ax.set_xlabel('Time')
         ax.set_ylabel('Task')
 
-        # time軸の最大値と最小値を設定
+        # Set the minimum and maximum of the time axis
         max_time = max(task.scheduled_time + task.processing_time for task in tasks)
         max_time = max(max(task.optimal_time + task.processing_time for task in tasks), max_time) + 5
         min_time = min(task.scheduled_time for task in tasks)
         min_time = min(min(task.optimal_time for task in tasks), min_time) - 5
         ax.set_xlim(min_time, max_time)
 
-        # タスクごとに異なる色を設定
+        # Assign a different color to each task
         colors = plt.get_cmap('tab10', len(tasks))
         for i, task in enumerate(tasks):
             start_time = task.scheduled_time
             end_time = start_time + task.processing_time
             ax.barh(task.experiment_operation, end_time - start_time, left=start_time, color=colors(i), edgecolor='black')
 
-        # 凡例を設定
+        # Set the legend
         patches = [mpatches.Patch(color=colors(i), label=task.experiment_operation) for i, task in enumerate(tasks)]
         plt.legend(handles=patches)
 
-        # グラフを表示
+        # Display the plot
         if save_path is not None:
             plt.savefig(save_path)
         else:
