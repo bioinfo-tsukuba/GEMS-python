@@ -30,6 +30,51 @@ from gems_python.common import dataframes
 MARKER = "_gems_serialization"
 VERSION = 1
 
+# Only these explicitly documented v1 migrations may supply missing progress.
+_LIFECYCLE_FIELDS = {
+    "Experiment": {"lifecycle_version", "lifecycle_status", "hold_reason", "parent_uuid",
+                   "_inherited_history", "initial_conditions", "initial_condition_origins",
+                   "task_group_sequence"},
+    "Experiments": {"lifecycle_version", "manager_status", "stop_diagnostic", "unknown_policy",
+                    "max_unknown_retries", "enable_split", "planning_progress", "ended_experiments",
+                    "finish_requests", "split_requests", "completed_results", "handled_groups"},
+    "TaskGroup": {"lifecycle_version", "task_group_uuid"},
+}
+
+
+def _lifecycle_migration_fields(cls, saved):
+    if "lifecycle_version" in saved:
+        return set()
+    for base in cls.__mro__:
+        if base.__module__ == "gems_python.multi_machine_problem_interval_task." + (
+                "task_info" if base.__name__ == "TaskGroup" else "transition_manager"):
+            return _LIFECYCLE_FIELDS.get(base.__name__, set())
+    return set()
+
+
+def _migrate_lifecycle(cls, saved):
+    from uuid import NAMESPACE_URL, uuid5
+    migrated = dict(saved)
+    if any(base.__name__ == "Experiments" and
+           base.__module__ == "gems_python.multi_machine_problem_interval_task.transition_manager"
+           for base in cls.__mro__) and "retrospective_trace" not in migrated:
+        # Older snapshots did not retain registration or completed reservations.
+        # Preserve that absence explicitly; never invent a complete history.
+        migrated["retrospective_trace"] = {
+            "version": 1, "complete": False, "experiments": {}, "tasks": {}}
+    permitted = _lifecycle_migration_fields(cls, saved)
+    for f in fields(cls) if is_dataclass(cls) else ():
+        if f.name in permitted and f.name not in migrated:
+            if f.name == "task_group_uuid":
+                identity = (saved.get("experiment_uuid"), saved.get("task_group_id"),
+                            saved.get("optimal_start_time"))
+                migrated[f.name] = str(uuid5(NAMESPACE_URL, f"gems:legacy:{identity}"))
+            elif f.default is not MISSING:
+                migrated[f.name] = copy.deepcopy(f.default)
+            else:
+                migrated[f.name] = f.default_factory()
+    return migrated
+
 
 class SerializationError(ValueError):
     """A saved value cannot be represented or restored without information loss."""
@@ -70,9 +115,10 @@ def _supported_object(value):
 def attributes(value):
     """Include dataclass fields, dynamic progress, and slots, without properties."""
     result = dict(getattr(value, "__dict__", {}))
+    migrating = _lifecycle_migration_fields(type(value), result)
     if is_dataclass(value):
         for field in fields(value):
-            if hasattr(value, field.name):
+            if field.name not in migrating and hasattr(value, field.name):
                 result.setdefault(field.name, getattr(value, field.name))
     for cls in type(value).__mro__:
         slots = cls.__dict__.get("__slots__", ())
@@ -236,7 +282,10 @@ def _decode_value(value, path, context):
             # documented migration may default; missing progress still fails.
             if any(base.__name__ == "Experiments" and base.__module__.startswith("gems_python.")
                    for base in cls.__mro__):
-                missing = [name for name in missing if name != "solver_time_limit_seconds"]
+                missing = [name for name in missing if name not in (
+                    "solver_time_limit_seconds", "retrospective_trace")]
+            permitted = _lifecycle_migration_fields(cls, saved)
+            missing = [name for name in missing if name not in permitted]
             if missing:
                 raise SerializationError(f"{path}: missing saved fields {', '.join(missing)}")
         return _restore(cls, {k: _decode(v, f"{path}.{k}", context) for k, v in saved.items()}, path)
@@ -288,6 +337,7 @@ def _domain(value, name):
 
 
 def _restore(cls, saved, path):
+    saved = _migrate_lifecycle(cls, saved)
     try:
         obj = object.__new__(cls)
         for key, value in saved.items():
@@ -312,6 +362,14 @@ def _restore(cls, saved, path):
             raise SerializationError(f"{path}.current_state_index: inconsistent with current_state_name")
         if obj.dataframe_backend != dataframes.backend_of(obj.shared_variable_history):
             raise SerializationError(f"{path}.dataframe_backend: inconsistent with history type")
+    if getattr(obj, "lifecycle_version", None) is not None:
+        if obj.lifecycle_version != 1:
+            raise SerializationError(f"{path}.lifecycle_version: unsupported version")
+        if _domain(obj, "Experiments") and hasattr(obj, "_validate_policy"):
+            try:
+                obj._validate_policy()
+            except ValueError as err:
+                raise SerializationError(f"{path}: {err}") from err
     return obj
 
 
@@ -399,6 +457,7 @@ def _legacy_object(cls, saved, path):
     except (NameError, TypeError) as err:
         raise SerializationError(f"{path}: cannot resolve legacy field types for {cls.__name__}") from err
     restored = {k: _legacy(v, hints.get(k), f"{path}.{k}") for k, v in saved.items()}
+    restored = _migrate_lifecycle(cls, restored)
     if is_dataclass(cls):
         for field in fields(cls):
             if field.name in restored or field.name in ("current_state_index", "dataframe_backend"):

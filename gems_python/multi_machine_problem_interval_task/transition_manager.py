@@ -23,6 +23,9 @@ from gems_python.common.scheduling import DEFAULT_SOLVER_TIME_LIMIT_SECONDS, val
 from gems_python.common.class_dumper import auto_dataclass as dataclass
 
 from gems_python.multi_machine_problem_interval_task.task_info import Machine, MachineList, Task, TaskGroup
+from gems_python.multi_machine_problem_interval_task.lifecycle import (
+    LifecycleManager, FEATURE_VERSION, fingerprint,
+)
 
 """MODULE: State
 """
@@ -99,6 +102,10 @@ class State(SerializationMixin, ABC):
             f"{self.__class__.__name__}.dummy_output(df, task_group_id, task_id) is not implemented."
         )
 
+    def lifecycle_action(self, history, context):
+        """Return Finish, Split or None at a completed group boundary."""
+        return None
+
 
 """MODULE: Experiment
 """
@@ -125,6 +132,27 @@ class Experiment:
     current_state_index: int = field(default=None, init=False)
     experiment_uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
     dataframe_backend: str = "auto"
+    lifecycle_version: int = FEATURE_VERSION
+    lifecycle_status: str = "ACTIVE"
+    hold_reason: str | None = None
+    parent_uuid: str | None = None
+    _inherited_history: DataFrame | None = None
+    initial_conditions: dict = field(default_factory=dict)
+    initial_condition_origins: dict = field(default_factory=dict)
+    task_group_sequence: int = 0
+
+    def history_for_state(self):
+        """Parent provenance followed by this experiment's own observations."""
+        if self._inherited_history is None:
+            return dataframes.copy_frame(self.shared_variable_history)
+        inherited = dataframes.convert(self._inherited_history, self.dataframe_backend)
+        return dataframes.append(inherited, self.shared_variable_history)
+
+    @property
+    def inherited_history(self):
+        return (dataframes.make_frame(backend=self.dataframe_backend)
+                if self._inherited_history is None else
+                dataframes.convert(self._inherited_history, self.dataframe_backend))
     
     def define_all_node(self)-> set:
         all_node = set()
@@ -289,6 +317,9 @@ class Experiment:
         self.update_current_state_name_and_index(self.current_state_name)
         if self.current_task_group is None:
             self.current_task_group = self.generate_task_group_of_the_state()
+        else:
+            self.current_task_group.configure_task_group_settings(
+                self.experiment_name, self.experiment_uuid)
 
         # if self.shared_variable_history != DataFrame:
         #     pl.read_csv(self.shared_variable_history)
@@ -309,7 +340,7 @@ class Experiment:
                 current_state_index = index
         
         if current_state_index == -1:
-            RuntimeError(f"There is no state named {input_state_name}")
+            raise ValueError(f"There is no state named {input_state_name}")
         
         return current_state_index
         
@@ -364,7 +395,10 @@ class Experiment:
         # Generate a task
         state_index = self.current_state_index
         try:
-            task_group: TaskGroup = self.states[state_index].task_generator(dataframes.copy_frame(self.shared_variable_history))
+            task_group: TaskGroup = self.states[state_index].task_generator(self.history_for_state())
+            task_group.task_group_uuid = str(uuid.uuid5(
+                uuid.NAMESPACE_URL, f"gems:group:{self.experiment_uuid}:{self.task_group_sequence}"))
+            self.task_group_sequence += 1
             self.current_task_group = task_group
             self.current_task_group.configure_task_group_settings(
                 experiment_name = self.experiment_name,
@@ -383,7 +417,7 @@ class Experiment:
         """
         # Determine the next state index
         try:
-            next_state_name: str = self.states[self.current_state_index].transition_function(self.shared_variable_history)
+            next_state_name: str = self.states[self.current_state_index].transition_function(self.history_for_state())
         except Exception as err:
             raise RuntimeError(f"Error state transition: {err}")
 
@@ -395,7 +429,7 @@ class Experiment:
 """
 
 @dataclass
-class Experiments:
+class Experiments(LifecycleManager):
     
     """
     Experiments class.
@@ -410,9 +444,26 @@ class Experiments:
     step: int = field(default=0)
     reference_time: int = field(default=0)
     solver_time_limit_seconds: float = DEFAULT_SOLVER_TIME_LIMIT_SECONDS
+    lifecycle_version: int = FEATURE_VERSION
+    manager_status: str = "RUNNING"
+    stop_diagnostic: dict | None = None
+    unknown_policy: str = "retry"
+    max_unknown_retries: int = 3
+    enable_split: bool = False
+    planning_progress: object = None
+    ended_experiments: dict = field(default_factory=dict)
+    finish_requests: dict = field(default_factory=dict)
+    split_requests: dict = field(default_factory=dict)
+    completed_results: dict = field(default_factory=dict)
+    handled_groups: dict = field(default_factory=dict)
+    # Completed groups are removed from the scheduler; keep their last
+    # reservations separately for post-run review, without duplicating history.
+    retrospective_trace: dict = field(default_factory=lambda: {
+        "version": 1, "complete": True, "experiments": {}, "tasks": {}})
 
     def __post_init__(self):
         self.solver_time_limit_seconds = validate_time_limit(self.solver_time_limit_seconds)
+        self._validate_policy()
         self.parent_dir_path = Path(self.parent_dir_path)
         # TODO: TaskGroupに対応
         if self.parent_dir_path.exists():
@@ -430,6 +481,13 @@ class Experiments:
                 self.task_groups.append(copy.deepcopy(experiment.current_task_group))
 
             self.set_task_group_ids()
+        for experiment in self.experiments:
+            self._register_retrospective(experiment)
+
+    def render_retrospective(self, output, *, font=None, time_unit="min"):
+        """Export post-run PNG/SVG views and a standalone interactive HTML."""
+        from gems_python.visualization.retrospective import render_retrospective
+        return render_retrospective(self, output, font=font, time_unit=time_unit)
 
     def reload(self, step: int = None, *, source: str = "auto"):
         """Return a saved step without changing this collection, even on failure."""
@@ -466,11 +524,14 @@ class Experiments:
             self.solver_time_limit_seconds if solver_time_limit_seconds is None
             else solver_time_limit_seconds)
         for e in self.experiments:
-            if e.experiment_name == experiment.experiment_name and e.experiment_uuid == experiment.experiment_uuid:
+            if e.experiment_uuid == experiment.experiment_uuid:
                 raise ValueError(f"Experiment name and uuid must be unique: {experiment.experiment_name}, {experiment.experiment_uuid}")
+        if experiment.experiment_uuid in self.ended_experiments:
+            raise ValueError(f"Experiment UUID already ended: {experiment.experiment_uuid}")
             
         self.experiments.append(experiment)
         self.task_groups.append(copy.deepcopy(experiment.current_task_group))
+        self._register_retrospective(experiment)
         self.set_task_group_ids()
         self.execute_scheduling(solver_time_limit_seconds=solver_time_limit_seconds)
         if save_step:
@@ -603,42 +664,8 @@ class Experiments:
             reference_time: int = None,
             *, solver_time_limit_seconds: float | None = None,
             ):
-        # TODO-DONE: TaskGroupに対応
-        """
-        Execute the scheduling of the tasks.
-        :param scheduling_method: 'o' for OR-Tools, 's' for simulated annealing, or 'f' for sequential scheduling.
-        :param reference_time: The reference time for the optimal time.
-        """
-        limit = validate_time_limit(self.solver_time_limit_seconds if solver_time_limit_seconds is None
-                                    else solver_time_limit_seconds)
-        if reference_time is not None:
-            self.reference_time = reference_time
-        
-        reference_time = self.reference_time
-        self.set_task_group_ids()
-        # Reschedule
-        task_groups = self.task_groups.copy()
-        scheduled_task_groups = list()
-
-        try:
-            match scheduling_method:
-                case 'o':
-                    scheduled_task_groups = schedule_task_groups(
-                        task_groups, reference_time, self.machine_list,
-                        solver_time_limit_seconds=limit,
-                    )
-                case 's':
-                    scheduled_task_groups = TaskGroup.schedule_task_groups_simulated_annealing(task_groups = task_groups, machines = self.machine_list, reference_time = reference_time)
-                case 'f':
-                    scheduled_task_groups = TaskGroup.schedule_task_groups(task_groups = task_groups, machines = self.machine_list, reference_time = reference_time)
-                case _:
-                    raise ValueError(f"Unexpected scheduling_method: {scheduling_method}")
-        except Exception as err:
-            raise RuntimeError(f"Error scheduling the tasks with method {scheduling_method}: {err}") from err
-
-        self.task_groups = scheduled_task_groups
-
-    
+        return self.plan_tasks(scheduling_method, reference_time,
+                               solver_time_limit_seconds=solver_time_limit_seconds)
 
     def update_shared_variable_history(
             self,
@@ -646,39 +673,53 @@ class Experiments:
             task_id: int,
             new_result_of_experiment: DataFrame,
             update_type: str = 'a',
+            *, task_group_uuid: str | None = None, result_id: str | None = None,
             ) -> Tuple[TaskGroup, Task]:
         """
         TODO: explanation
         """
-        # TODO-DONE: TaskGroupに対応
-        # Update task_group
-        task_group_index = TaskGroup.find_task_group(self.task_groups, task_group_id)
-        experiment_uuid = self.task_groups[task_group_index].experiment_uuid
-        experiment_index = 0
-        for index in range(len(self.experiments)):
-            if self.experiments[index].experiment_uuid == experiment_uuid:
-                experiment_index = index
-
-        # Validate/convert before completing tasks so a rejected result is retryable.
-        experiment = self.experiments[experiment_index]
-        new_history = dataframes.update(
-            experiment.shared_variable_history, new_result_of_experiment, update_type
-        )
-        self.task_groups = TaskGroup.complete_task(
-            self.task_groups, group_id=task_group_id, task_id=task_id
-        )
+        if result_id is not None:
+            if not task_group_uuid:
+                raise ValueError("result_id requires a persistent task_group_uuid")
+            result_hash = fingerprint((task_group_uuid, task_id,
+                                       new_result_of_experiment, update_type))
+            if result_id in self.completed_results:
+                if self.completed_results[result_id]["fingerprint"] != result_hash:
+                    raise ValueError(f"Conflicting result ID: {result_id}")
+                return
+        group = self._resolve_group(task_group_id, task_group_uuid)
+        experiment = self._experiment(group.experiment_uuid)
+        task = next(t for t in group.tasks if t.task_id == task_id)
+        if task.completed:
+            raise ValueError("Task already completed; resend with the original result_id")
+        if self.manager_status == "STOPPED" and task.task_status.name != "IN_PROGRESS":
+            raise RuntimeError("STOPPED manager only accepts results of in-progress tasks")
+        new_history = dataframes.update(experiment.shared_variable_history,
+                                        new_result_of_experiment, update_type)
+        reservation = {
+            "experiment": experiment.experiment_uuid,
+            "group": group.task_group_uuid, "task_id": task.task_id,
+            "machine": task.allocated_machine_id,
+            "operation": task.experiment_operation,
+            "start": task.scheduled_time,
+            "end": (None if task.scheduled_time is None else
+                    task.scheduled_time + task.processing_time),
+            "completed_at": self.reference_time,
+        }
+        TaskGroup.complete_task(self.task_groups, group.task_group_id, task_id)
         experiment.shared_variable_history = new_history
-
-        if self.task_groups[task_group_index].is_completed():
-            # Delete the task group
-            self.task_groups = TaskGroup.delete_task_group(self.task_groups, task_group_id)
-            # Transition and generate a new task group
-            new_task_group = self.experiments[experiment_index].execute_one_step()
-            # Add the new task group and reschedule
-            if new_task_group.tasks:
-                self.task_groups = TaskGroup.add_task_group(
-                    self.task_groups, self.machine_list, new_task_group, reschedule=False)
-
+        self.retrospective_trace["tasks"][f"{group.task_group_uuid}:{task.task_id}"] = reservation
+        if result_id is not None:
+            self.completed_results[result_id] = {
+                "fingerprint": result_hash,
+                "backend": dataframes.backend_of(new_result_of_experiment),
+                "task_group_uuid": group.task_group_uuid, "task_id": task_id,
+            }
+        if group.is_completed() and self.manager_status != "STOPPED":
+            try:
+                self._complete_group(group)
+            except Exception as err:
+                raise self._stop("LIFECYCLE_ERROR", err) from err
         self.set_task_group_ids()
 
     def update_shared_variable_history_and_states_and_generate_task_and_reschedule(
@@ -690,6 +731,7 @@ class Experiments:
             scheduling_method = 'o',
             optimal_time_reference_time: int = None,
             *, solver_time_limit_seconds: float | None = None,
+            task_group_uuid: str | None = None, result_id: str | None = None,
             ) -> Tuple[TaskGroup, Task]:
         """
         TODO: explanation
@@ -700,15 +742,24 @@ class Experiments:
         # TODO-DONE: TaskGroupに対応
         # Update task_group
 
+        if result_id is not None and result_id in self.completed_results:
+            # Check identity before resolving a group which may have been deleted.
+            digest = fingerprint((task_group_uuid, task_id, new_result_of_experiment, update_type))
+            if digest != self.completed_results[result_id]["fingerprint"]:
+                raise ValueError(f"Conflicting result ID: {result_id}")
+            return None, None
         if optimal_time_reference_time is not None:
             self.reference_time = optimal_time_reference_time
-        self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type)
+        self.update_shared_variable_history(task_group_id, task_id, new_result_of_experiment, update_type,
+                                            task_group_uuid=task_group_uuid, result_id=result_id)
+        if self.manager_status == "STOPPED":
+            return None, None
         self.set_task_group_ids()
         
         self.execute_scheduling(scheduling_method, solver_time_limit_seconds=solver_time_limit_seconds)
         print(f"{self.task_groups=}")
 
-        earliest_task, eariest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.task_groups)
+        earliest_task, eariest_group_id = TaskGroup.get_ealiest_task_in_task_groups(self.runnable_groups())
         if earliest_task is None:
             return None, None
         print(f"{earliest_task=}")
@@ -729,7 +780,7 @@ class Experiments:
     def generate_gantt_chart(self, save_dir: Path = None):
         if save_dir is None:
             save_dir = self.save_dir()
-        TaskGroup.generate_gantt_chart(self.task_groups, save_dir = save_dir)
+        TaskGroup.generate_gantt_chart(self.runnable_groups(), save_dir = save_dir)
 
     def save_results(self, save_dir: Path = None):
         if save_dir is None:
@@ -743,7 +794,7 @@ class Experiments:
             f.write(date_and_time)
 
         # Save the task groups
-        schedule_df = TaskGroup.create_non_completed_tasks_df(self.task_groups)
+        schedule_df = TaskGroup.create_non_completed_tasks_df(self.runnable_groups())
         dataframes.write_csv(schedule_df, save_dir / "schedule.csv")
 
         # Save the gantt chart
@@ -833,7 +884,9 @@ class Experiments:
             task_response = result_data.get("task_response")
             update_type = result_data.get("update_type", "a")
             scheduling_method = result_data.get("scheduling_method", "o")
-            task_group_id = result_data["task_group_id"]
+            task_group_id = result_data.get("task_group_id")
+            task_group_uuid = result_data.get("task_group_uuid")
+            result_id = result_data.get("result_id")
             task_id = result_data["task_id"]
             optimal_time_reference_time = result_data.get("schedule_reference_time")
             if optimal_time_reference_time is None:
@@ -842,15 +895,18 @@ class Experiments:
                 case "In Progress":
                     # TODO-DONE 適切な処理
                     try:
-                        TaskGroup.start_task(self.task_groups, task_group_id, task_id)
+                        self.start_task(task_group_id, task_id, task_group_uuid=task_group_uuid)
                     except Exception as err:
                         print(f"Error starting task: {err}")
                 case "Completed":
-                    group_index = TaskGroup.find_task_group(self.task_groups, task_group_id)
-                    experiment_uuid = self.task_groups[group_index].experiment_uuid
-                    experiment = next(e for e in self.experiments if e.experiment_uuid == experiment_uuid)
+                    duplicate = result_id is not None and result_id in self.completed_results
+                    if duplicate:
+                        backend = self.completed_results[result_id]["backend"]
+                    else:
+                        group = self._resolve_group(task_group_id, task_group_uuid)
+                        backend = self._experiment(group.experiment_uuid).dataframe_backend
                     new_result_of_experiment = dataframes.read_csv(
-                        result_data["result_path"], experiment.dataframe_backend
+                        result_data["result_path"], backend
                     )
                     self.update_shared_variable_history_and_states_and_generate_task_and_reschedule(
                         task_group_id=task_group_id,
@@ -858,8 +914,11 @@ class Experiments:
                         new_result_of_experiment=new_result_of_experiment,
                         update_type=update_type,
                         scheduling_method=scheduling_method,
-                        optimal_time_reference_time=optimal_time_reference_time
+                        optimal_time_reference_time=optimal_time_reference_time,
+                        task_group_uuid=task_group_uuid, result_id=result_id,
                     )
+                    if duplicate:
+                        return
                 case "Error":
                     # TODO: 適切な処理
                     print(f"Task failed: {task_group_id}, {task_id}")
@@ -910,14 +969,18 @@ class Experiments:
         self.execute_scheduling(scheduling_method=scheduling_method, reference_time=self.reference_time,
                                 solver_time_limit_seconds=solver_time_limit_seconds)
 
-        if len(self.task_groups) == 0:
-            return {"status": "no_tasks"}
+        if self.manager_status == "STOPPED":
+            return {"status": "stopped", "diagnostic": self.stop_diagnostic}
+        if not self.runnable_groups():
+            return {"status": "held" if any(e.lifecycle_status.startswith("WAITING") or
+                                            e.lifecycle_status == "SPLIT_PENDING"
+                                            for e in self.experiments) else "no_tasks"}
 
         try:
             group, earliest_task = min(
                 (
                     (group, task)
-                    for group in self.task_groups
+                    for group in self.runnable_groups()
                     for task in group.tasks if not task.completed
                 ),
                 key=lambda item: (
@@ -952,13 +1015,13 @@ class Experiments:
         try:
             if observation_provider is None:
                 dummy_df = state.dummy_output(
-                    dataframes.copy_frame(exp.shared_variable_history),
+                    exp.history_for_state(),
                     task_group_id=earliest_group_id,
                     task_id=earliest_task.task_id,
                 )
             else:
                 dummy_df = observation_provider(
-                    state, dataframes.copy_frame(exp.shared_variable_history), tg,
+                    state, exp.history_for_state(), tg,
                     earliest_task, event_time,
                 )
             if not dataframes.is_dataframe(dummy_df):
@@ -968,7 +1031,7 @@ class Experiments:
 
         # 本番と同経路で更新→遷移→再スケジュール
         try:
-            for scheduled_group in self.task_groups:
+            for scheduled_group in self.runnable_groups():
                 if scheduled_group.is_not_started():
                     for scheduled_task in scheduled_group.tasks:
                         if (
@@ -988,6 +1051,8 @@ class Experiments:
                 scheduling_method=scheduling_method,
                 optimal_time_reference_time=self.reference_time,
                 solver_time_limit_seconds=solver_time_limit_seconds,
+                task_group_uuid=tg.task_group_uuid,
+                result_id=f"simulation:{tg.task_group_uuid}:{earliest_task.task_id}",
             )
         except Exception as err:
             return {"status": "error", "error": f"simulation_update_failed: {err!r}"}

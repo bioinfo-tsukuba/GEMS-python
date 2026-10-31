@@ -1,0 +1,307 @@
+import contextlib
+import copy
+import io
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from gems_python.common import dataframes as frames
+from gems_python.common.persistence import load_snapshot, save_snapshot
+from gems_python.common.serialization import equivalent, SerializationError
+from gems_python.common.planning_errors import SolverFailure
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+from tests.lifecycle_fixtures import manager, advance, observe
+
+
+class TestLifecyclePersistence(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+
+    def test_pending_committed_and_ended_resume_match_uninterrupted(self):
+        for backend in ("pandas", "polars"):
+            for checkpoint in range(7):
+                with self.subTest(backend=backend, checkpoint=checkpoint), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    source = manager(self.directory.name, backend, True)
+                    # checkpoint 2 deliberately retains an unconfirmed split.
+                    for i in range(checkpoint):
+                        if i == 1:
+                            source.simulate_one(observation_provider=observe)
+                        else:
+                            advance(source)
+                    resumed = [Experiments.from_json(source.to_json()),
+                               Experiments.from_pickle(dumped=source.to_pickle())]
+                    for restored in resumed:
+                        self.assertTrue(equivalent(source, restored))
+                    for _ in range(9):
+                        expected = advance(source)
+                        for restored in resumed:
+                            self.assertEqual(expected, advance(restored))
+                            self.assertTrue(equivalent(source, restored))
+
+    def test_stopped_reload_does_not_release_stop(self):
+        lab = manager(self.directory.name)
+        lab.execute_scheduling()
+        lab._stop("TEST", "injected")
+        for restored in (Experiments.from_json(lab.to_json()),
+                         Experiments.from_pickle(dumped=lab.to_pickle())):
+            self.assertEqual(restored.manager_status, "STOPPED")
+            self.assertEqual(restored.simulate_one()["status"], "stopped")
+            restored.resume()
+            self.assertEqual(restored.manager_status, "RUNNING")
+
+    def test_retry_checkpoint_keeps_remaining_budget(self):
+        from gems_python.common.cp_sat_scheduler import schedule_task_groups
+        lab = manager(self.directory.name)
+        saved, limits = [], []
+        def solver(groups, reference, machines, **kwargs):
+            limits.append(kwargs["solver_time_limit_seconds"])
+            if len(limits) == 1:
+                raise SolverFailure("UNKNOWN", {"status": "UNKNOWN"})
+            saved.append(lab.to_json())
+            return schedule_task_groups(groups, reference, machines, **kwargs)
+        with patch("gems_python.common.cp_sat_scheduler.schedule_task_groups", solver):
+            lab.execute_scheduling()
+        restored = Experiments.from_json(saved[0])
+        resumed_limits = []
+        def remaining(groups, reference, machines, **kwargs):
+            resumed_limits.append(kwargs["solver_time_limit_seconds"])
+            raise SolverFailure("UNKNOWN", {"status": "UNKNOWN"})
+        with patch("gems_python.common.cp_sat_scheduler.schedule_task_groups", remaining), \
+                self.assertRaisesRegex(RuntimeError, "retry limit"):
+            restored.execute_scheduling()
+        self.assertEqual(resumed_limits, [10, 20, 40])
+        self.assertEqual(restored.manager_status, "STOPPED")
+
+    def test_same_generation_selected_after_write_faults(self):
+        import gems_python.common.persistence as persistence
+        directory = Path(self.directory.name)
+        lab = manager(directory)
+        lab.execute_scheduling()
+        save_snapshot(lab, directory)
+        before = lab.to_json()
+        advance(lab)
+        original = persistence._write_synced
+        for failure in (1, 2, 3):
+            calls = []
+            def fail(path, content):
+                calls.append(path)
+                if len(calls) == failure:
+                    raise OSError("injected write interruption")
+                return original(path, content)
+            with patch.object(persistence, "_write_synced", fail), self.assertRaises(OSError):
+                save_snapshot(lab, directory)
+            self.assertEqual(load_snapshot(directory, Experiments).to_json(), before)
+        original_replace = persistence.os.replace
+        def fail_pointer(source, destination):
+            if Path(destination).name == "snapshot_manifest.json":
+                raise OSError("injected manifest interruption")
+            return original_replace(source, destination)
+        with patch.object(persistence.os, "replace", fail_pointer), self.assertRaises(OSError):
+            save_snapshot(lab, directory)
+        self.assertEqual(load_snapshot(directory, Experiments).to_json(), before)
+
+    def test_canonical_hash_validation_and_compatibility_exports(self):
+        directory = Path(self.directory.name)
+        lab = manager(directory)
+        save_snapshot(lab, directory)
+        manifest = json.loads((directory / "snapshot_manifest.json").read_text())
+        generation = directory / ".snapshot_generations" / manifest["generation"]
+        (directory / "experiments.json").write_text("broken compatibility export")
+        self.assertTrue(equivalent(lab, load_snapshot(directory, Experiments)))
+        (generation / "experiments.json").write_text("broken")
+        with self.assertWarns(RuntimeWarning):
+            self.assertTrue(equivalent(lab, load_snapshot(directory, Experiments)))
+        with self.assertRaisesRegex(RuntimeError, "hash mismatch"):
+            load_snapshot(directory, Experiments, source="json")
+        (generation / "experiments.pkl").write_bytes(b"broken")
+        with self.assertRaisesRegex(RuntimeError, "json:.*pickle:"):
+            load_snapshot(directory, Experiments)
+
+    def test_process_exit_before_and_after_manifest_commit(self):
+        directory = Path(self.directory.name)
+        lab = manager(directory)
+        advance(lab)
+        save_snapshot(lab, directory)
+        old_generation = lab.to_json()
+        advance(lab)
+        updated = directory / "updated.json"
+        updated.write_text(lab.to_json())
+        code = """
+import os, sys
+from pathlib import Path
+import gems_python.common.persistence as persistence
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+directory = Path(sys.argv[1])
+lab = Experiments.from_json((directory / "updated.json").read_text())
+replace = persistence.os.replace
+def crash(source, destination):
+    if Path(destination).name == "snapshot_manifest.json":
+        if sys.argv[2] == "before": os._exit(77)
+        replace(source, destination)
+        os._exit(77)
+    return replace(source, destination)
+persistence.os.replace = crash
+persistence.save_snapshot(lab, directory)
+"""
+        for boundary in ("before", "after"):
+            process = subprocess.run([sys.executable, "-c", code, str(directory), boundary],
+                                     capture_output=True)
+            self.assertEqual(process.returncode, 77, process.stderr.decode())
+            restored = load_snapshot(directory, Experiments)
+            expected = old_generation if boundary == "before" else lab.to_json()
+            self.assertEqual(restored.to_json(), expected)
+        self.assertFalse(load_snapshot(directory, Experiments).experiments)
+
+    def test_missing_new_progress_fields_fail_but_old_snapshot_migrates(self):
+        lab = manager(self.directory.name)
+        value = lab.to_dict()
+        del value["attributes"]["max_unknown_retries"]
+        with self.assertRaisesRegex(SerializationError, "missing saved fields"):
+            Experiments.from_dict(value)
+        value = lab.to_dict()
+        from gems_python.common.serialization import _LIFECYCLE_FIELDS
+        def old(item):
+            if isinstance(item, dict):
+                name = item.get("class", "").split(":")[-1]
+                if item.get("kind") == "object" and name in _LIFECYCLE_FIELDS:
+                    for key in _LIFECYCLE_FIELDS[name]:
+                        item["attributes"].pop(key, None)
+                for child in list(item.values()):
+                    old(child)
+            elif isinstance(item, list):
+                for child in item:
+                    old(child)
+        old(value)
+        restored = Experiments.from_dict(value)
+        self.assertEqual(restored.manager_status, "RUNNING")
+        self.assertFalse(restored.enable_split)
+        self.assertEqual(restored.max_unknown_retries, 3)
+        self.assertEqual(restored.experiments[0].experiment_uuid, "parent")
+        restored.execute_scheduling()
+
+    def test_actual_main_json_and_pickle_migrate_and_continue_same_protocol(self):
+        from tests.simulators.cell_culture import observe as culture_observe
+        directory = Path(__file__).parent / "fixtures" / "issue24_main"
+        labs = [load_snapshot(directory, Experiments, source=s) for s in ("json", "pickle")]
+        self.assertTrue(equivalent(*labs))
+        for lab in labs:
+            self.assertEqual(lab.manager_status, "RUNNING")
+            self.assertFalse(lab.enable_split)
+            self.assertEqual(lab.experiments[0].current_state_name, "ObservationState")
+            self.assertEqual(len(lab.experiments[0].shared_variable_history), 1)
+            self.assertEqual(lab.simulate_one(observation_provider=culture_observe)["status"], "ok")
+        self.assertTrue(equivalent(*labs))
+
+    def test_restore_in_fresh_process_retains_pending_split_and_history(self):
+        lab = manager(self.directory.name, "polars", True)
+        advance(lab)
+        lab.simulate_one(observation_provider=observe)
+        path = Path(self.directory.name) / "pending.json"
+        path.write_text(lab.to_json())
+        code = """
+import sys
+from pathlib import Path
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+from tests.lifecycle_fixtures import advance
+lab = Experiments.from_json(Path(sys.argv[1]).read_text())
+assert len(lab.experiments) == 1
+event = next(iter(lab.split_requests.values()))
+lab.confirm_split(event.request_id)
+assert len(lab.experiments) == 2
+assert all(len(e.inherited_history) == 2 for e in lab.experiments)
+for _ in range(8): advance(lab)
+assert not lab.experiments
+assert len(lab.ended_experiments) == 3
+"""
+        subprocess.run([sys.executable, "-c", code, str(path)], check=True, capture_output=True)
+
+    def test_fresh_process_checkpoint_matrix_both_formats_and_backends(self):
+        code = """
+import sys
+from pathlib import Path
+from unittest.mock import patch
+from gems_python.common.cp_sat_scheduler import schedule_task_groups
+from gems_python.common.persistence import load_snapshot
+from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
+from gems_python.multi_machine_problem_interval_task.task_info import Machine
+from tests.lifecycle_fixtures import advance
+lab = load_snapshot(Path(sys.argv[1]), Experiments, source=sys.argv[2])
+checkpoint, backend = sys.argv[3:5]
+assert all(e.dataframe_backend == backend for e in lab.experiments)
+if checkpoint == "stopped":
+    assert lab.manager_status == "STOPPED"
+    assert lab.simulate_one()["status"] == "stopped"
+    lab.resume()
+elif checkpoint == "waiting":
+    assert lab.experiments[0].lifecycle_status == "WAITING_MACHINE"
+    original_uuid = lab.experiments[0].experiment_uuid
+    with patch.object(lab, "proceed_to_next_step"):
+        lab.add_machine(Machine(0, "m0"))
+    assert lab.experiments[0].lifecycle_status == "ACTIVE"
+    assert lab.experiments[0].experiment_uuid == original_uuid
+elif checkpoint == "retry":
+    limits = []
+    def tracked(groups, reference, machines, **kwargs):
+        limits.append(kwargs["solver_time_limit_seconds"])
+        return schedule_task_groups(groups, reference, machines, **kwargs)
+    with patch("gems_python.common.cp_sat_scheduler.schedule_task_groups", tracked):
+        lab.execute_scheduling()
+    assert limits == [10]
+elif checkpoint == "pending":
+    assert len(lab.experiments) == 1
+    assert next(iter(lab.split_requests.values())).status == "PENDING"
+elif checkpoint in ("committed", "ended"):
+    assert "parent" in lab.ended_experiments
+    event = next(iter(lab.split_requests.values()))
+    assert event.status == "COMMITTED"
+    lab.confirm_split(event.request_id)
+for _ in range(12): advance(lab)
+assert not lab.experiments
+assert len(lab.ended_experiments) == 3
+assert len(lab.split_requests) == 1
+assert all(record.settings["max_unknown_retries"] == 3 for record in lab.ended_experiments.values())
+"""
+        for backend in ("pandas", "polars"):
+            for checkpoint in ("before", "pending", "committed", "waiting", "retry", "stopped", "ended"):
+                with self.subTest(backend=backend, checkpoint=checkpoint), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    directory = Path(self.directory.name) / backend / checkpoint
+                    lab = manager(directory, backend, True)
+                    if checkpoint in ("pending", "committed", "ended"):
+                        advance(lab)
+                        if checkpoint == "pending":
+                            lab.simulate_one(observation_provider=observe)
+                        else:
+                            advance(lab)
+                        if checkpoint == "ended":
+                            for _ in range(10):
+                                advance(lab)
+                    elif checkpoint == "waiting":
+                        lab.machine_list.machines = []
+                        lab.execute_scheduling()
+                    elif checkpoint == "stopped":
+                        lab.execute_scheduling()
+                        lab._stop("TEST", "checkpoint")
+                    elif checkpoint == "retry":
+                        calls = []
+                        def interrupted(groups, reference, machines, **kwargs):
+                            calls.append(kwargs["solver_time_limit_seconds"])
+                            if len(calls) == 1:
+                                raise SolverFailure("UNKNOWN", {"status": "UNKNOWN"})
+                            raise KeyboardInterrupt("checkpoint between attempts")
+                        with patch("gems_python.common.cp_sat_scheduler.schedule_task_groups", interrupted), \
+                                self.assertRaises(KeyboardInterrupt):
+                            lab.execute_scheduling()
+                    save_snapshot(lab, directory / "saved")
+                    for source in ("json", "pickle"):
+                        process = subprocess.run(
+                            [sys.executable, "-c", code, str(directory / "saved"), source, checkpoint, backend],
+                            capture_output=True, timeout=30)
+                        self.assertEqual(process.returncode, 0,
+                                         process.stderr.decode() + process.stdout.decode()[-2000:])

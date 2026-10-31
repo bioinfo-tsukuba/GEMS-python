@@ -5,6 +5,7 @@ import logging
 from time import perf_counter
 
 from ortools.sat.python import cp_model
+from gems_python.common.planning_errors import SolverFailure
 from gems_python.common.scheduling import (
     DEFAULT_SOLVER_TIME_LIMIT_SECONDS, measured_schedule,
 )
@@ -127,7 +128,7 @@ def _solve(model, costs, cost_bounds, starts, reference_time, horizon,
         objective_penalty_weight=weight, reference_time=reference_time, horizon=horizon,
     )
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        raise RuntimeError(f"OR-Tools failed to find a schedule: {solver.status_name(status)}")
+        raise SolverFailure(solver.status_name(status), diagnostics)
     diagnostics["penalty"] = sum(
         solver.value(cost) if not isinstance(cost, int) else cost for cost in costs)
     LOGGER.info(

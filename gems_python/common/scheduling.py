@@ -46,8 +46,8 @@ def validate_inputs(groups, reference_time, machines=None):
         if group.is_completed() and any(not task.completed for task in group.tasks):
             raise ValueError("Completed group contains unfinished tasks; call status_update()")
         for task in group.tasks:
-            _integer(task.processing_time, "processing_time", nonnegative=True)
-            _integer(task.interval, "interval", nonnegative=True)
+            _integer(task.processing_time, f"Task {task.task_id} processing_time", nonnegative=True)
+            _integer(task.interval, f"Task {task.task_id} interval", nonnegative=True)
             if machines is not None and not task.completed and not group.is_completed():
                 if not any(m.machine_type == task.optimal_machine_type
                            for m in machine_by_id.values()):
@@ -151,6 +151,7 @@ def measured_schedule(function):
                  for task in tasks]
         fixed = {} if simple else fixed_work(items)
         started = perf_counter()
+        external_report = values.get("diagnostics")
         report = {"scheduler": function.__name__, "status": "NO_TASKS",
                   "build_seconds": 0.0, "search_seconds": 0.0,
                   "apply_seconds": 0.0, "validation_seconds": 0.0}
@@ -192,6 +193,8 @@ def measured_schedule(function):
             report["other_seconds"] = max(0.0, report["total_seconds"] - sum(
                 report[key] for key in
                 ("build_seconds", "search_seconds", "apply_seconds", "validation_seconds")))
+            if external_report is not None:
+                external_report.update(report)
             LOGGER.info("Scheduling status=%s valid=%s total_seconds=%.6f",
                         report["status"], report.get("valid"), report["total_seconds"],
                         extra={"scheduling_report": report})

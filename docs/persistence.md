@@ -45,6 +45,14 @@ restored = Experiments.from_dict(dictionary)
 コレクション全体の`experiments.json`と`experiments.pkl`を保存します。
 区間タスク管理系の`save_results()`も両形式を保存します。
 
+Since Issue #24, shared persistence writes and synchronizes both formats in the
+same snapshot generation, then commits it by switching `snapshot_manifest.json`.
+Reload checks the generation and hashes selected by the manifest, never selecting
+an unfinished generation. The two root-level files remain as compatibility
+outputs; editing them directly does not affect reload when a manifest exists.
+Legacy saves without a manifest use the previous two-file loading path.
+See [snapshot generations and legacy saves](experiment_lifecycle.md#snapshot-generations-and-legacy-saves).
+
 ## reloadの自動選択
 
 ```python
@@ -97,6 +105,9 @@ bytes、日付・時刻・期間、NumPyスカラーを保存できます。
   クラスを使います。失われたExperiment派生型を自動で推定しません。
   Stateの必須設定や具体的penalty、進捗フィールドが欠けている場合は、
   デフォルト値で補って実行を再開せず、欠けた項目を示すエラーにします。
+  As an exception, only legacy multi-machine saves without a lifecycle version
+  receive initial records with the additional features disabled and default retry
+  settings. State and Task progress are not regenerated.
   旧形式にState indexがない場合は名前が一意に対応するときだけ復元し、
   複数のStateが同じ名前を持つ場合はエラーにします。
 - 旧JSONには共有参照の情報がありません。その同一性を回復することはできません。

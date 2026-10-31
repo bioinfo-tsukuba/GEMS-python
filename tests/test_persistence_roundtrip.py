@@ -289,6 +289,10 @@ class TestPersistenceRoundtrip(unittest.TestCase):
             self.assertTrue(equivalent(source, Bundle.from_json(path.read_text(encoding="utf-8"))))
 
     def test_reload_conflicts_fallbacks_and_failure_atomicity_all_managers(self):
+        def save_legacy_snapshot(collection, directory):
+            save_snapshot(collection, directory)
+            # This test exercises the published legacy two-file reader.
+            (Path(directory) / "snapshot_manifest.json").unlink()
         for module, state in ((simple, SimpleState), (single, SingleState), (multi, TimedState)):
             with self.subTest(module=module.__name__), tempfile.TemporaryDirectory() as directory, \
                     contextlib.redirect_stdout(io.StringIO()):
@@ -304,17 +308,17 @@ class TestPersistenceRoundtrip(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "Cannot load snapshot"):
                         source.reload(source=selection)
                     self.assertEqual(before, source.to_json())
-                save_snapshot(source, directory)
+                save_legacy_snapshot(source, directory)
                 self.assertTrue(equivalent(source, source.reload()))
                 self.assertEqual(before, source.to_json())
                 (directory / "experiments.json").unlink()
                 with self.assertWarns(RuntimeWarning):
                     self.assertTrue(equivalent(source, source.reload()))
-                save_snapshot(source, directory)
+                save_legacy_snapshot(source, directory)
                 (directory / "experiments.pkl").unlink()
                 with self.assertWarns(RuntimeWarning):
                     self.assertTrue(equivalent(source, source.reload()))
-                save_snapshot(source, directory)
+                save_legacy_snapshot(source, directory)
                 other = copy.deepcopy(source)
                 other.experiments[0].experiment_name = "different"
                 other.to_pickle(directory / "experiments.pkl")
@@ -343,7 +347,7 @@ class TestPersistenceRoundtrip(unittest.TestCase):
                 if module is not simple:
                     source.step = 3
                     saved = copy.deepcopy(source)
-                    save_snapshot(saved, source.save_dir())
+                    save_legacy_snapshot(saved, source.save_dir())
                     source.step = 9
                     before = source.to_json()
                     self.assertTrue(equivalent(saved, source.reload(step=3)))

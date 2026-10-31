@@ -2,7 +2,7 @@
 
 ![GEMS logo](assets/logo.png)
 
-> **推奨 / Recommended scheduler: Google OR-Tools (`"o"`, the default).**
+> **Recommended scheduler: Google OR-Tools (`"o"`, the default).**
 > In 168 feasible comparisons across 64 synthetic scheduling patterns,
 > OR-Tools had a lower (better) timing-penalty score in 110, tied in 58, and
 > had a higher score in 0. See the
@@ -20,8 +20,39 @@ This document describes how to set up the environment, run tests, simulate exper
 
 All three experiment managers support JSON and pickle snapshots with concrete
 State classes, settings, progress, task times, and shared references preserved.
-See [保存・復元とreloadの仕様](docs/persistence.md) for usage, automatic selection,
+See [saving, restoring, and reload](docs/persistence.md) for usage, automatic selection,
 legacy compatibility, and verification results.
+
+## Experiment lifecycle
+
+The multi-machine manager supports explicit experiment completion, local holds
+for missing machine types, and bounded retries when a plan remains unknown.
+Sample splitting with independent children and inherited provenance is available
+with `enable_split=True` (disabled by default). See the
+[lifecycle contract and examples](docs/experiment_lifecycle.md).
+
+### Review completed experiments
+
+After all experiments finish, generate lineage timelines, family pages, and an
+interactive view linking experiment selection to machine reservations:
+
+```python
+manager.render_retrospective("review", time_unit="min")
+```
+
+Open `review/review.html` in a browser. It works as a single file.
+See the [post-run visualization guide](docs/experiment_retrospective.md) for
+saved runs, selection controls, output files, and Japanese fonts.
+
+To try the [small runnable example](examples/experiment_retrospective.py):
+
+```bash
+MPLBACKEND=Agg poetry run python -m scripts.run_experiment_retrospective_example \
+  --output /tmp/gems-review-example
+```
+
+Open `/tmp/gems-review-example/figures/review.html`. The example generates its
+own data; use a new output directory each time.
 
 ## Prerequisites
 - Python 3.14.4 (the repository's `.python-version`)
@@ -54,7 +85,13 @@ timing penalties, and by default searches for up to five seconds per scheduling 
 feasible schedule may be returned before optimality is proven; the solver
 status, objective, and best bound are recorded through Python logging at
 `INFO` level. Missing resources or a failure to find a feasible schedule
-raise an error.
+raise an error in the one-machine variants. The multi-machine manager retains
+experiments with missing machine types on hold and continues the others.
+An `UNKNOWN` result warns and retries with doubled search limits by default,
+with at most three additional attempts (5→10→20→40 seconds with the default
+initial limit). Set `unknown_policy="stop"` to stop after the first `UNKNOWN`.
+Invalid specifications and conflicting fixed reservations stop the whole manager;
+see the lifecycle contract for diagnostics and explicit `resume()`.
 
 All three `Experiments` managers accept `solver_time_limit_seconds`, saved in
 JSON/pickle snapshots. The value must be a finite positive number; old snapshots
