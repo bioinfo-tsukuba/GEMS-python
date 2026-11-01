@@ -176,3 +176,83 @@ unchanged. `git diff --check` passed; generated outputs remain outside the check
 
 Physical experiment execution, the interactive polling loop and the absent
 64-case raw pattern dataset were not verified in this language-only change.
+
+## Approved docstring follow-up (2026-11-01)
+
+After reviewing the docstrings against the scheduling and transition code, the
+user approved eight corrections to existing English explanations. The follow-up
+changes 20 docstrings and related comments in eight Python files:
+
+| Area | Corrected explanation |
+|---|---|
+| `Task.interval` | The first task starts at the group start plus its interval; later tasks start at the preceding task's end plus their interval. |
+| `CyclicalRestPenalty` | Rest ranges are inclusive and apply the finite configured `PENALTY_MAXIMUM`, currently 1,000,000, to start times. Group penalties evaluate the group start before the first interval. This does not forbid a schedule or test processing-interval overlap with rest. |
+| `determine_next_state_name` | The returned value is a state-name string. |
+| Interval `execute_one_step` | The returned value is a generated `TaskGroup`. |
+| Interval `Experiment` attributes | The field is `current_task_group`. |
+| `CyclicalRestPenaltyWithLinear` | Before the cycle start the penalty is 0; in an active rest range it is `PENALTY_MAXIMUM`; otherwise it is the existing linear formula. A scheduling lower bound at or after the cycle start excludes the before-cycle region. |
+| `get_ealiest_task` | Completed tasks are excluded; no remaining task produces `None`. |
+| `extract_all_state_transition_candidates` | Source is inspected without execution. String literals and `val:<name>` placeholders are collected; other expressions are ignored. Nested returns and duplicates remain, so the result is not all possible runtime state names. |
+
+The candidate-extraction explanation was moved before the first assignment in
+all three models. In addition to the corrected text, this deliberately makes
+their `__doc__` available instead of `None`. The nonexistent `func` parameter
+description was removed. Candidate extraction, scheduling, formulas, numerical
+constants, public identifiers and diagnostic messages were not changed.
+
+### Follow-up revisions and environment
+
+- Before: `42f1186e5c8c50a6d0beac8f3701cf862f6bdbd4`.
+- Implementation: `d5cf75f96af4c5b6ea19d984829af5d0df7d60fa`.
+- Python 3.14.4 in `/tmp/gems-issue28-venv`.
+- All 58 applicable dependency entries still match the unchanged lock.
+  The lock hash is the same as recorded above.
+
+An initial version audit ignored lock markers and incorrectly reported inactive
+NetworkX 3.7 as a mismatch. Filtering entries with their Python/platform markers
+verified NetworkX 3.6 and all 58 applicable versions; no packages were changed.
+
+### Follow-up verification
+
+The same 14-module command under [tests and output inspection](#tests-and-output-inspection)
+ran in separate before/after archive copies: 85 tests passed in each, including
+Japanese experiment names and paths. Runtime checks also verified the following
+outputs in both copies, with no behavioral differences:
+
+| Check | Inputs and observed output |
+|---|---|
+| First and later intervals | Group start 10, processing times `[2, 2]`, intervals `[5, 3]`: task starts `[15, 20]` for OR-Tools and sequential placement in both interval models. |
+| Rest boundaries | Cycle start 0, duration 60, rest `[15, 30]`: penalties at `[14, 15, 30, 31, 75]` are `[0, 1000000, 1000000, 0, 1000000]` in all three models. |
+| Finite rest cost | A CP-SAT penalty model fixed at start 20 within rest `[15, 30]` remains feasible with cost 1,000,000 in all three models. |
+| Before-cycle penalty | Cycle start 10, scheduled time 5, optimal time 0: linear-rest penalty is 0 in all three models. |
+| Before-cycle placement | Cycle start 10, duration 60, rest `[0, 2]`, coefficient 3, optimum 20: OR-Tools chooses start 0 at reference 0 and start 20 at reference 10 in all three models. Interval starts here are group starts before the first interval. |
+| Earliest uncompleted task | Completing the first task selects the second; completing both returns `None` in both interval models. |
+| State transition and return type | The next name is `"NextState"`; executing one step updates the state name/index and returns `OneMachineTask` in the simple model or `TaskGroup` in both interval models. |
+| Literal returns | Separate branches returning `"StateA"` and `"StateB"` produce `["StateA", "StateB"]` in all three models. |
+| Variable returns | Returning `next_state` produces `["val:next_state"]` without resolving its value. |
+| Other return expressions | A conditional-expression return or function-call return produces `[]`. |
+| Nested and duplicate returns | Nested returns are included; repeated literal returns remain repeated. |
+
+For reproduction, archive either follow-up revision and run the 14-module
+command above with the recorded interpreter and environment:
+
+```bash
+revision=d5cf75f96af4c5b6ea19d984829af5d0df7d60fa
+verification_dir=$(mktemp -d /tmp/gems-docstring-check-XXXXXX)
+git archive "$revision" | tar -x -C "$verification_dir"
+cd "$verification_dir"
+export PYTHONDONTWRITEBYTECODE=1 MPLBACKEND=Agg
+export MPLCONFIGDIR="$verification_dir/mpl-config"
+# Run the 14-module unittest command recorded above.
+```
+
+AST comparison after removing explanatory string expressions found identical
+executable structure in all eight files. The three candidate-extraction methods
+changed from absent to available docstrings, as intended. Tracked-file searches
+still find Japanese only in the four deliberate Unicode regression-data lines;
+`AGENTS.md` remains excluded and unchanged. `git diff --check` passed.
+
+Full 148-test discovery was not rerun for this docstring follow-up. Its five
+previously recorded baseline errors remain outside this scope. No new scheduler
+study, physical operation or interactive polling run was performed. Temporary
+test outputs were kept outside the checkout.
