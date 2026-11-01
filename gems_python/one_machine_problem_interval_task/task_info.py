@@ -31,7 +31,9 @@ class Task:
     processing_time : int
         The processing time of the task.
     interval : int
-        The interval between the task and the previous task. There is no interval for the first task.
+        The delay before the task. The first task starts at the group start time
+        plus its interval; later tasks start at the previous task's end time
+        plus their interval.
     experiment_operation : str
         The experiment operation associated with the task.
     completed : bool
@@ -150,7 +152,9 @@ class TaskGroup:
 
     def get_ealiest_task(self) -> Task:
         """
-        Get the task with the earliest scheduled time.
+        Get the uncompleted task with the earliest scheduled time.
+
+        :return: The earliest uncompleted task, or None if there are none.
         """
         earliest_task = None
         for task in self.tasks:

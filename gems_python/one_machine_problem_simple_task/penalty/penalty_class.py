@@ -74,14 +74,20 @@ class LinearWithRangePenalty(PenaltyType):
 class CyclicalRestPenalty(PenaltyType):
     """
     Class: CyclicalRestPenalty
-    Penalty type for cyclical rest periods. Returns maximum penalty during rest periods.
+    A finite start-time penalty for cyclical rest periods.
+    Before cycle_start_time, the penalty is 0. At or after that time, return
+    the configured PENALTY_MAXIMUM when the cycle-relative start time falls
+    within an inclusive rest range; otherwise return 0.
+    This penalty does not prohibit a schedule or check whether the task's
+    processing interval overlaps a rest period.
     :param cycle_start_time: Start time of the cycle in minutes.
     :param cycle_duration: Length of the cycle in minutes.
     :param rest_time_ranges: List of (start, end) tuples defining rest periods within the cycle.
 
     Example:
     CyclicalRestPenalty(cycle_start_time=0, cycle_duration=60, rest_time_ranges=[(15, 30)])
-    This example defines a 60-minute cycle starting from 0 minute, with a rest period from 15 to 30 minutes.
+    This example applies PENALTY_MAXIMUM to start times from 15 through 30
+    minutes after the start of each 60-minute cycle, including both endpoints.
     """
     cycle_start_time: int
     cycle_duration: int
@@ -105,7 +111,13 @@ class CyclicalRestPenalty(PenaltyType):
 class CyclicalRestPenaltyWithLinear(PenaltyType):
     """
     Class: CyclicalRestPenaltyWithLinear
-    Penalty type for cyclical rest periods with linear penalty outside rest periods.
+    A finite cyclical rest penalty with a linear penalty outside rest periods.
+    Before cycle_start_time, the penalty is 0. At or after that time, return
+    PENALTY_MAXIMUM within an inclusive rest range; otherwise return
+    abs(scheduled_time - optimal_time) * penalty_coefficient.
+    The scheduler's time lower bound is separate from cycle_start_time.
+    A lower bound at or after cycle_start_time prevents placement in the
+    zero-penalty region before the cycle; this penalty does not impose that bound.
     :param cycle_start_time: Start time of the cycle in minutes.
     :param cycle_duration: Length of the cycle in minutes.
     :param rest_time_ranges: List of (start, end) tuples defining rest periods within the cycle.

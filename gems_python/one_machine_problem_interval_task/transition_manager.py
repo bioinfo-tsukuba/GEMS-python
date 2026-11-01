@@ -47,12 +47,21 @@ class State(SerializationMixin, ABC):
         return str(self.__class__.__name__)
 
     def extract_all_state_transition_candidates(self):
+        """
+        Inspect transition_function source for state graph candidates without
+        executing the function.
+
+        String literal returns are collected as written; bare variable names
+        are represented as "val:<name>" without resolving their values.
+        Other return expressions, including conditional expressions and
+        function calls, are ignored. Returns in nested functions are also
+        visited, and duplicates are retained in traversal order.
+        This is not a complete set of possible runtime return values.
+        Source retrieval and parsing errors propagate to the caller.
+
+        :return: A list of literal strings and variable-name placeholders.
+        """
         func = self.transition_function
-        """
-        Extracts the return values from the function.
-        :param func: Function to extract the return values from.
-        :return: List of return values.
-        """
         class ReturnVisitor(ast.NodeVisitor):
             def __init__(self):
                 self.returns = []
@@ -111,7 +120,7 @@ class Experiment:
         states (List[State]): The states of the experiment.
         current_state_name (str): The name of the current state.
         shared_variable_history (DataFrame): The shared variable history of the experiment.
-        current_task (TaskGroup) (You can manually assign it or Automatically generated): The current task of the experiment.
+        current_task_group (TaskGroup): The current task group, assigned manually or generated from the current state.
         current_state_index (int) (Automatically generated): The index of the current state.
         experiment_uuid (str) (Automatically generated): The UUID of the experiment.
     """
@@ -333,19 +342,19 @@ class Experiment:
     def execute_one_step(self) -> TaskGroup:
         # TODO-DONE: Support TaskGroup
         """
-        Execute one step of the experiment.
-        :return: Task 
+        Execute one state transition and generate the new state's task group.
+        :return: Generated TaskGroup.
         """
-        # Determine the next state index
+        # Determine the next state name
         try:
             new_state_name: str = self.determine_next_state_name()
         except Exception as err:
             raise RuntimeError(f"Error determining the next state index: {err}")
 
-        # Update the current state index
+        # Update the current state name and index
         self.update_current_state_name_and_index(new_state_name)
         
-        # Generate a task
+        # Generate a task group
         try:
             task_group = self.generate_task_group_of_the_state()
         except Exception as err:
@@ -359,7 +368,7 @@ class Experiment:
         Generate a task group of the current state.
         :return: Generated task group.
         """
-        # Generate a task
+        # Generate a task group
         state_index = self.current_state_index
         try:
             task_group: TaskGroup = self.states[state_index].task_generator(dataframes.copy_frame(self.shared_variable_history))
@@ -376,10 +385,11 @@ class Experiment:
     
     def determine_next_state_name(self) -> str:
         """
-        Determine the next state index.
-        :return: Next state index.
+        Determine the next state name by executing the current state's
+        transition_function.
+        :return: Next state name as a string.
         """
-        # Determine the next state index
+        # Determine the next state name
         try:
             next_state_name: str = self.states[self.current_state_index].transition_function(self.shared_variable_history)
         except Exception as err:
