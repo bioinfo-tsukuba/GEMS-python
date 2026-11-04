@@ -50,12 +50,21 @@ class State(SerializationMixin, ABC):
         return str(self.__class__.__name__)
 
     def extract_all_state_transition_candidates(self):
+        """
+        Inspect transition_function source for state graph candidates without
+        executing the function.
+
+        String literal returns are collected as written; bare variable names
+        are represented as "val:<name>" without resolving their values.
+        Other return expressions, including conditional expressions and
+        function calls, are ignored. Returns in nested functions are also
+        visited, and duplicates are retained in traversal order.
+        This is not a complete set of possible runtime return values.
+        Source retrieval and parsing errors propagate to the caller.
+
+        :return: A list of literal strings and variable-name placeholders.
+        """
         func = self.transition_function
-        """
-        Extracts the return values from the function.
-        :param func: Function to extract the return values from.
-        :return: List of return values.
-        """
         class ReturnVisitor(ast.NodeVisitor):
             def __init__(self):
                 self.returns = []
@@ -120,7 +129,7 @@ class Experiment:
         states (List[State]): The states of the experiment.
         current_state_name (str): The name of the current state.
         shared_variable_history (DataFrame): The shared variable history of the experiment.
-        current_task (TaskGroup) (You can manually assign it or Automatically generated): The current task of the experiment.
+        current_task_group (TaskGroup): The current task group, assigned manually or generated from the current state.
         current_state_index (int) (Automatically generated): The index of the current state.
         experiment_uuid (str) (Automatically generated): The UUID of the experiment.
     """
@@ -269,7 +278,7 @@ class Experiment:
         highlight_nodes = [self.current_state_name]
 
         # Draw the graph
-        plt.figure(figsize=(8, 10))  # 画像サイズを指定
+        plt.figure(figsize=(8, 10))  # Set the figure size
         pos = nx.spring_layout(G, seed=100, k=0.5)
         node_color = ["skyblue" if node not in highlight_nodes else "orange" for node in G.nodes()]
         node_size = [1000 if node not in highlight_nodes else 1500 for node in G.nodes()]
@@ -281,7 +290,7 @@ class Experiment:
             plt.text(0.05, 0.95, f'Nodes {hide_nodes} are hidden', transform=plt.gca().transAxes, 
                     fontsize=8, verticalalignment='top', bbox=dict(facecolor='red', alpha=0.5))
 
-        plt.axis('off')  # 軸を非表示に
+        plt.axis('off')  # Hide the axes
         if save_path is not None:
             plt.savefig(save_path)
         else:
@@ -364,21 +373,21 @@ class Experiment:
         self.current_task_group = new_task_group
 
     def execute_one_step(self) -> TaskGroup:
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         """
-        Execute one step of the experiment.
-        :return: Task 
+        Execute one state transition and generate the new state's task group.
+        :return: Generated TaskGroup.
         """
-        # Determine the next state index
+        # Determine the next state name
         try:
             new_state_name: str = self.determine_next_state_name()
         except Exception as err:
             raise RuntimeError(f"Error determining the next state index: {err}")
 
-        # Update the current state index
+        # Update the current state name and index
         self.update_current_state_name_and_index(new_state_name)
         
-        # Generate a task
+        # Generate a task group
         try:
             task_group = self.generate_task_group_of_the_state()
         except Exception as err:
@@ -387,12 +396,12 @@ class Experiment:
         return task_group
     
     def generate_task_group_of_the_state(self) -> TaskGroup:
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         """
         Generate a task group of the current state.
         :return: Generated task group.
         """
-        # Generate a task
+        # Generate a task group
         state_index = self.current_state_index
         try:
             task_group: TaskGroup = self.states[state_index].task_generator(self.history_for_state())
@@ -412,10 +421,11 @@ class Experiment:
     
     def determine_next_state_name(self) -> str:
         """
-        Determine the next state index.
-        :return: Next state index.
+        Determine the next state name by executing the current state's
+        transition_function.
+        :return: Next state name as a string.
         """
-        # Determine the next state index
+        # Determine the next state name
         try:
             next_state_name: str = self.states[self.current_state_index].transition_function(self.history_for_state())
         except Exception as err:
@@ -465,7 +475,7 @@ class Experiments(LifecycleManager):
         self.solver_time_limit_seconds = validate_time_limit(self.solver_time_limit_seconds)
         self._validate_policy()
         self.parent_dir_path = Path(self.parent_dir_path)
-        # TODO: TaskGroupに対応
+        # TODO: Support TaskGroup
         if self.parent_dir_path.exists():
             if not self.parent_dir_path.is_dir():
                 raise ValueError(f"parent_dir_path must be a directory: {self.parent_dir_path}")
@@ -539,7 +549,7 @@ class Experiments(LifecycleManager):
 
 
     def delete_experiment_with_experiment_uuid(self, experiment_uuid: str) -> Union[None, ValueError]:
-        # TODO: TaskGroupに対応
+        # TODO: Support TaskGroup
         """
         Delete the experiment with the input experiment_uuid.
         """
@@ -633,7 +643,7 @@ class Experiments(LifecycleManager):
 
         os.makedirs(save_path, exist_ok=True)
         save_snapshot(self, save_path)
-        # TODO: TaskGroupに対応
+        # TODO: Support TaskGroup
         tasks = [task.to_json() for task in self.task_groups]
         # print(f"{tasks=}")
         # for task in self.tasks:
@@ -739,7 +749,7 @@ class Experiments(LifecycleManager):
         solver_time_limit_seconds = validate_time_limit(
             self.solver_time_limit_seconds if solver_time_limit_seconds is None
             else solver_time_limit_seconds)
-        # TODO-DONE: TaskGroupに対応
+        # TODO-DONE: Support TaskGroup
         # Update task_group
 
         if result_id is not None and result_id in self.completed_results:
@@ -867,7 +877,7 @@ class Experiments(LifecycleManager):
             "schedule_reference_time": 0
         }
         """
-        # TODO-DONE: result typeの確認
+        # TODO-DONE: Check the result type
         # 
         # Check that results are available
         result = self.save_dir() / "experiment_result.json"
@@ -893,7 +903,7 @@ class Experiments(LifecycleManager):
                 optimal_time_reference_time = result_data.get("optimal_time_reference_time")
             match task_response:
                 case "In Progress":
-                    # TODO-DONE 適切な処理
+                    # TODO-DONE Handle this case appropriately
                     try:
                         self.start_task(task_group_id, task_id, task_group_uuid=task_group_uuid)
                     except Exception as err:
@@ -920,7 +930,7 @@ class Experiments(LifecycleManager):
                     if duplicate:
                         return
                 case "Error":
-                    # TODO: 適切な処理
+                    # TODO: Handle this case appropriately
                     print(f"Task failed: {task_group_id}, {task_id}")
                     # Reschedule
                     self.execute_scheduling(scheduling_method, reference_time=optimal_time_reference_time)
@@ -1000,11 +1010,11 @@ class Experiments(LifecycleManager):
         group_index = TaskGroup.find_task_group(self.task_groups, earliest_group_id)
         tg = self.task_groups[group_index]
 
-        # 対応する Experiment を見つける
+        # Find the corresponding Experiment
         exp_index = next(i for i, e in enumerate(self.experiments) if e.experiment_uuid == tg.experiment_uuid)
         exp = self.experiments[exp_index]
 
-        # 現在の State からダミー出力を生成
+        # Generate dummy output from the current State
         state_index = exp.get_current_state_index_from_current_state_name()
         state = exp.states[state_index]
         before_state_name = exp.current_state_name
@@ -1029,7 +1039,7 @@ class Experiments(LifecycleManager):
         except Exception as err:
             return {"status": "error", "error": f"dummy_output_failed: {err!r}", "state": before_state_name}
 
-        # 本番と同経路で更新→遷移→再スケジュール
+        # Use the production path: update, transition, then reschedule
         try:
             for scheduled_group in self.runnable_groups():
                 if scheduled_group.is_not_started():

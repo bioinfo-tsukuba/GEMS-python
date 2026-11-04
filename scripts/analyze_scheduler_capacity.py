@@ -322,37 +322,37 @@ def analyze(source, output):
     io_n, io_valid = phase_counts["io"]
     operation_n, operation_valid = phase_counts["operation"]
     report = [
-        "# Issue #23: 記述統計と図",
+        "# Issue #23: Descriptive statistics and figures",
         "",
-        f"主評価 `{result['primary_source']}` の{len(trials)}試行を再集計した資料です。"
-        f"最終確認 `{result['confirmation_source']}` の{len(confirmation['results'])}条件は"
-        "独立に表示し、反復へ合算していません。",
-        "再探索なし。入力ファイルのSHA-256、全条件の統計は[statistics.json](statistics.json)、"
-        "表は[condition_statistics.csv](condition_statistics.csv)へ保存しています。",
+        f"Primary evaluation `{result['primary_source']}`: this report reanalyzes {len(trials)} trials. "
+        f"Final confirmation `{result['confirmation_source']}` has {len(confirmation['results'])} conditions, "
+        "which are shown separately and not pooled with the repetitions.",
+        "No new search was run. Input SHA-256 hashes and statistics for all conditions are in [statistics.json](statistics.json); "
+        "tables are saved in [condition_statistics.csv](condition_statistics.csv).",
         "",
-        "## 集計方法と分母",
+        "## Aggregation method and denominators",
         "",
-        f"- 主評価: 静的{scan_n}試行（{scan_valid}成功・{scan_n - scan_valid}失敗）、"
-        f"IO {io_n}試行（{io_valid}成功）、運用{operation_n}系列"
-        f"（{operation_valid}成功・{operation_n - operation_valid}失敗）。"
-        "今回の失敗はすべてUNKNOWN。静的条件の反復数は1または5。",
-        "- 時間・メモリは失敗を含む全試行、遅延・ペナルティ・利用率は有効出力のみを集計。",
-        "- 中央値、Q1、Q3、線形補間p95、最大、平均、標本標準偏差を記録。n=1の標準偏差は未定義。"
-        "図の帯はQ1–Q3で、信頼区間ではありません。少数反復のp95は将来の保証ではありません。",
-        "- 同一の決定的入力・seedでの反復です。施設・実験集団からの独立標本ではなく、"
-        "成功率の一般化や統計的有意差の主張を行いません。",
-        "- 探索上限は各CP-SAT呼出しに1/60秒を直接設定。"
-        "構築・反映・検査は合否対象外。UNKNOWNは実行不能の証明ではありません。",
+        f"- Primary evaluation: {scan_n} static trials ({scan_valid} successful, {scan_n - scan_valid} failed), "
+        f"{io_n} IO trials ({io_valid} successful), and {operation_n} operational sequences "
+        f"({operation_valid} successful, {operation_n - operation_valid} failed). "
+        "All failures here were UNKNOWN. Static conditions have 1 or 5 repetitions.",
+        "- Time and memory include all trials, including failures; delay, penalty and utilization include valid outputs only.",
+        "- Records include median, Q1, Q3, linearly interpolated p95, maximum, mean and sample standard deviation. Standard deviation is undefined for n=1. "
+        "Figure bands show Q1–Q3, not confidence intervals. A p95 from few repetitions does not guarantee future performance.",
+        "- Repetitions use identical deterministic input and seed. These are not independent samples from facilities or experiment populations; "
+        "no generalized success rate or statistical significance is claimed.",
+        "- Search limits of 1 or 60 seconds are set directly on each CP-SAT call. "
+        "Construction, application and validation are excluded from the success criterion. UNKNOWN does not prove infeasibility.",
         "",
-        "## 静的成功率",
+        "## Static success rates",
         "",
-        "セルは有効計画数／試行数。灰色は未測定です。規模と失敗の単調性は仮定しません。",
+        "Cells show valid plans / trials. Gray indicates unmeasured conditions. No monotonic relationship between scale and failure is assumed.",
         "",
-        "![静的成功率](static_success.png)",
+        "![Static success rates](static_success.png)",
         "",
-        "### 全反復成功の最大実測規模における統計",
+        "### Statistics at the largest measured scale with all repetitions successful",
         "",
-        "| 負荷 | 探索秒 | 規模 | 成功/反復 | 計画時間 中央値 / p95 / 最大（秒） | 構築時間 中央値（秒） | ピークRSS 中央値 / 最大（MiB） | 最大遅延 中央値（分） |",
+        "| Workload | Search seconds | Scale | Successes/repetitions | Planning time median / p95 / maximum (seconds) | Construction time median (seconds) | Peak RSS median / maximum (MiB) | Maximum delay median (minutes) |",
         "| --- | ---: | ---: | ---: | --- | ---: | --- | ---: |",
     ]
     for pattern in PATTERNS:
@@ -370,50 +370,50 @@ def analyze(source, output):
                 f"{formatted(memory, 'max')} | {formatted(row['delay_max_minutes'])} |")
     report += [
         "",
-        "512は測定上限です。成功した最大実測規模同士では負荷量が異なるため、"
-        "この表の1秒と60秒の遅延・メモリを公平な品質比較として解釈しません。",
+        "512 is the measurement ceiling. Workloads differ at their largest measured successful scales, so "
+        "delay and memory at 1 and 60 seconds in this table are not a comparison at equal workload.",
         "",
-        "## 計算時間・品質・メモリ",
+        "## Runtime, quality and memory",
         "",
-        "時間図は失敗も含みます。点は中央値、帯はQ1–Q3、横軸は実験数です。"
-        "計画時間図の点線は探索設定値であり、計画全体の制限ではありません。",
+        "Runtime figures include failures. Points are medians, bands are Q1–Q3, and the horizontal axis is experiment count. "
+        "Dashed lines in the planning-time figure show search settings, not limits on the entire planning operation.",
         "",
-        "![計算時間](static_runtime.png)",
+        "![Runtime](static_runtime.png)",
         "",
-        "最大遅延は各計画内の最大値を条件ごとに集計し、有効出力のない条件は欠測です。"
-        "仮想分と計算の実秒は異なる単位です。遅延0を残すためsymlog軸を使います。"
-        "RSSは起動・importを含むワーカープロセス全体のピークです。",
+        "Maximum delay aggregates each plan's maximum by condition; conditions without valid outputs are missing. "
+        "Virtual minutes and actual runtime seconds are different units. A symlog axis retains zero delay. "
+        "RSS is the peak for the entire worker process, including startup and imports.",
         "",
-        "![遅延とメモリ](static_quality_memory.png)",
+        "![Delay and memory](static_quality_memory.png)",
         "",
-        "### 同一入力における品質比較",
+        "### Quality comparison with identical input",
         "",
     ]
-    for metric, label in [("movable_penalty", "移動可能群のペナルティ"),
-                          ("delay_max_minutes", "最大遅延")]:
+    for metric, label in [("movable_penalty", "Movable-group penalty"),
+                          ("delay_max_minutes", "Maximum delay")]:
         differences = [r[f"{metric}_delta_60_minus_1"] for r in paired
                        if r[f"{metric}_delta_60_minus_1"] is not None]
         report.append(
-            f"- {label}: 両探索上限で有効解のある{len(differences)}条件中、"
-            f"60秒の中央値が小さい{sum(v < 0 for v in differences)}、"
-            f"同じ{sum(v == 0 for v in differences)}、大きい{sum(v > 0 for v in differences)}条件。")
+            f"- {label}: among {len(differences)} conditions with valid solutions at both search limits, "
+            f"the 60-second median is lower in {sum(v < 0 for v in differences)}, "
+            f"equal in {sum(v == 0 for v in differences)}, and higher in {sum(v > 0 for v in differences)} conditions.")
     report += [
         "",
-        "各条件の入力ハッシュ一致を確認し、異なる反復数を持つ条件もそれぞれの中央値を比較しました。"
-        "試行の一対一対応や統計的検定は行いません。"
-        "[paired_quality.csv](paired_quality.csv)には失敗側も欠測として残しています。"
-        "最適化目的はペナルティを優先する重み付き目的値で、最大遅延そのものではありません。"
-        "異なる入力・重みの目的値やペナルティはプールしません。",
+        "Input hashes were checked for equality per condition; medians were compared even where repetition counts differed. "
+        "Trials are not paired one to one, and no statistical test is performed. "
+        "[paired_quality.csv](paired_quality.csv) retains failed sides as missing values. "
+        "The optimization uses a weighted objective prioritizing penalty, rather than maximum delay itself. "
+        "Objectives and penalties from different inputs or weights are not pooled.",
         "",
-        "## 継続更新",
+        "## Continued updates",
         "",
-        "各負荷・探索上限で運用系列は1回のみ。系列内の更新は独立な反復ではありません。"
-        "1更新に通常2回の探索があり、実験追加も別の呼出しを行います。"
-        "「成功／試行」は未実施更新を成功にも失敗にも数えていません。",
+        "There is only one operational sequence per workload and search limit. Updates within a sequence are not independent repetitions. "
+        "An update normally involves two searches, and adding an experiment makes a separate call. "
+        "Successes / attempted updates counts unattempted updates as neither successes nor failures.",
         "",
-        "![継続更新](operational_updates.png)",
+        "![Continued updates](operational_updates.png)",
         "",
-        "| 負荷 | 規模 | 探索秒 | 成功/試行更新 | 成功更新時間 中央値 / Q1–Q3 / p95 / 最大（秒） | 系列全体（秒） |",
+        "| Workload | Scale | Search seconds | Successful/attempted updates | Successful update time median / Q1–Q3 / p95 / maximum (seconds) | Whole sequence (seconds) |",
         "| --- | ---: | ---: | ---: | --- | ---: |",
     ]
     for row in operations:
@@ -425,13 +425,13 @@ def analyze(source, output):
             f"{formatted(time, 'max')} | {row['total_seconds']:.3f} |")
     report += [
         "",
-        "60秒の運用規模は上表の256/512/128/128/256で、全負荷512ではありません。"
-        "最終ソースの1秒・128実験では割当候補多数と複雑ペナルティのUNKNOWNを再現し、"
-        "別の補助64実験で両負荷8更新成功（各1系列）でした。信頼できる運用上限は未確定です。",
+        "The 60-second operational scales are 256/512/128/128/256 as shown above, not 512 for every workload. "
+        "Final-source checks reproduced UNKNOWN at 1 second and 128 experiments for many assignment candidates and complex penalties; "
+        "separate supplementary runs at 64 experiments completed eight updates for each workload (one sequence each). A reliable operational limit remains undetermined.",
         "",
-        "## 再現",
+        "## Reproduction",
         "",
-        "保存用コミットのリポジトリルートで実行します。スケジューラーは呼び出しません。",
+        "Run at the repository root of the archived commit. This does not call the scheduler.",
         "",
         "```bash",
         "MPLCONFIGDIR=/tmp/gems-mpl MPLBACKEND=Agg poetry run python \\",
@@ -440,8 +440,8 @@ def analyze(source, output):
         "  --output /tmp/gems-capacity-statistics",
         "```",
         "",
-        "PNGとSVGを併記しています。主評価の入力・出力・失敗・全ログは"
-        "[元資料](../README.md)の圧縮アーカイブとSHA-256で履歴に保持しています。",
+        "Both PNG and SVG are provided. Primary-evaluation inputs, outputs, failures and complete logs are "
+        "retained in history as compressed archives and SHA-256 hashes in the [original records](../README.md).",
         "",
     ]
     (output / "README.md").write_text("\n".join(report))

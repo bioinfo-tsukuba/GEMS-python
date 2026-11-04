@@ -14,7 +14,7 @@ def print_separate_line(info: str):
     print(info, "*" * (SEPARATE_LINE_LENGTH-len(info)), sep="")
     print("*" * SEPARATE_LINE_LENGTH)
 
-# Enum例
+# Enum example
 class Status(Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
@@ -32,7 +32,7 @@ class B:
 
 @dataclass
 class C:
-    B_list: List[B]  # Bクラスのリストを持つ
+    B_list: List[B]  # Contains a list of B instances
     name: str
 
 class TestDumper(unittest.TestCase):

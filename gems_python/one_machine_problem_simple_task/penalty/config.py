@@ -1,2 +1,2 @@
-# 最大ペナルティ値
-PENALTY_MAXIMUM = 1000000  # 適切な値に置き換えてください
+# Maximum penalty value
+PENALTY_MAXIMUM = 1000000  # Replace with a value appropriate for the application

@@ -18,7 +18,7 @@ from gems_python.one_machine_problem_interval_task.penalty.penalty_class import 
     LinearPenalty,
 )
 
-# デバッグ用にクラスのメタ情報を確認
+# Inspect class metadata for debugging
 print("Experiments repr:", Experiments)
 print("Experiments module:", getattr(Experiments, "__module__", None))
 print("Experiments bases:", getattr(Experiments, "__mro__", None))
@@ -26,10 +26,10 @@ print("Has __annotations__:", hasattr(Experiments, "__annotations__"))
 print("Has __init__:", hasattr(Experiments, "__init__"))
 
 
-# ---- 3つの State ----
+# ---- Three States ----
 class InitState(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        # 例: 15分の準備作業
+        # Example: 15 minutes of setup
         tg = TaskGroup(
             optimal_start_time=0,
             penalty_type=LinearPenalty(penalty_coefficient=10),
@@ -44,7 +44,7 @@ class InitState(State):
         return tg
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # init_ok=True を観測したら MeasureState へ
+        # Transition to MeasureState when init_ok=True is observed
         if "init_ok" in df.columns and df.filter(pl.col("init_ok") == True).height > 0:
             return "MeasureState"
         return "InitState"
@@ -69,9 +69,9 @@ class MeasureState(State):
         self.threshold = threshold
 
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        # 例: 30分の測定
+        # Example: 30 minutes of measurement
         tg = TaskGroup(
-            optimal_start_time=30,  # 準備が終わる頃を狙う例
+            optimal_start_time=30,  # Example target time near the end of setup
             penalty_type=LinearPenalty(penalty_coefficient=10),
             tasks=[
                 Task(
@@ -84,7 +84,7 @@ class MeasureState(State):
         return tg
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # measurement >= threshold を観測したら FinishState
+        # Transition to FinishState when measurement >= threshold is observed
         if "measurement" in df.columns and df.filter(pl.col("measurement") >= self.threshold).height > 0:
             return "FinishState"
         return "MeasureState"
@@ -105,7 +105,7 @@ class MeasureState(State):
 
 class FinishState(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        # 例: 5分の確定処理
+        # Example: 5 minutes of finalization
         tg = TaskGroup(
             optimal_start_time=70,
             penalty_type=LinearPenalty(penalty_coefficient=10),
@@ -120,7 +120,7 @@ class FinishState(State):
         return tg
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 終了状態のイメージ：ここに留まる
+        # Represent the final state by remaining here
         return "FinishState"
 
     def dummy_output(
@@ -137,7 +137,7 @@ class FinishState(State):
         )
 
 
-# ---- 実験の構築 ----
+# ---- Build the experiment ----
 def build_experiment() -> Experiment:
     states: List[State] = [InitState(), MeasureState(threshold=1.0), FinishState()]
     exp = Experiment(
@@ -157,12 +157,12 @@ def build_experiments() -> Experiments:
     return exps
 
 
-# ---- 実行例 ----
+# ---- Execution example ----
 if __name__ == "__main__":
     exps = build_experiments()
 
-    # ガント・スケジュールなどは既存メソッドで生成可
+    # Use existing methods to generate Gantt charts and schedules
     # exps.experiments[0].show_experiment_directed_graph(save_path="demo_graph_one_machine.png")
 
-    # 保存も行いたい場合は save_each_step=True を指定
+    # Use save_each_step=True to save each step
     exps.simulate(max_steps=3, save_each_step=True)

@@ -62,12 +62,12 @@ def report(root):
     write_csv(root / "update_metrics.csv", updates)
 
     overview = [
-        "# 探索上限1秒／60秒の規模評価結果",
+        "# Scale evaluation with 1-second / 60-second search limits",
         "",
-        "1秒／60秒はCP-SATへ直接渡した探索上限です。モデル構築・反映・検査などは成功判定に含めません。",
-        "成功は有効な計画の返却です。FEASIBLEは最適性未証明、UNKNOWNは解未発見です。",
+        "1 or 60 seconds are search limits passed directly to CP-SAT. Model construction, application and validation are excluded from the success criterion.",
+        "Success means returning a valid plan. FEASIBLE means optimality is unproven; UNKNOWN means no solution was found.",
         "",
-        "| 負荷 | 探索上限（秒） | 全反復成功の最大実測規模 | 成功数 | その規模の最大遅延（分）の範囲 |",
+        "| Workload | Search limit (seconds) | Largest measured scale with all repetitions successful | Successes | Range of maximum delay (minutes) at that scale |",
         "| --- | ---: | ---: | ---: | ---: |",
     ]
     for pattern in cfg["patterns"]:
@@ -83,13 +83,13 @@ def report(root):
                             f"{len(selected)}/{len(selected)} | {span} |")
     overview += [
         "",
-        "512で成功した条件は設定上限に到達した結果であり、真の処理可能上限ではありません。"
-        "失敗と規模の関係が単調であるとは仮定しません。境界付近以外は初回1回のみです。",
-        "遅延は仮想実験の分、計算時間は実秒です。設備の処理量や科学的な妥当性は別の評価です。",
+        "Success at 512 reaches the configured measurement ceiling, not the true capacity limit. "
+        "No monotonic relationship between failure and scale is assumed. Outside boundary conditions, only one initial trial was run.",
+        "Delay is in virtual-experiment minutes; runtime is in actual seconds. Equipment throughput and scientific validity require separate evaluation.",
         "",
-        "## 運用更新",
+        "## Operational updates",
         "",
-        "| 負荷 | 規模 | 探索上限（秒） | 結果 | 成功／試行更新数 | 計画呼出し数 | 成功更新時間中央値（秒、参考） |",
+        "| Workload | Scale | Search limit (seconds) | Result | Successful/attempted updates | Planning calls | Successful update time median (seconds, reference) |",
         "| --- | ---: | ---: | --- | ---: | ---: | ---: |",
     ]
     for row in rows:
@@ -102,12 +102,12 @@ def report(root):
                             f"{len(row.get('reports', []))} | {median} |")
     overview += [
         "",
-        "運用更新では1更新に複数の計画呼出しがあります。探索上限は各呼出しに適用します。"
-        "保存・描画は小規模の別試験で測定しました。",
-        "静的な規模評価の成功は、継続更新の成功を保証しません。途中で失敗した更新は成功数に含めません。",
+        "Operational updates make multiple planning calls per update. The search limit applies to each call. "
+        "Saving and rendering were measured separately in small tests.",
+        "Success in static scale evaluation does not guarantee successful continued updates. Updates that fail partway through do not count as successes.",
         "",
-        "trial_metrics.csvは時間・品質・メモリ、solver_calls.csvは目的値と同じ単位のboundを含む全計画呼出し、"
-        "update_metrics.csvは更新時間と規模を記録しています。生データはresults.jsonlとtrials/に保持しています。",
+        "trial_metrics.csv records time, quality and memory; solver_calls.csv records all planning calls, including bounds in the same units as the objective; "
+        "update_metrics.csv records update times and scale. Raw data is retained in results.jsonl and trials/.",
         "",
     ]
     (root / "measurement_summary.md").write_text("\n".join(overview))

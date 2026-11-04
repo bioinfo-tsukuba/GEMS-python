@@ -1,34 +1,36 @@
-# 当時未解決だった保存・復元の完成
+# Completing the previously unresolved persistence round trip
 
-当時、技術的に解決できなかった双方向の保存・復元を完成させる修正です。
-Issue #19、main `3641e77817d8f4821b01026884be1a04543a7c1b` 起点の
-`fix/previously-unresolved-roundtrip` で実装しました。
+Issue #19 completes the previously unresolved save-and-restore round trip.
+It was implemented on `fix/previously-unresolved-roundtrip`, starting from
+main `3641e77817d8f4821b01026884be1a04543a7c1b`.
 
-## 対象と保存内容
+## Supported managers and saved content
 
-以下の3管理系で同じ保存・復元APIを使用できます。
+The same persistence API is available in all three managers:
 
 - `one_machine_problem_simple_task`
 - `one_machine_problem_interval_task`
 - `multi_machine_problem_interval_task`
 
-`Experiment` / `Experiments` / State / Task / TaskGroup / penalty / Machineの
-具体的なクラスと属性を保存します。Stateの必須設定・動的な進捗、
-`init=False`の属性、現在Stateの名前とindex、履歴のバックエンド・列順・型・値、
-タスク時刻・ID・完了状態、機械割当、管理系のstep・reference timeが対象です。
-同じTaskGroup等を複数箇所から参照している場合、その共有も復元します。
+Persistence records concrete classes and attributes for `Experiment`,
+`Experiments`, State, Task, TaskGroup, penalties and Machine. This includes
+required State configuration, dynamic progress, `init=False` attributes,
+the current State name and index, history backend, column order, types and
+values, task times, IDs and completion status, machine assignments, and the
+manager's step and reference time. Shared references, such as a TaskGroup
+referenced from multiple locations, are also restored.
 
-復元ではコンストラクターと`__post_init__`を実行しません。
-UUID生成、スケジュール再計算、State/taskの再生成、保存先ディレクトリの作成を
-読込時に行わず、保存時点の値を戻します。
+Restoration does not execute constructors or `__post_init__`. It restores
+saved values without generating UUIDs, recalculating schedules, regenerating
+States or tasks, or creating output directories during loading.
 
-## 使用例
+## Usage
 
 ```python
 from pathlib import Path
 from gems_python.multi_machine_problem_interval_task.transition_manager import Experiments
 
-# labはスケジュール・実行途中のExperiments
+# lab is an Experiments collection partway through scheduling or execution.
 json_text = lab.to_json()
 restored = Experiments.from_json(json_text)
 
@@ -40,10 +42,10 @@ dictionary = lab.to_dict()
 restored = Experiments.from_dict(dictionary)
 ```
 
-単純タスクの`Experiments`にも同じ6メソッドを追加しました。
-`save_all()`は従来の個別実験・tasks出力に加え、
-コレクション全体の`experiments.json`と`experiments.pkl`を保存します。
-区間タスク管理系の`save_results()`も両形式を保存します。
+The simple-task `Experiments` also provides these six methods.
+`save_all()` saves the entire collection as `experiments.json` and
+`experiments.pkl`, alongside the existing individual experiment and task
+outputs. The interval-task managers' `save_results()` also saves both formats.
 
 Since Issue #24, shared persistence writes and synchronizes both formats in the
 same snapshot generation, then commits it by switching `snapshot_manifest.json`.
@@ -53,76 +55,82 @@ outputs; editing them directly does not affect reload when a manifest exists.
 Legacy saves without a manifest use the previous two-file loading path.
 See [snapshot generations and legacy saves](experiment_lifecycle.md#snapshot-generations-and-legacy-saves).
 
-## reloadの自動選択
+## Automatic selection in reload
 
 ```python
-# 区間タスク：最大の保存stepを自動選択
+# Interval tasks: automatically select the highest saved step.
 restored = lab.reload()
 restored = lab.reload(step=3, source="json")
 restored = lab.reload(step=3, source="pickle")
 
-# 単純タスク：parent_dir_pathまたは指定ディレクトリから読込
+# Simple tasks: load from parent_dir_path or the specified directory.
 restored = simple_lab.reload()
 restored = simple_lab.reload(save_dir=Path("saved"), source="json")
 ```
 
-| source | 動作 |
+| source | Behavior |
 | --- | --- |
-| `"auto"`（既定） | 両方を読む。型・値・DataFrame・共有参照が一致すればJSONを返す。有効なのが一方だけなら警告を出してその形式を返す |
-| `"json"` | JSONだけ読む。失敗時はエラー |
-| `"pickle"` | pickleだけ読む。失敗時はエラー |
+| `"auto"` (default) | Read both. Return JSON if types, values, DataFrames and shared references match. If only one format is valid, warn and return that format |
+| `"json"` | Read JSON only; raise an error on failure |
+| `"pickle"` | Read pickle only; raise an error on failure |
 
-両方が読めても内容が違う場合は、`auto`でエラーにします。
-`source`を指定して選択してください。対話入力は行いません。
-読込に失敗した場合も成功した場合も、呼出元のlabやstepは変更しません。
-返却オブジェクトを変数に代入して使用してください。
+If both formats load but differ, `auto` raises an error. Select a format
+explicitly with `source`; loading never prompts for input. Neither successful
+nor failed loading changes the calling lab or its step. Assign the returned
+object to a variable to use it.
 
-## 保存形式と互換性
+## Format and compatibility
 
-新しいJSONは`_gems_serialization: 1`、具体的な`module:Class`、
-型付きコンテナ、共有参照を持ちます。`to_dict()`の出力形状も変更しています。
-外部コードで旧辞書のトップレベル項目を直接参照している場合は変更が必要です。
-保存・読込には公開APIを使用してください。DataFrameは既存のArrow IPC形式を使い、
-空のPandas履歴のRangeIndex列について補足情報を保存します。
+The new JSON records `_gems_serialization: 1`, concrete `module:Class` names,
+typed containers and shared references. The output structure of `to_dict()`
+also changed. External code that directly accesses top-level entries in the
+old dictionary must be updated. Use the public API for saving and loading.
+DataFrames use the existing Arrow IPC format, with supplementary information
+for RangeIndex columns in empty Pandas histories.
 
-入れ子のdataclass、list / dict / tuple / set / frozenset、Enum、Path、UUID、
-bytes、日付・時刻・期間、NumPyスカラーを保存できます。
-型情報のない入れ子でも、新形式は保存された具体的な型を使用して復元します。
+Supported values include nested dataclasses, list / dict / tuple / set /
+frozenset, Enum, Path, UUID, bytes, dates, times, durations and NumPy scalars.
+The new format restores saved concrete types even in nested values without
+type annotations.
 
-既存のクラス情報を含むState、識別可能なpenalty、Polars JSON・列辞書、
-既存のArrow履歴を読み込めます。旧形式の型注釈があるtupleも復元します。
-読込用辞書は変更しないので、同じ入力から繰り返し復元できます。
+Loading supports legacy States with class information, identifiable penalties,
+Polars JSON and column dictionaries, and existing Arrow histories. Legacy
+tuples with type annotations are also restored. Input dictionaries are not
+modified, so the same input can be restored repeatedly.
 
-### 制約と意図的な判断
+### Constraints and deliberate decisions
 
-- 保存したクラスのモジュールを読込環境でも利用可能にしてください。
-  関数内のローカルクラス、削除・改名されたクラスは復元できません。
-  保存されるのは属性です。クラスの実行コード、観測関数、乱数生成器の外部状態や
-  solverの内部状態は保存しません。今回の再開検証では同じ観測器・入力・solver設定を使います。
-- 循環参照、ファイルハンドル、関数、未対応のオブジェクトは、項目のパスを示す
-  `SerializationError`になります。共有参照は循環がなければ保存できます。
-- 旧形式に具体的クラスの情報がない場合は、呼出APIや既存の型注釈で明示された
-  クラスを使います。失われたExperiment派生型を自動で推定しません。
-  Stateの必須設定や具体的penalty、進捗フィールドが欠けている場合は、
-  デフォルト値で補って実行を再開せず、欠けた項目を示すエラーにします。
+- Modules containing saved classes must be available in the loading environment.
+  Function-local classes and deleted or renamed classes cannot be restored.
+  Attributes are saved; class code, observation functions, external random
+  generator state and internal solver state are not. Resume verification uses
+  the same observer, inputs and solver settings.
+- Cyclic references, file handles, functions and unsupported objects raise a
+  `SerializationError` that identifies the field path. Shared references are
+  supported when they do not form a cycle.
+- When a legacy format lacks concrete class information, loading uses the class
+  specified by the called API or existing type annotations. It does not infer
+  a lost Experiment subtype. Missing required State configuration, concrete
+  penalties or progress fields produce an error identifying the missing field,
+  rather than resuming execution with default values.
   As an exception, only legacy multi-machine saves without a lifecycle version
   receive initial records with the additional features disabled and default retry
   settings. State and Task progress are not regenerated.
-  旧形式にState indexがない場合は名前が一意に対応するときだけ復元し、
-  複数のStateが同じ名前を持つ場合はエラーにします。
-- 旧JSONには共有参照の情報がありません。その同一性を回復することはできません。
-  旧pickleが正常で元の共有を保持している場合は`source="pickle"`で明示選択できます。
-  この違いがあるJSON/pickleの組を`auto`で選択すると不一致エラーになります。
-- 履歴は行順と名前付きの列をデータとする既存仕様です。Pandasの独自indexは
-  保存対象ではありません。フレームはArrowで表現できる列型が対象です。
-- JSONもpickleも、使用するクラスを読み込みます。信頼できる保存ファイルを
-  読み込む前提です。
-- UUIDを受け取る実験のIDは文字列に統一します。IPSサンプルの既定UUIDは
-  インスタンスごとに生成し、指定された文字列IDは維持します。
-- 今回の新形式は旧版のreaderで読めません。書き戻す前に旧ファイルを保管してください。
+  If a legacy save lacks a State index, the name must identify one State
+  uniquely; duplicate State names cause an error.
+- Legacy JSON lacks shared-reference information, so object identity cannot be
+  recovered. If a valid legacy pickle retains the original sharing, select it
+  with `source="pickle"`. Using `auto` on JSON/pickle files with this difference
+  raises a mismatch error.
+- History follows the existing convention of ordered rows and named columns.
+  Custom Pandas indexes are not saved. Column types must be representable in Arrow.
+- Both JSON and pickle load the classes they use. Saved files must be trusted.
+- Experiment IDs supplied as UUIDs are normalized to strings. Default UUIDs in
+  IPS samples are generated per instance; explicitly supplied string IDs are retained.
+- Old readers cannot read the new format. Preserve old files before writing back.
 
-## 検証
+## Verification
 
-追加の受入試験は`tests/test_persistence_roundtrip.py`です。
-検証コマンド・環境・全テストの残存エラーは
-[検証記録](benchmarks/persistence_roundtrip.md)を参照してください。
+Additional acceptance tests are in `tests/test_persistence_roundtrip.py`.
+See the [verification record](benchmarks/persistence_roundtrip.md) for commands,
+the environment and remaining errors in the full suite.

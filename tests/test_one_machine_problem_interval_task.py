@@ -327,7 +327,7 @@ class TestClass(unittest.TestCase):
                 f.write(json_dumped)
 
 
-            # TODO: Stateの再構築ができないので、コメントアウト
+            # TODO: Commented out because State reconstruction was unavailable when this test was written
             # # Load from file
             # lab2 = Experiments.from_dict(dict_dumped)
             # print(f"{lab2=}")

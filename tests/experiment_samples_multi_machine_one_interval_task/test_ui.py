@@ -61,20 +61,20 @@ r"""
             #     f.write(mode)
 
 
-            # プラグインマネージャーの開始前にリロードの選択を促す
-            reload_choice = 'y' #input("実験をリロードしますか？ (y/n): ").strip().lower()
+            # Choose whether to reload before starting the plugin manager
+            reload_choice = 'y' #input("Reload the experiments? (y/n): ").strip().lower()
             if reload_choice == 'y':
                 try:
-                    step = '' #input("リロードするステップを入力してください。空白の場合は自動的に最大ステップまでリロードします。: ").strip()
+                    step = '' #input("Enter the step to reload. Leave blank to select the highest saved step automatically: ").strip()
                     if step == '':
                         step = None
                     else:
                         step = int(step)
                     experiments = experiments.reload(step)
                 except ValueError:
-                    print("無効なステップ番号です。リロードをスキップします。")
+                    print("Invalid step number. Skipping reload.")
                 except Exception as err:
-                    print(f"リロード中にエラーが発生しました: {err}. リロードをスキップします。")
+                    print(f"Error during reload: {err}. Skipping reload.")
 
             plugin_manager = PluginManager(experiments)
             plugin_manager.run()

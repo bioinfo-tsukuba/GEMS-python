@@ -17,7 +17,7 @@ def calc_optimal_time(target_density: float, r: float, n0: float, K: float = 1.0
 
 def calculate_optimal_time_from_df(df: pl.DataFrame, target_density: float,
                                 K: float = 1.0, time_column: str = "time", density_column: str = "density", operation_column: str = "operation", passage_group_column: str = "passage_group") -> float:
-    # time, density, operation があることを確認
+    # Check that time, density and operation are present
     assert time_column in df.columns, f"Column {time_column} as time column is not found."
     assert density_column in df.columns, f"Column {density_column} as density column is not found."
     assert operation_column in df.columns, f"Column {operation_column} as operation column is not found."
@@ -29,14 +29,14 @@ def calculate_optimal_time_from_df(df: pl.DataFrame, target_density: float,
     k, r, n0_fitted, df = fit_param_with_weight(df)
     n0 = n0_fitted[-1]
 
-    # 最終Passage groupを取得
+    # Get the last Passage group
     last_passage_group = df[passage_group_column].max()
     df = df.filter(pl.col(passage_group_column) == last_passage_group)
 
-    # 基準時間を取得
+    # Get the reference time
     base_time = df[time_column].min()
 
-    # 密度が目標値になるまでの時間を計算
+    # Calculate the time until density reaches the target
     rest_time = calc_optimal_time(target_density, r, n0, K)
 
     return base_time + rest_time
@@ -68,17 +68,17 @@ def group_by_passage(df: pl.DataFrame, time_column: str = "time", operation_colu
         ... })
         >>> df = group_by_passage(df)
     """
-    # time, operation があることを確認
+    # Check that time and operation are present
     assert time_column in df.columns, f"Column {time_column} as time column is not found."
     assert operation_column in df.columns, f"Column {operation_column} as operation column is not found."
 
-    # time でソート
+    # Sort by time
     df = df.sort(time_column)
 
-    # Passage ごとに時間を取得し、グループ分け
+    # Get times and group them by Passage
     passage_times = df.filter(pl.col(operation_column) == "Passage")[time_column].to_list()
 
-    # passage_group列を作成
+    # Create the passage_group column
     df = df.with_columns([
         pl.Series("passage_group", np.searchsorted(passage_times[1:], df[time_column], side="right"))
     ])
@@ -116,22 +116,22 @@ def fit_param(df: pl.DataFrame, time_column: str = "time", density_column: str =
     """
 
 
-    # time, density, operation があることを確認
+    # Check that time, density and operation are present
     assert time_column in df.columns, f"Column {time_column} as time column is not found."
     assert density_column in df.columns, f"Column {density_column} as density column is not found."
     assert operation_column in df.columns, f"Column {operation_column} as operation column is not found."
 
     if "passage_group" not in df.columns:
-        # passage_group列を作成
+        # Create the passage_group column
         df = group_by_passage(df, time_column, operation_column)
 
-    # 各 passage_group ごとに最小密度 (n0) を推定
+    # Estimate minimum density (n0) for each passage_group
     n0_estimates = df.filter(pl.col(density_column).is_not_null()) \
         .group_by("passage_group") \
         .agg(pl.min(density_column).alias("n0")) \
         .to_dict(as_series=False)["n0"]
 
-    # 全体のフィッティング (k, r の推定)
+    # Fit all groups jointly (estimate k and r)
     def combined_model(t: np.ndarray, k: float, r: float, *n0_values: float) -> np.ndarray:
         result = np.empty_like(t)
         t = np.array(t)
@@ -144,15 +144,15 @@ def fit_param(df: pl.DataFrame, time_column: str = "time", density_column: str =
             base_time_index = np.where(t == base_time)[0][0]
             times = times - base_time
             result[mask] = logistic(times, r, n0)
-            # base_time (null) の部分は 0 にする
+            # Set the fitted value at base_time to 0
             result[base_time_index] = 0
         
 
 
         return result
 
-    # フィッティングを実行
-    initial_guess = [1.0, 0.00001] + n0_estimates  # k, r, n0s の初期値
+    # Run the fit
+    initial_guess = [1.0, 0.00001] + n0_estimates  # Initial values for k, r and n0s
     popt, _ = curve_fit(
         combined_model,
         df[time_column].to_numpy(),
@@ -165,7 +165,7 @@ def fit_param(df: pl.DataFrame, time_column: str = "time", density_column: str =
 
 
     group_num = df["passage_group"].max()
-    # Group num == len(n0_fitted) であることを確認
+    # Check that len(n0_fitted) == group_num + 1
     assert len(n0_fitted) == group_num + 1, f"Number of n0_fitted ({len(n0_fitted)}) is not equal to the number of passage groups ({group_num + 1})."
 
     return k, r, n0_fitted, df
@@ -173,20 +173,20 @@ def fit_param(df: pl.DataFrame, time_column: str = "time", density_column: str =
 
 
 def fit_param_with_weight(df: pl.DataFrame, time_column: str = "time", density_column: str = "density", operation_column: str = "operation") -> Tuple[float, float, List[float], pl.DataFrame]:
-    # time, density, operation があることを確認
+    # Check that time, density and operation are present
     assert time_column in df.columns, f"Column {time_column} as time column is not found."
     assert density_column in df.columns, f"Column {density_column} as density column is not found."
     assert operation_column in df.columns, f"Column {operation_column} as operation column is not found."
     df_grouped = df
 
     if "passage_group" not in df_grouped.columns:
-        # passage_group列を作成
+        # Create the passage_group column
         df_grouped = group_by_passage(df, time_column, operation_column)
     
 
     df = df_grouped.filter((pl.col(operation_column) == "GetImage") | (pl.col(operation_column) == "Passage"))
 
-    # 各 passage_group ごとに最小密度 (n0) を推定
+    # Estimate minimum density (n0) for each passage_group
     n0_estimates = df.filter(pl.col(density_column).is_not_null()) \
         .group_by("passage_group") \
         .agg(pl.min(density_column).alias("n0")) \
@@ -197,7 +197,7 @@ def fit_param_with_weight(df: pl.DataFrame, time_column: str = "time", density_c
     groups = df["passage_group"].to_numpy()
     weights = pow(1/2, groups)
 
-    # 全体のフィッティング (k, r の推定)
+    # Fit all groups jointly (estimate k and r)
     def combined_model(t: np.ndarray, k: float, r: float, *n0_values: float) -> np.ndarray:
         result = np.empty_like(t)
         t = np.array(t)
@@ -210,43 +210,43 @@ def fit_param_with_weight(df: pl.DataFrame, time_column: str = "time", density_c
             base_time_index = np.where(t == base_time)[0][0]
             times = times - base_time
             result[mask] = logistic(times, r, n0)
-            # base_time (null) の部分は 0 にする
+            # Set the fitted value at base_time to 0
             result[base_time_index] = 0
         return result
 
-    # フィッティングを実行
-    initial_guess = [1.0, 0.00001] + n0_estimates  # k, r, n0s の初期値
+    # Run the fit
+    initial_guess = [1.0, 0.00001] + n0_estimates  # Initial values for k, r and n0s
     popt, _ = curve_fit(
         combined_model,
         df[time_column].to_numpy(),
         df[density_column].fill_null(0).to_numpy(),
         p0=initial_guess,
         sigma=weights,
-        absolute_sigma=False  # sigma を重みとして解釈
+        absolute_sigma=False  # Interpret sigma as relative weights
     )
 
     k, r = popt[0], popt[1]
     n0_fitted = popt[2:]
 
     group_num = df["passage_group"].max()
-    # Group num == len(n0_fitted) であることを確認
+    # Check that len(n0_fitted) == group_num + 1
     assert len(n0_fitted) == group_num + 1, f"Number of n0_fitted ({len(n0_fitted)}) is not equal to the number of passage groups ({group_num + 1})."
 
     return k, r, n0_fitted, df_grouped
 
 
 def plot_fit(df: pl.DataFrame, k: float, r: float, n0_fitted: list, time_column: str = "time", density_column: str = "density", operation_column: str = "operation"):
-    # passage_group列が存在するか確認
+    # Check that the passage_group column exists
     if "passage_group" not in df.columns:
         raise ValueError("passage_group column is missing in the DataFrame.")
     
-    # フィッティングした結果を可視化
+    # Visualize the fitted results
     plt.figure(figsize=(10, 6))
     
-    # 元のデータをプロット
+    # Plot the original data
     plt.scatter(df[time_column], df[density_column], label='Original Data', color='blue')
     
-    # フィッティングした曲線を描画
+    # Plot the fitted curves
     passage_groups = df["passage_group"].to_numpy()
     time_values = df[time_column].to_numpy()
     for i, n0 in enumerate(n0_fitted):
@@ -264,7 +264,7 @@ def plot_fit(df: pl.DataFrame, k: float, r: float, n0_fitted: list, time_column:
     plt.ylabel("Density")
     plt.title("Logistic Growth Fit")
     plt.legend()
-    # 0~1の範囲に収める
+    # Keep values in the range 0 to 1
     plt.ylim(0, 1)
     plt.show()
 
@@ -275,15 +275,15 @@ def generate_input_example(num_passages: int, k: float, r: float, passage_criter
     
     current_time = 0
     for passage in range(num_passages):
-        # Passage直後の密度を設定
+        # Set density immediately after Passage
         n0 = 0.3 + np.random.uniform(-0.05, 0.05)
         
-        # Passageの時点を追加
+        # Add the Passage time point
         time_points.append(current_time)
-        densities.append(None)  # Passage時点のdensityは計測しないと仮定
+        densities.append(None)  # Assume density is not measured at the Passage time point
         operations.append("Passage")
         
-        # Passage後の成長をシミュレート
+        # Simulate growth after Passage
         t = 0
         while True:
             t += time_point_interval
@@ -295,10 +295,10 @@ def generate_input_example(num_passages: int, k: float, r: float, passage_criter
             operations.append("GetImage")
             if density > passage_criteria:
                 break
-        r = r*0.9  # rを少し変更
+        r = r*0.9  # Adjust r slightly
         
         
-        current_time += 1  # 次のPassageまでの時間を空ける
+        current_time += 1  # Leave time before the next Passage
     
     df = pl.DataFrame({
         "time": time_points,
@@ -316,8 +316,8 @@ if __name__ == "__main__":
     print("Hello, World!")
     
 
-    # 例として3回のPassageを持つデータを生成
-    # 例: Passageが3回行われ、全体の時間が20、k=1.0, r=0.1の場合
+    # Generate example data with three Passages
+    # Example: three Passages, total time 20, k=1.0 and r=0.1
     r_original = 0.0007
     passage_criteria: float = 0.7
 
@@ -327,14 +327,14 @@ if __name__ == "__main__":
         optimal_time = calculate_optimal_time_from_df(example_df, target_density=passage_criteria)
         print(f"Optimal Time: {optimal_time}")
 
-        # パラメータの推定
+        # Estimate parameters
         k, r, n0_fitted, df = fit_param_with_weight(example_df)
         print(f"k: {k}, r: {r}, n0: {n0_fitted}")
         # for i in df.rows():
         #     print(i)
         print(f"Difference in r: {abs(r - r_original)}, Passage: {num_passages}")
 
-        # フィッティング結果の可視化
+        # Visualize the fitted results
         plot_fit(df, k, r, n0_fitted)
 
     print(example_df)

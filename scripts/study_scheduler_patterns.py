@@ -256,7 +256,7 @@ def summary_table(case_results, field, heading):
     lines = [
         f"### {heading}",
         "",
-        "| 条件 | ケース | CP最適証明 | SA実行可能/全回 | CP低点/同点/SA低点 | スコア差中央値 | 90%点 |",
+        "| Condition | Cases | CP proven optimal | SA feasible/all runs | CP lower/equal/SA lower | Median score gap | 90th percentile |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for label, pairs in sorted(groups.items(), key=lambda item: str(item[0])):
@@ -290,19 +290,19 @@ def write_summary(output_dir, case_results, seeds):
     lines = [
         "# Scheduler-only pattern study",
         "",
-        "この文書は `scripts/study_scheduler_patterns.py` が集計した結果です。",
-        "旧方式は公開APIの焼きなまし `s`、新方式は OR-Tools `o`。",
-        "スケジューリングのみを実行し、シミュレーターは呼んでいません。",
+        "This document reports results aggregated by `scripts/study_scheduler_patterns.py`.",
+        "The previous method is simulated annealing `s` through the public API; the new method is OR-Tools `o`.",
+        "Only scheduling was run; the simulator was not called.",
         "",
-        "## 再実行",
+        "## Reproduction",
         "",
         "```bash",
         "MPLCONFIGDIR=/tmp/gems-mpl poetry run python scripts/study_scheduler_patterns.py \\",
         f"  --output-dir /tmp/gems-pattern-study-recheck --seeds {' '.join(map(str, seeds))}",
         "```",
         "",
-        "スクリプトがCSV/JSONとこの要約・図を新しい出力先に生成する。",
-        "保存済みの実行別JSONから集計だけを再計算する場合:",
+        "The script generates CSV/JSON, this summary and figures in a new output directory.",
+        "To reaggregate only, using saved per-run JSON:",
         "",
         "```bash",
         "MPLCONFIGDIR=/tmp/gems-mpl poetry run python scripts/study_scheduler_patterns.py \\",
@@ -310,99 +310,99 @@ def write_summary(output_dir, case_results, seeds):
         "  --output-dir /tmp/gems-pattern-study-reanalysis",
         "```",
         "",
-        "[実行可能な対のスコア散布図](paired_scores.png) と"
-        "[実行可能率・実行時間の図](feasibility_runtime.png)。",
+        "[Score scatter plot for feasible pairs](paired_scores.png) and "
+        "[feasibility and runtime figure](feasibility_runtime.png).",
         "",
-        "## 実行条件",
+        "## Execution conditions",
         "",
         f"- Python {sys.version.split()[0]}, OR-Tools {ortools.__version__}, "
-        f"simanneal {simanneal.__version__}, Matplotlib {matplotlib.__version__}。",
-        f"- 実行環境: {platform.platform()}。",
-        f"- ケース数 {result['cases']}。焼きなましシード: {seeds}。",
-        f"- CP-SAT: {SOLVER_TIME_LIMIT_SECONDS}秒制限、1ワーカー、シード0。"
-        " 焼きなまし: 10万ステップ、Tmax 25000、Tmin 1（既存実装）。",
-        "- 各方式の入力は毎回作り直し、スケジュール前のSHA-256が同じことを検査。",
-        "- 単一タスク型は4/8タスク、1機械。グループ型は3/6グループで、"
-        "各グループに2タスク。複数機械型は同タイプの機械を1/2台。",
-        "- 最適開始時刻は12分から一定間隔。単一タスク型の集中/分散は2/8分間隔、"
-        "単一機械グループ型は3/14分間隔、複数機械グループ型は2/8分間隔。"
-        "処理時間と先行間隔の生成式はスクリプトに固定。",
-        "- ペナルティ構成は Linear、Range、Rest+Linear の各単独型と、"
-        "全5型を順番に使う Mixed。係数・休止周期は "
-        "`scripts/compare_schedulers.py` の `make_penalty()` に固定。",
-        "- 以上のパターン数・間隔・シードは比較のために選んだ合成条件であり、"
-        "実験運用データから推定した値ではない。",
+        f"simanneal {simanneal.__version__}, Matplotlib {matplotlib.__version__}.",
+        f"- Execution environment: {platform.platform()}.",
+        f"- {result['cases']} cases. Simulated annealing seeds: {seeds}.",
+        f"- CP-SAT: {SOLVER_TIME_LIMIT_SECONDS}-second limit, one worker, seed 0."
+        " Simulated annealing: 100,000 steps, Tmax 25000, Tmin 1 (existing implementation).",
+        "- Inputs are rebuilt for each method and checked for identical SHA-256 hashes before scheduling.",
+        "- The simple-task variant has 4/8 tasks and one machine. Group variants have 3/6 groups, "
+        "each containing two tasks. The multi-machine variant has 1/2 machines of the same type.",
+        "- Optimal start times begin at 12 minutes with fixed spacing. Clustered/spread spacing is 2/8 minutes for simple tasks, "
+        "3/14 minutes for single-machine groups, and 2/8 minutes for multi-machine groups. "
+        "Processing-time and preceding-interval generation formulas are fixed in the script.",
+        "- Penalty patterns use Linear, Range or Rest+Linear alone, or "
+        "Mixed, cycling through all five types. Coefficients and rest cycles are fixed in "
+        "`make_penalty()` in `scripts/compare_schedulers.py`.",
+        "- These pattern counts, intervals and seeds are synthetic conditions selected for comparison; "
+        "they are not estimated from operational experiment data.",
         "",
-        "## 指標",
+        "## Metrics",
         "",
-        "- スコアは各タスク/グループの既存 `calculate_penalty()` の合計。"
-        "低いほどよい。資源制約と割当・先行間隔を満たす実行だけをスコア比較する。",
-        "- `CP低点/同点/SA低点` は同一ケース・シードの実行可能な対について数える。"
-        "スコア差は `SA − CP` で、正ならCPが低い。"
-        "90%点は最も近い順位の値。",
-        "- CPの `OPTIMAL` と `FEASIBLE` を区別する。"
-        "実行時間はスケジューリング呼出しの壁時計時間。",
+        "- Scores sum the existing `calculate_penalty()` for each task/group. "
+        "Lower is better. Score comparisons include only runs satisfying resource, assignment and preceding-interval constraints.",
+        "- `CP lower/equal/SA lower` counts feasible pairs for the same case and seed. "
+        "The score gap is `SA − CP`; a positive value means CP is lower. "
+        "The 90th percentile uses the nearest-rank value.",
+        "- CP `OPTIMAL` and `FEASIBLE` are distinguished. "
+        "Runtime is wall-clock time for the scheduling call.",
         "",
-        "## 結果",
+        "## Results",
         "",
-        f"- CP: {result['cp_optimal']}件で最適証明、"
-        f"{result['cp_feasible']}件で時間内の実行可能解、"
-        f"{result['cp_invalid']}件は実行不能または失敗。",
-        f"- 焼きなまし: {result['sa_feasible']}/{result['sa_runs']}実行が"
-        "実機ID単位で実行可能。",
-        f"- 実行可能な{len([1 for cp, rs in case_results for sa in rs if is_feasible(cp) and is_feasible(sa)])}対の"
-        f"うち、CP低点 {result['cp_better']}、同点 {result['equal_score']}、"
-        f"SA低点 {result['sa_better']}。",
-        f"- ケース単位で焼きなまし{len(seeds)}シード中の"
-        "実行可能な最良値と比べると、"
-        f"{result['cases_with_feasible_sa']}ケースでCP低点 "
-        f"{result['case_cp_better']}、同点 {result['case_equal_score']}、"
-        f"SA低点 {result['case_sa_better']}。残り"
-        f"{result['cases'] - result['cases_with_feasible_sa']}ケースは"
-        "焼きなましの実行可能解がない。",
-        f"- スコア差中央値 {format_number(result['median_gap'])}、"
-        f"90%点 {format_number(result['p90_gap'])}。",
-        f"- 壁時計時間中央値: CP {result['median_cp_seconds']:.6f}秒、"
-        f"焼きなまし {result['median_sa_seconds']:.6f}秒。",
+        f"- CP: {result['cp_optimal']} proven optimal, "
+        f"{result['cp_feasible']} feasible within the time limit, "
+        f"{result['cp_invalid']} infeasible or failed.",
+        f"- Simulated annealing: {result['sa_feasible']}/{result['sa_runs']} runs "
+        "feasible at the individual machine-ID level.",
+        f"- Among {len([1 for cp, rs in case_results for sa in rs if is_feasible(cp) and is_feasible(sa)])} feasible pairs, "
+        f"CP lower {result['cp_better']}, equal {result['equal_score']}, "
+        f"SA lower {result['sa_better']}.",
+        f"- Per case, across {len(seeds)} simulated annealing seeds, "
+        "compared with the best feasible result, "
+        f"among {result['cases_with_feasible_sa']} cases: CP lower "
+        f"{result['case_cp_better']}, equal {result['case_equal_score']}, "
+        f"SA lower {result['case_sa_better']}. The remaining "
+        f"{result['cases'] - result['cases_with_feasible_sa']} cases "
+        "have no feasible simulated annealing solution.",
+        f"- Median score gap {format_number(result['median_gap'])}, "
+        f"90th percentile {format_number(result['p90_gap'])}.",
+        f"- Median wall-clock time: CP {result['median_cp_seconds']:.6f} seconds, "
+        f"simulated annealing {result['median_sa_seconds']:.6f} seconds.",
         "",
-        summary_table(case_results, "variant", "系統別"),
+        summary_table(case_results, "variant", "By variant"),
         "",
-        summary_table(case_results, "penalty_pattern", "ペナルティ構成別"),
+        summary_table(case_results, "penalty_pattern", "By penalty pattern"),
         "",
-        summary_table(case_results, "density", "希望開始時刻の集中度別"),
+        summary_table(case_results, "density", "By clustering of preferred start times"),
         "",
-        summary_table(case_results, "count", "タスク・グループ数別"),
+        summary_table(case_results, "count", "By task/group count"),
         "",
         summary_table(
             [pair for pair in case_results if pair[0]["variant"] == "multi_interval"],
-            "machine_count", "機械台数別",
+            "machine_count", "By machine count",
         ),
         "",
-        "## 条件別の観測",
+        "## Observations by condition",
         "",
-        f"- 集中条件は実行可能な{clustered['cp_better'] + clustered['equal_score'] + clustered['sa_better']}対のうち"
-        f"CP低点{clustered['cp_better']}対、分散条件は"
-        f"{spread['cp_better'] + spread['equal_score'] + spread['sa_better']}対のうち"
-        f"CP低点{spread['cp_better']}対だった。",
-        f"- 複数機械型の焼きなまし実行可能率は、同型機1台で"
-        f"{multi_one['sa_feasible']}/{multi_one['sa_runs']}、2台で"
-        f"{multi_two['sa_feasible']}/{multi_two['sa_runs']}だった。",
-        "- 全体のスコア差90%点には、開始時刻が休止範囲に入るごとに"
-        "100万点となる"
-        "循環休止ペナルティが影響する。線形型・範囲型は上の構成別表で"
-        "別に確認する。",
+        f"- Clustered conditions: among {clustered['cp_better'] + clustered['equal_score'] + clustered['sa_better']} feasible pairs, "
+        f"CP is lower in {clustered['cp_better']}; spread conditions: among "
+        f"{spread['cp_better'] + spread['equal_score'] + spread['sa_better']} feasible pairs, "
+        f"CP is lower in {spread['cp_better']}.",
+        f"- Multi-machine simulated annealing feasibility is "
+        f"{multi_one['sa_feasible']}/{multi_one['sa_runs']} with one machine of the type, and "
+        f"{multi_two['sa_feasible']}/{multi_two['sa_runs']} with two machines.",
+        "- The overall 90th-percentile score gap is affected by "
+        "the 1,000,000-point "
+        "cyclical rest penalty applied when a start time falls within the rest range. See the penalty-pattern table above "
+        "for separate linear and range results.",
         "",
-        "## 読み方と制約",
+        "## Interpretation and limitations",
         "",
-        "焼きなましで実機IDが重複するスケジュールの低いスコアは、"
-        "実行可能な解として勝敗へ加えない。CP-SATが時間制限内に"
-        "最適証明できなかったケースは、得た解のスコア比較だけに使う。",
-        "合成入力と少数の乱数シードによる1環境の結果であり、"
-        "一般的な速度・解品質の保証や実細胞培養の予測ではない。",
+        "Low simulated annealing scores from schedules with overlapping individual machine IDs "
+        "do not count as feasible wins. Where CP-SAT cannot "
+        "prove optimality within the time limit, only the score of the obtained solution is compared.",
+        "Results use synthetic inputs and few random seeds in one environment; "
+        "they do not guarantee general speed or solution quality, or predict actual cell culture.",
         "",
-        "再実行時にはCSV/JSONを新しい出力ディレクトリへ保存し、"
-        "この要約と図を生成結果と照合する。生データをGitに追加しなくても、"
-        "生成スクリプト、入力SHA-256、条件、集計式を追跡できる。",
+        "When rerunning, save CSV/JSON in a new output directory and "
+        "compare generated results with this summary and figures. Without adding raw data to Git, "
+        "the generation script, input SHA-256 hashes, conditions and aggregation formulas remain traceable.",
         "",
     ]
     (output_dir / "summary.md").write_text("\n".join(lines), encoding="utf-8")

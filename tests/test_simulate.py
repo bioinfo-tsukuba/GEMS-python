@@ -4,13 +4,13 @@ from datetime import datetime
 from typing import List
 import polars as pl
 
-# 既存実装
+# Existing implementation
 from gems_python.multi_machine_problem_interval_task.task_info import (
     Machine, MachineList, Task, TaskGroup, TaskStatus,
 )
 from gems_python.multi_machine_problem_interval_task.penalty.penalty_class import LinearPenalty
 
-# あなたの State / Experiment / Experiments を import
+# Import your State / Experiment / Experiments classes
 # from your_module import State, Experiment, Experiments
 
 print("Experiments repr:", Experiments)
@@ -20,10 +20,10 @@ print("Has __annotations__:", hasattr(Experiments, "__annotations__"))
 print("Has __init__:", hasattr(Experiments, "__init__"))
 
 
-# ---- 3つの State ----
+# ---- Three States ----
 class InitState(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        # 例: 汎用機(machine_type=0)で 15分の準備作業
+        # Example: 15 minutes of setup on a general-purpose machine (machine_type=0)
         tg = TaskGroup(
             optimal_start_time=0,
             penalty_type=LinearPenalty(penalty_coefficient=10),
@@ -35,7 +35,7 @@ class InitState(State):
         return tg
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # init_ok=True を観測したら MeasureState へ
+        # Transition to MeasureState when init_ok=True is observed
         if "init_ok" in df.columns and df.filter(pl.col("init_ok") == True).height > 0:
             return "MeasureState"
         return "InitState"
@@ -56,9 +56,9 @@ class MeasureState(State):
         self.threshold = threshold
 
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        # 例: 測定器(machine_type=1)で 30分
+        # Example: 30 minutes on a reader (machine_type=1)
         tg = TaskGroup(
-            optimal_start_time=30,  # 準備が終わる頃を狙う例
+            optimal_start_time=30,  # Example target time near the end of setup
             penalty_type=LinearPenalty(penalty_coefficient=10),
             tasks=[
                 Task(processing_time=30, interval=0,
@@ -68,13 +68,13 @@ class MeasureState(State):
         return tg
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # measurement >= threshold を観測したら FinishState
+        # Transition to FinishState when measurement >= threshold is observed
         if "measurement" in df.columns and df.filter(pl.col("measurement") >= self.threshold).height > 0:
             return "FinishState"
         return "MeasureState"
 
     def dummy_output(self, df: pl.DataFrame, task_group_id: int, task_id: int) -> pl.DataFrame:
-        # 閾値を超える値で通す（閾値未満にして再測定を確認しても良い）
+        # Return a value above the threshold; use a lower value to test repeated measurement
         return pl.DataFrame({
             "time": [datetime.now().isoformat()],
             "task_group_id": [task_group_id],
@@ -86,7 +86,7 @@ class MeasureState(State):
 
 class FinishState(State):
     def task_generator(self, df: pl.DataFrame) -> TaskGroup:
-        # 例: 汎用機(machine_type=0)で 5分の確定処理
+        # Example: 5 minutes of finalization on a general-purpose machine (machine_type=0)
         tg = TaskGroup(
             optimal_start_time=70,
             penalty_type=LinearPenalty(penalty_coefficient=10),
@@ -98,7 +98,7 @@ class FinishState(State):
         return tg
 
     def transition_function(self, df: pl.DataFrame) -> str:
-        # 終了状態のイメージ：ここに留まる
+        # Represent the final state by remaining here
         return "FinishState"
 
     def dummy_output(self, df: pl.DataFrame, task_group_id: int, task_id: int) -> pl.DataFrame:
@@ -111,7 +111,7 @@ class FinishState(State):
         })
 
 
-# ---- 実験の構築 ----
+# ---- Build the experiment ----
 def build_experiment() -> Experiment:
     states: List[State] = [InitState(), MeasureState(threshold=1.0), FinishState()]
     exp = Experiment(
@@ -136,17 +136,17 @@ def build_experiments() -> Experiments:
     return exps
 
 
-# ---- 実行例 ----
+# ---- Execution example ----
 if __name__ == "__main__":
     exps = build_experiments()
 
-    # ガント・スケジュールなどは既存メソッドで生成可
+    # Use existing methods to generate Gantt charts and schedules
     # exps.experiments[0].show_experiment_directed_graph(save_path="demo_graph.png")
 
-    # 仮結果で 5 ステップ回す（ディスクへ保存しない）
+    # Run 10 steps with dummy results and save each step
     logs = exps.simulate(max_steps=10, save_each_step=True)
     for i, r in enumerate(logs, 1):
         print(f"[step {i}] {r}")
 
-    # 保存も行いたい場合は True
+    # Use True to save each step
     # exps.simulate(max_steps=3, save_each_step=True)
