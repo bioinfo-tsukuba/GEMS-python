@@ -6,7 +6,11 @@ This document plans a study of concurrent HEK and iPS cultures using the ROUND3 
 
 ## Requirements and evidence
 
-The user requested multiple cultures of both cell types registered from the beginning, no injected failures, and growth simulation based on the actual ROUND3 data. An equal HEK/iPS ratio, identical initial growth phases, random individual variation, measurement noise, equipment limits and a success threshold have **not** been specified.
+The user requested multiple cultures of both cell types registered from the beginning, no injected failures, and growth simulation informed by actual ROUND3 data. The follow-up decisions specify the full grid of HEK counts 3 through 10 and iPS counts 3 through 10, growth-curve variation, completion through sampling, ROUND3 settings including refill work, and 30 repetitions from the outset. This is 64 count combinations and 1,920 main evaluation runs, with 6 to 20 cultures per run.
+
+For density acceptance, the user proposed target density ±0.1 as a provisional rule and asked whether equal absolute widths at targets 0.8 and 0.3 were comparable. After the recommendation to retain that primary rule and report relative errors as well, the user accepted the recommendation. The primary rule remains target ±0.1; the proposed alternative, relative ±20% capped at an absolute width of 0.1, is a supplementary sensitivity calculation from the same recorded outcomes. Neither rule has been biologically validated for these experimental conditions.
+
+The user clarified that abnormal/interrupted courses should be omitted from the simulation and that growth modeling should use values before those events. Data extraction must retain normal observations preceding an interruption, rather than exclude every observation from an affected culture. The event boundary remains an audit question; do not infer it from the eventual outcome alone.
 
 The previous [scheduler capacity study](benchmarks/scheduler_capacity/README.md) evaluated synthetic scheduling workloads. Its initial-plan and limited-update results do not establish sustainable cell-culture counts. Its search limits, maximum experiment count, repetition count and runtime budget are specific to that evaluation and are not inherited by this proposal.
 
@@ -25,26 +29,36 @@ The source contains normal and restart definitions, cumulative histories, config
 
 The experiment repository is private; the GEMS repository and Issue are public. This planning change includes source references and proposed methods, without copying raw measurements, images or source credentials. Decide where extracted records, fitted parameters and results may be stored and published before producing those artifacts. Reproduction of private inputs requires access to the source repository.
 
-## Decisions to resolve
+## Recorded decisions and remaining details
 
-The alternatives below are proposals, not approved defaults. Questions about the primary design, endpoint, resources, usable observations and the meaning of sampling were sent to the user before implementation.
+The table distinguishes user decisions from implementation proposals and details still to be audited. The full study remains a planning deliverable; the follow-up answers do not request calibration or execution of 1,920 runs.
 
-| Decision | Proposed starting point | Consequence or unresolved detail |
+| Decision | Recorded choice or implementation proposal | Consequence or unresolved detail |
 | --- | --- | --- |
-| Culture count and unit | HEK N + iPS N; count each independently operated culture | Confirm whether one culture corresponds to an Experiment, a vessel, a plate or a well. Always report both per-type and total counts. |
-| Enrollment and initial state | Register every culture at virtual time zero; compare aligned phases with empirical phase variation | Initial registration does not imply simultaneous seeding. Specify prior passage age, initial density and whether startup operations compete for the resource. Do not give cultures free pre-run processing unless that is the agreed initial condition. |
-| Endpoint | Complete the ROUND3-equivalent passage-and-sampling sequence | Alternatively evaluate maintenance over a specified duration. Agree on the passage count, whether initial passage counts, the virtual horizon and how incomplete cultures are classified. Finite completion does not establish indefinite maintenance capacity. |
-| Biological acceptance | Operation-specific timing and density criteria | Specify allowed early/late passage and sampling, density ranges, maximum medium-change gaps, observation delays, and whether every culture must pass. Evaluate the relevant operation start or end, rather than only task-group start. |
-| Equipment and durations | ROUND3's single shared operation resource and configured processing times | Measured-duration calibration or future equipment configurations are separate alternatives. An operation history timestamp alone does not give actual start-to-end occupancy. |
-| Availability and other resources | Inventory refill reservations, work hours and culture storage limits | Decide whether human work, consumables, storage and refill demand constrain the main study. A limit measured without these constraints applies only to operation scheduling. Increasing culture counts must not silently assume unlimited refill capacity. |
-| Growth-data inclusion | Use confirmed normal growth intervals; review interruptions, restarts and anomalous intervals | Retain usable normal intervals before a failure where appropriate. Report exclusions and sensitivity to inclusion choices. Survivor-only fitting can bias capacity estimates. |
-| Growth variation | Validate a representative model, then sample empirical individual parameters | Confirm whether “sample from actual data” means individual growth-rate/reseeding variation, a fixed representative curve, or additional observation noise. Biological variation and fitted-parameter uncertainty need separate interpretation. |
+| Culture count and unit | User: every pair `(HEK, iPS)` in `{3, ..., 10} × {3, ..., 10}` | Confirm the source mapping from independently operated culture to Experiment, vessel, plate or well. Report both per-type and total counts. Equal-count-only sweeps are superseded. |
+| Enrollment and initial state | User: all cultures initially enrolled, with varying growth curves; implementation proposal: retain ROUND3 protocol entry states | “Growth phase” meant time since passage at enrollment, not the shape of the growth curve. A separately shifted-phase sweep is not requested. Audit initial history/time mapping and include resource-competing startup operations required by the source. |
+| Endpoint | User: through sampling, using the ROUND3 sequence | Audit the source passage count and treatment of initial passage; end each culture after sampling. Keep incomplete runs visible. No long-term maintenance endpoint is selected. |
+| Biological acceptance | User-accepted provisional recommendation: target ±0.1 as primary; report absolute and relative errors and supplementary relative ±20% with absolute width capped at 0.1 | Proposed run criterion: every culture reaches sampling and all targeted passage/sampling operations meet the density band. Evaluate density before the operation/reset, not a post-passage value. Additional timing thresholds are not selected; retain timing/gap diagnostics without inventing pass/fail limits. |
+| Equipment and durations | User: ROUND3 settings, including refill processing time | Keep the source single shared operation resource, configured durations and intervals. Measured-duration substitution and added equipment are outside this selected main design. |
+| Availability and other resources | User: include ROUND3 refill reservations; implementation proposal: reproduce source frequency, durations and work-hour preferences | Audit the active refill definition and source availability rules. Do not silently add count-dependent refill scaling or new inventory constraints. Report storage/consumable capacity as unverified where the source does not establish it. |
+| Growth-data inclusion | User: ignore abnormal/interrupted courses and use earlier normal values | Audit cutoff boundaries, preserve preceding normal intervals and omit post-event/restart trajectories from the main fitting pool. Report exclusions and uncertainty in the boundary. |
+| Growth variation | User: varying growth curves informed by real observations, with repeated runs | Proposed method: assign jointly drawn growth-rate/reseeding parameters to each simulated culture, preserving supported dependencies. “Parameter sampling” means selecting simulation parameters; it does not mean laboratory sampling. Additional observation noise is not requested and is not automatically introduced. |
 | Online prediction | Reproduce the normal ROUND3 observation-based prediction policy | Keep latent simulator parameters and future observations unavailable to the planner. Document any corrected prediction behavior separately from a faithful baseline. |
-| Solver and execution budget | Use the current default OR-Tools scheduler | Explicitly choose search limit, retry policy, seeds, repetitions, count ceiling and runtime budget before capacity execution. Existing implementation defaults are five seconds, one worker, solver seed zero and bounded UNKNOWN retries; these are not automatically study settings. |
+| Repetitions | User: 30 per count combination from the outset | 64 × 30 = 1,920 main runs. Repetitions vary growth parameters/seeds; rerunning the same growth curves only measures computational variation. Pilots and debug runs are additional and separately labeled. |
+| Solver and execution budget | Proposal: use the current default OR-Tools scheduler; execution budget still to be specified | Record search limit, retry policy, seeds and runtime budget before main execution. Existing implementation defaults are five seconds, one worker, solver seed zero and bounded UNKNOWN retries; these are not automatically study settings. |
 | Model quality | Validate density forecasts and target-density arrival forecasts | Set acceptable predictive error before interpreting a count as actionable, or label it exploratory. The user supplies biological criteria; model-form selection can follow documented validation. |
 | Output access | Keep private source observations in an access-controlled location | Decide access and publication of calibrated parameters and derived results. Public reproduction instructions can identify private prerequisites without embedding them. |
 
-If biological acceptance criteria cannot yet be supplied, report curves of delay, density, completion and utilization. Do not replace missing criteria with a chosen “maximum feasible culture count.”
+The accepted primary density interval is inclusive. For a target `d*`, accept the recorded pre-operation density `d` when `abs(d - d*) <= 0.1`. Record the target, actual latent density, observed/predicted density where available, signed error, absolute error and relative error `abs(d - d*) / d*` separately. Use latent simulator density to score a run; it remains unavailable to the prediction policy.
+
+| Target | Primary absolute band | Relative size of primary half-width | Supplementary half-width `min(0.1, 0.20 × target)` | Supplementary band |
+| --- | --- | --- | --- | --- |
+| 0.8 | 0.7–0.9 | 12.5% | 0.1 | 0.7–0.9 |
+| 0.3 | 0.2–0.4 | 33.3% | 0.06 | 0.24–0.36 |
+
+These are arithmetic comparisons, not evidence that equal relative error is biologically equivalent across cell types. The supplementary choice of 20% is an exploratory sensitivity value recommended by the agent and accepted as part of the proposed comparison. If the two rules give different acceptance regions, show both rather than select a favorable threshold after seeing results.
+
+Plot the outcome grid with HEK count and iPS count as its two axes, showing accepted runs out of 30, plus per-culture outcomes, density errors and scheduling failures. Describe an accepted region of count pairs, rather than force mixed-cell-type capacity into one maximum total count. A 30-run proportion is an empirical estimate under the fitted model, not a guaranteed probability for actual cultures.
 
 ## Stage 1: audit inputs and reconstruct the normal protocol
 
@@ -54,7 +68,7 @@ Extract observations without concatenating cumulative snapshots as independent m
 
 Confirm the meaning, scale and units of density, and whether each timestamp denotes acquisition, task start, task end or result receipt. Convert to a documented relative virtual clock, retaining original timestamps and Japan time for work-hour interpretation. Use elapsed time since the actual passage boundary for growth fitting. Treat missing passage densities as missing, not as observed zero density.
 
-Split trajectories at passages and identify initialization, reseeding, interruptions and restarts. Produce an inclusion/exclusion manifest with reason codes and unresolved cases for review. A falling density is evidence to inspect, not by itself proof of a failure. Confirm whether medium changes, recovery after passage or different passage generations need distinct effects that the observations can identify.
+Split trajectories at passages and identify initialization, reseeding, interruptions and restarts. In accordance with the follow-up decision, retain normal pre-event observations for fitting and omit abnormal/interrupted and restart courses from the main growth pool. Produce an inclusion/exclusion manifest with reason codes and unresolved cutoff boundaries. A falling density is evidence to inspect, not by itself proof of a failure. Confirm whether medium changes, recovery after passage or different passage generations need distinct effects that the observations can identify.
 
 Inventory operation durations, fixed intervals, target densities, penalties, prediction rules, refill reservations, sampling and termination. Distinguish configured durations from actual resource occupancy. Cyclical rest penalties in GEMS act on group starts; they do not prohibit work from crossing a rest interval. Turning those preferences into hard availability constraints would change the problem and requires an explicit decision.
 
@@ -68,7 +82,7 @@ Fixing carrying capacity at a unit-normalized density or fixing a recovery perio
 
 Evaluate withheld cultures where practical, and predict future observations from earlier observations within a passage. Report density error, target-density crossing-time error, residual structure, coverage and failed fits. Keep final evaluation observations separate from fitting and model selection. If a target was not bracketed by observations, identify its crossing time as uncertain rather than treating an interpolation or fitted curve as ground truth.
 
-First establish a fixed representative case that makes protocol debugging reproducible. If empirical sampling is selected, sample correlated parameter sets or culture trajectories together, retain within-culture dependencies across passages where supported, and record the empirical pool and random seeds. Use culture-level resampling to study fit uncertainty; report it separately from individual biological variation. A small experiment does not justify an arbitrary precise population distribution.
+First establish a fixed representative case for protocol debugging; this is not a replacement for the selected varied-growth main evaluation. Then draw correlated parameter sets or culture trajectories together, retain within-culture dependencies across passages where supported, and record the empirical pool and random seeds. Infer variation from usable pre-event observations; do not invent a Gaussian spread or a fixed percentage jitter without reporting its basis. Use culture-level resampling to study fit uncertainty and report it separately from individual biological variation. A small experiment does not justify an arbitrary precise population distribution.
 
 Represent growth as a function of actual elapsed virtual time. Delayed observation or passage must let the culture continue growing. Passage resets density according to the fitted reseeding rule; coating and waiting do not freeze cell growth. Record the simulated density at biologically relevant operation starts and ends, including hidden threshold crossings between observations.
 
@@ -80,7 +94,7 @@ Output: candidate fits, validation plots, crossing-time errors, parameter proven
 
 The proposed integration uses the current multi-machine interval manager with one shared machine for the main single-resource case, and `observation_provider` for virtual measurements. This reuses the supported simulation/update path and resource validation without introducing physical robot or API dependencies.
 
-Start with 1 HEK + 1 iPS, then the 5 + 5 reference scale. Reconstruct the agreed normal sequence: passage, imaging, medium change, coating and sampling as appropriate. Separate occupied processing time from nonoccupying culture/coating intervals. Register all cultures initially and disable later enrollment and sample splitting for this study.
+Start with 1 HEK + 1 iPS, then the 5 + 5 reference scale as correctness checks, separate from the 64-condition main evaluation. Reconstruct the normal ROUND3 sequence: passage, imaging, medium change, coating and sampling as appropriate. Include the source refill tasks and their processing time on the same shared operation resource. Separate occupied processing time from nonoccupying culture/coating intervals. Register all cultures initially and disable later enrollment and sample splitting for this study.
 
 Replace source wall-clock-dependent scheduling with the agreed virtual clock. Preserve the intended normal protocol and document any differences between source and current APIs. Use an explicit finish after the agreed endpoint; do not count post-sampling placeholder waits or an endless expired state as continued culture.
 
@@ -92,7 +106,9 @@ Output: complete event histories and schedule snapshots for both reference scale
 
 ## Stage 4: measure count-dependent behavior
 
-Freeze the accepted protocol, growth model, criteria, solver settings and execution budget. Sweep counts coarsely, then refine around observed transitions. Use fresh output directories and preserve unsuccessful conditions and inputs. Choose repetitions after a small cost/variance pilot and before the main comparison.
+Freeze the accepted protocol, growth model, criteria, solver settings and execution budget. Evaluate all 64 pairs in `{3, ..., 10} × {3, ..., 10}`, with 30 varied-growth repetitions per pair from the outset. Do not substitute a coarse sweep or give only boundary conditions 30 repetitions. Use fresh output directories and preserve unsuccessful conditions and inputs.
+
+A small pilot estimates computational cost and verifies variability before main execution; it does not change the selected 30 main repetitions. Declare pilot cost, the estimated cost of all 1,920 runs, resource/time budget and censoring policy before starting the main study. Budget exhaustion must be reported as incomplete evaluation rather than used to silently reduce the selected grid or repetition count.
 
 Run observation, prediction and replanning through the agreed endpoint for every tested condition. Do not substitute successful initial planning or a fixed small number of updates for completion. Use common empirical draws where possible when comparing configurations, and distinguish solver timing variability from differences in simulated cultures.
 
@@ -100,9 +116,9 @@ Report per-type and total initial counts, active counts over time, completed cul
 
 Classify outcomes separately: accepted completed runs, biological/timing violations, solver UNKNOWN, proven solver infeasibility, invalid input/output, software/resource errors, and execution-budget censoring. UNKNOWN is not proof of infeasibility. FEASIBLE is not proof of optimality. A violated criterion under this scheduling policy does not prove that every possible scheduling policy would fail.
 
-Report the largest accepted tested scale with its repetition count and variation, nearby failed scales and the untested region. Do not assume success is monotonic in count or call a count ceiling the true limit. An analytic workload/utilization calculation can check plausibility and identify bottlenecks, but average load alone misses coincident passage demand.
+Report the accepted region of count pairs with repetition counts and variation, nearby failed pairs and the untested region. If 10 + 10 succeeds, the range ceiling has been reached; a limit above it has not been measured and extension is not automatic. Do not assume success is monotonic in either count or call a count ceiling the true limit. An analytic workload/utilization calculation can check plausibility and identify bottlenecks, but average load alone misses coincident passage demand.
 
-Output: count-versus-acceptance, delay, density and utilization plots, timelines near the observed boundary, failure classifications, and conclusions that separate solver limitations, resource contention and growth/timing constraints.
+Output: a two-dimensional grid of counts versus acceptance, delay, density and utilization plots, timelines near the observed boundary, primary/supplementary density comparisons, failure classifications, and conclusions that separate solver limitations, resource contention and growth/timing constraints.
 
 ## Implementation candidates and verification records
 
@@ -131,6 +147,8 @@ Planning inspection used authenticated `gh` reads of the pinned private reposito
 
 The restricted environment initially prevented GitHub access and Git branch creation. Authorized network reads and branch creation succeeded through the escalation mechanism. Shell inspection uses `python3` because the unqualified `python` executable is unavailable outside the managed environment.
 
-The planning deliverable is complete when this document and Issue #30 agree, consequential decisions have been asked and their current status recorded, a dedicated branch/commit and planning PR exist, and documentation links and the scoped diff have been checked. A planning PR does not close the future evaluation Issue or approve unresolved study settings.
+The follow-up decisions are recorded above: the full 3–10 by 3–10 grid, variable growth, 30 repetitions, sampling endpoint, ROUND3 settings including refill, pre-interruption normal data and provisional primary/supplementary density criteria. The main study still has not run; cutoff boundaries, parameter distributions, input mapping, solver settings and execution budget remain to be established in preparation.
+
+The planning deliverable is complete when this document and Issue #30 agree, consequential decisions and their current status are recorded, a dedicated branch/commit and planning PR exist, and documentation links, grid arithmetic and the scoped diff have been checked. A planning PR does not close the future evaluation Issue or approve unresolved execution settings.
 
 The future evaluation is complete only after the accepted settings are frozen, input and model audits pass to the documented extent, reference simulations pass, count/boundary runs are verified, and reproducible results and remaining limitations are recorded. Its conclusions will be estimates under the specified equipment, protocol, observations and model, not guarantees for actual cultures.
