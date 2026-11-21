@@ -86,6 +86,21 @@ def download(directory, workers=8):
 
 def history_rows(history):
     """Decode the original one-machine history dictionary."""
+    if isinstance(history, str):
+        history = json.loads(history)
+    if isinstance(history, dict) and "columns" in history and "data" not in history:
+        columns = history["columns"]
+        if not columns:
+            return []
+        if all(isinstance(column, dict) and "values" in column for column in columns):
+            names = [column["name"] for column in columns]
+            if len(names) != len(set(names)):
+                raise ValueError("Duplicate source column names")
+            lengths = {len(column["values"]) for column in columns}
+            if len(lengths) != 1:
+                raise ValueError("Ragged source column values")
+            return [dict(zip(names, row)) for row in
+                    zip(*(column["values"] for column in columns))]
     if isinstance(history, dict) and "columns" in history and "data" in history:
         return [dict(zip(history["columns"], row)) for row in history["data"]]
     if isinstance(history, dict) and all(isinstance(x, list) for x in history.values()):
@@ -122,7 +137,8 @@ def extract(directory):
                 if row.get("time") is None or not row.get("operation"):
                     raise ValueError(f"Missing operation/time in {path}")
                 key = (identity, int(row["time"]), row["operation"])
-                payload = {"culture_id": identity, "cell_type": kind, **row}
+                payload = {"culture_id": identity, "cell_type": kind, **row,
+                           "density": row.get("density"), "memo": row.get("memo")}
                 if key not in ledger:
                     ledger[key] = {"row": payload, "first_step": step, "last_step": step,
                                    "source": str(path.relative_to(directory))}

@@ -2,7 +2,7 @@
 
 Planning date: 2026-11-20. Tracking issue: [#30](https://github.com/bioinfo-tsukuba/GEMS-python/issues/30). Related work: #21, #23 and #24.
 
-This document plans a study of concurrent HEK and iPS cultures using the ROUND3 protocol and measured growth observations. The current request covers inspection, planning, an Issue and questions for the user. Model calibration, implementation, simulation and capacity measurement require a subsequent instruction after the consequential conditions are resolved.
+This document records the plan for concurrent HEK and iPS cultures using the ROUND3 protocol and measured growth observations. The initial request covered inspection, planning, an Issue and questions. The user's subsequent instruction authorized full implementation, calibration, evaluation and a report with appropriate visualizations on a dedicated branch. Current execution choices and source-audit findings are recorded in the [methodology](benchmarks/culture_capacity/methodology.md).
 
 ## Requirements and evidence
 
@@ -27,11 +27,11 @@ Source references inspected for planning:
 
 The source contains normal and restart definitions, cumulative histories, configured processing times, observation-driven predictions and refill reservations. These provide inputs to the study, but do not establish which settings were active throughout the run, why an individual trajectory changed, or whether configured times represent measured resource occupancy. Those questions need an audit before fitting.
 
-The experiment repository is private; the GEMS repository and Issue are public. This planning change includes source references and proposed methods, without copying raw measurements, images or source credentials. Decide where extracted records, fitted parameters and results may be stored and published before producing those artifacts. Reproduction of private inputs requires access to the source repository.
+The experiment repository is private; the GEMS repository and Issue are public. Original observations, images and detailed extraction ledgers stay in ignored private directories. Derived fitted parameters, aggregate validation and simulated outcomes are prepared locally for reproducibility. Automatic approval review rejected publishing the derived model to the public remote without explicit approval of that payload and destination; code-only publication can proceed separately. Reproduction of raw input extraction requires access to the source repository.
 
 ## Recorded decisions and remaining details
 
-The table distinguishes user decisions from implementation proposals and details still to be audited. The full study remains a planning deliverable; the follow-up answers do not request calibration or execution of 1,920 runs.
+The table distinguishes user decisions from implementation proposals and details to be audited. The initial decision responses were followed by explicit authorization to implement and execute the full study; see the methodology for choices fixed during preparation.
 
 | Decision | Recorded choice or implementation proposal | Consequence or unresolved detail |
 | --- | --- | --- |
@@ -147,7 +147,7 @@ Planning inspection used authenticated `gh` reads of the pinned private reposito
 
 The restricted environment initially prevented GitHub access and Git branch creation. Authorized network reads and branch creation succeeded through the escalation mechanism. Shell inspection uses `python3` because the unqualified `python` executable is unavailable outside the managed environment.
 
-The follow-up decisions are recorded above: the full 3–10 by 3–10 grid, variable growth, 30 repetitions, sampling endpoint, ROUND3 settings including refill, pre-interruption normal data and provisional primary/supplementary density criteria. The main study still has not run; cutoff boundaries, parameter distributions, input mapping, solver settings and execution budget remain to be established in preparation.
+The follow-up decisions are recorded above: the full 3–10 by 3–10 grid, variable growth, 30 repetitions, sampling endpoint, ROUND3 settings including refill, pre-interruption normal data and provisional primary/supplementary density criteria. Implementation and calibration now proceed on `feat/30-round3-culture-capacity`. Completion and measured outcomes will be reported separately from this original plan.
 
 The planning deliverable is complete when this document and Issue #30 agree, consequential decisions and their current status are recorded, a dedicated branch/commit and planning PR exist, and documentation links, grid arithmetic and the scoped diff have been checked. A planning PR does not close the future evaluation Issue or approve unresolved execution settings.
 
