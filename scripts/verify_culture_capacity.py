@@ -59,6 +59,12 @@ def verify_trial(directory, config, model_hash):
         if identity not in cultures:
             issues.append("Unknown culture identity")
             continue
+        if cultures[identity]["cell_type"] != kind:
+            issues.append("Culture type mismatch")
+        operation = event["operation"].removeprefix(kind)
+        expected_duration = config["round3"][kind]["processing_minutes"].get(operation)
+        if expected_duration is None or event["duration"] != expected_duration:
+            issues.append("Configured operation duration omitted or altered")
         generation, passage_end = origins[identity]
         expected = (config["round3"]["iPS"]["passage_density"] if generation < 0 else
                     latent_density(cultures[identity]["parameters"][generation],
@@ -133,6 +139,11 @@ def verify_trial(directory, config, model_hash):
     if result["refill_occupancy_minutes"] != refill_occupation or (
             result["culture_occupancy_minutes"]+refill_occupation != occupation):
         issues.append("Occupancy aggregation mismatch")
+    expected_utilization = occupation/result["virtual_minutes"] if result["virtual_minutes"] else 0
+    if abs(expected_utilization-result["machine_utilization"]) > 1e-12:
+        issues.append("Reported resource utilization mismatch")
+    if result["completed"] != (result["outcome"] == "COMPLETED"):
+        issues.append("Completion/outcome classification mismatch")
     statuses = dict(Counter(row["status"] for row in calls))
     if statuses != result["solver_statuses"] or len(calls) != result["solver_calls"]:
         issues.append("Solver call/status aggregation mismatch")

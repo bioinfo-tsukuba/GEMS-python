@@ -23,9 +23,9 @@ This study implements [Issue #30](https://github.com/bioinfo-tsukuba/GEMS-python
 
 The tracked [`culture_capacity_config.json`](../../../scripts/culture_capacity_config.json) is the configuration source. No additional observation noise, equipment breakdowns, biological failure events, later enrollment or sample splitting are introduced. Configured durations, rather than measured execution durations, determine resource occupancy.
 
-For a run to pass the primary criterion, every culture must be sampled and every subsequent targeted passage/sampling operation must be within its density band. Two subsequent passages and one sampling operation are scored for each culture; initial seeding is outside that density criterion. HEK begins post-passage, matching its source entry state. iPS performs the initial coating/image/passage workflow on the shared resource. Startup iPS has a nominal parent density 0.3; it is not a target-driven source operation and is not scored.
+For a run to pass the primary criterion, every culture must be sampled and every subsequent targeted passage/sampling operation must be within its density band. Two subsequent passages and one sampling operation are scored for each culture; initial seeding is outside that density criterion. HEK begins post-passage, matching its source entry state. iPS performs the initial coating/image/passage workflow on the shared resource. Startup iPS has a nominal parent density 0.3; it is not a target-driven source operation and is not scored. Growth while that initial parent stock waits is unmodeled: the nominal density remains constant until passage.
 
-All culture clocks are normalized to the common enrollment origin. This intentionally differs from the historical staggered addition of cell types. No extra study axis shifts initial passage ages. The initial HEK passage is a completed initial condition, while no iPS processing is credited before time zero. These entry conditions do not represent simultaneous de novo seeding of both cell types.
+All culture clocks are normalized to the common enrollment origin, with time zero at clock phase zero. This intentionally differs from the historical staggered addition of cell types. No extra study axis shifts initial passage ages or work-hour phase. The initial HEK passage is a completed initial condition, while no iPS processing is credited before time zero. These entry conditions do not represent simultaneous de novo seeding of both cell types.
 
 ## Source audit
 
@@ -49,11 +49,11 @@ Forward validation fits earlier observations and predicts a later observation ex
 
 This rule selected logistic growth for HEK and lag-logistic growth for iPS. The initial unrestricted comparison preferred lag growth for HEK by a small error difference on only two matched forecasts; that selection was rejected as insufficient evidence, before any main runs. There are 34 observed passage intervals and 31 fitted records for the chosen models. Unfit sparse terminal intervals are explicitly retained in the private audit with exclusion reasons.
 
-The selected fitted pool is the local artifact `volatile_round3/calibration/growth_model.json`. A source donor block is drawn uniformly for each virtual culture. Generation-matched initial density, growth rate and lag are drawn jointly from that donor. HEK's main sequence uses the three source generations following the history reset; its older initial interval remains available to validation. If a selected donor lacks a fitted generation, a complete joint record from the same-type, same-generation pool is drawn and the fallback is recorded.
+The selected fitted pool is the local artifact `volatile_round3/calibration/growth_model.json`. A source-culture block is drawn uniformly for each virtual culture. Generation-matched initial density, growth rate and lag are drawn jointly from that block. The internal `donor` field identifies a technical source culture, not a human or genetic donor. HEK's main sequence uses the three source generations following the history reset; its older initial interval remains available to validation. If a selected block lacks a fitted generation, a complete joint record from the same-type, same-generation pool is drawn and the fallback is recorded.
 
-This preserves within-donor dependencies where supported without recreating abnormal terminal courses. It does not claim to estimate a full population distribution from five cultures per type. Across count pairs, the same repetition/type/index seed reuses a culture-parameter prefix, making comparisons paired. The 1,920 outcomes therefore must not be interpreted as 1,920 independent biological replicates.
+This preserves dependencies within a source culture where supported without recreating abnormal terminal courses. It does not claim to estimate a full population distribution from five cultures per type. Across count pairs, the same repetition/type/index seed reuses a culture-parameter prefix, making comparisons paired. The 1,920 outcomes therefore must not be interpreted as 1,920 independent biological replicates. Post-passage starting density is an empirical draw; the model does not conserve cell mass or change the next passage's growth parameters in response to an earlier density overshoot.
 
-Population generalization is inspected by excluding one whole donor and predicting its observations using median parameters from the remaining donors. The resulting errors are reported separately from online forward errors. The data used for model selection are not an independent final validation dataset; calibration and validation are exploratory.
+Cross-culture generalization is inspected by excluding one whole source culture and predicting its observations using median parameters from the remaining cultures. The resulting errors are reported separately from online forward errors. The data used for model selection are not an independent final validation dataset; calibration and validation are exploratory.
 
 ## Prediction, scheduling and scoring
 
@@ -62,6 +62,8 @@ The planner is not given sampled growth parameters or future observations. It se
 The source task-group templates were audited across snapshots. Notably, active iPS sampling uses an image with zero initial interval, sampling penalty coefficient 100 and the same epoch-aligned rest ranges as HEK. The initial `iPSsetting.py` differs from those active sampling settings. The main study uses the actually observed terminal template, drops terminal waiting placeholders and finishes after sampling.
 
 Rest ranges `(0,600)` and `(960,1440)` penalize task-group starts; they are not hard machine-availability constraints. Coating waits and culture waits do not occupy the machine. Refill processing occupies the same machine as culture operations. The source fixed refill group repeats if necessary until all cultures finish; future refill reservations beyond the final sampling time do not contribute to measured utilization.
+
+Inter-group observation/medium-change target times are also preferences, not hard minimum intervals. The scheduler may move a not-yet-started group earlier when that reduces its total objective. Intra-group intervals remain fixed once the group starts. The first iPS medium-change group contains an image, medium change and another image after 24 hours; the following group prefers another 24-hour wait. Thus a roughly 48-hour medium gap is already possible in the source route. The report measures actual medium/passage-end to next medium-start gaps, including unexpectedly short gaps, without claiming they are biologically appropriate.
 
 There is one initial schedule, followed by one production history/state update and replan per received result. This skips a redundant pre-receipt solve on an already valid plan. A focused test checks that this driver agrees with `simulate_one` on operation order, scheduled times and simulated observations in a deterministic reference case.
 
@@ -86,3 +88,46 @@ Outcomes distinguish completed runs, density violations, UNKNOWN, proven infeasi
 Reports show completion and full-run acceptance separately. Full-run acceptance naturally becomes harder when there are more independently scored cultures; an observed reduction alone is not proof of resource saturation. Paired parameter prefixes, per-operation error distributions, occupancy and timing diagnostics help interpret that difference.
 
 Successful 10+10 runs reach the requested range ceiling, not a demonstrated upper capacity limit. Storage, sufficient consumables, morphology, cell quality, long-term stability and actual hardware timing are not independently verified. Conclusions apply to the specified normal protocol, provisional criterion, empirical growth model and tested planning policy.
+
+## Reproduce and review
+
+Run these commands from the repository root using the project's locked dependencies. Paths under `volatile_round3/` are ignored and remain local. The source reader requires access to the private source repository.
+
+```bash
+.venv/bin/python scripts/extract_round3_culture_data.py \
+  --download --output volatile_round3/source --workers 8
+.venv/bin/python scripts/calibrate_round3_growth.py \
+  --source volatile_round3/source \
+  --output volatile_round3/calibration --private-output volatile_round3/calibration
+.venv/bin/python scripts/measure_culture_capacity.py \
+  --model volatile_round3/calibration/growth_model.json \
+  --output volatile_round3/main --workers 12 --wall-budget-seconds 86400
+.venv/bin/python scripts/verify_culture_capacity.py volatile_round3/main
+.venv/bin/python scripts/report_culture_capacity.py volatile_round3/main \
+  --model volatile_round3/calibration/growth_model.json \
+  --output volatile_round3/report --reference volatile_round3/reference \
+  --private-audit volatile_round3/calibration/fit_audit.json
+```
+
+The optional 1+1 reference uses `--case 1 1 N` for each `N` from 0 to 29, the same configuration/model, two independent processes, and a separate output directory. Verify it independently before passing it to the report. To inspect a pilot or an unfinished study, `--allow-partial` labels the HTML as a preview; never use that flag to certify the full study. Reports refuse to overwrite earlier outputs.
+
+The standalone HTML includes count-pair selection, all recorded repetitions, and whole-run/day event timelines. Accompanying PNG/SVG figures and CSV tables contain completion, density acceptance, culture-level acceptance, paired HEK-00/iPS-00 comparisons, calibration checks, medium-change gaps and occupancy. Representative runs are selected near median completion time without reference to their acceptance.
+
+`scripts/finalize_culture_capacity.py --wait` can run alongside a long study. It waits for the driver's final execution manifest, independently verifies every planned outcome, then creates the local report. It cannot mark an incomplete calculation complete and does not publish any artifact.
+
+```bash
+.venv/bin/python scripts/finalize_culture_capacity.py volatile_round3/main \
+  --model volatile_round3/calibration/growth_model.json \
+  --output volatile_round3/report --reference volatile_round3/reference \
+  --private-audit volatile_round3/calibration/fit_audit.json --wait
+```
+
+Use a persistent execution environment for the driver and finalizer. In this session the dedicated `tmux` sessions are `gems30-main` and `gems30-finalize`. `volatile_round3/main/finalization.json` distinguishes waiting, a verified report, and a failure requiring inspection. Add `--browser` only in an environment with the optional browser tools configured.
+
+Optional browser validation uses `scripts/verify_culture_capacity_report.py` and Playwright/Chromium, not runtime dependencies. The verification environment lacked `libnspr4`, `libnss3` and `libasound`; distribution packages were downloaded and extracted under `/tmp/gems30-browser-libs/`, without installing system packages. With the extracted library path and `PLAYWRIGHT_BROWSERS_PATH=/tmp/gems30-playwright`, the portable pilot HTML passed Chromium checks after those missing-library launch failures. Images, condition selection, repetition counts, day zoom and absence of external requests were checked.
+
+## Execution and publication boundary
+
+The initial foreground pilot was interrupted when tool execution lost its session. Completed records were preserved; its unfinished case was not counted as an outcome. Long calculations were moved to dedicated `tmux` sessions, and the 10+10 pilot was rerun in a fresh directory. This is an execution failure, not a culture failure. Core source hashes guard resumed runs against mixing implementations.
+
+Automatic approval review rejected a push containing private-source-derived fitted parameters to the public implementation repository. The code-only push subsequently succeeded after the model was moved to an ignored local directory and the destination was verified. Original observations/images, fitted models, simulated records and generated reports remain local pending explicit publication approval. The report's optional private fit supplement contains source observations and is excluded from the portable HTML.
