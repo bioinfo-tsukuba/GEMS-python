@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "hek_counts": [3, 4, 5, 6, 7, 8, 9, 10],
+  "ips_counts": [3, 4, 5, 6, 7, 8, 9, 10],
+  "repetitions": 30,
+  "biological_seed_namespace": 30,
+  "solver_time_limit_seconds": 5.0,
+  "unknown_policy": "stop",
+  "process_workers": 12,
+  "max_events_per_run": 10000,
+  "max_virtual_days": 120,
+  "max_wall_seconds_per_run": 1800,
+  "primary_density_half_width": 0.1,
+  "supplementary_relative_half_width": 0.2,
+  "round3": {
+    "HEK": {
+      "processing_minutes": {"GetImage": 10, "Passage": 60, "Sampling": 40},
+      "observation_interval_minutes": 720,
+      "first_observation_minutes": 1440,
+      "passage_density": 0.8,
+      "sampling_density": 0.4,
+      "passages_including_initial": 3
+    },
+    "iPS": {
+      "processing_minutes": {"GetImage": 10, "Passage": 80, "Sampling": 60, "MediumChange": 20, "PlateCoating": 20},
+      "observation_interval_minutes": 1440,
+      "coating_interval_minutes": 60,
+      "passage_density": 0.3,
+      "sampling_density": 0.3,
+      "passages_including_initial": 3
+    },
+    "sampling_penalty_coefficient": 100,
+    "sampling_rest_cycle_start": 0,
+    "sampling_rest_ranges": [[0, 600], [960, 1440]],
+    "refill_processing_minutes": 120,
+    "refill_first_marker_minutes": 960,
+    "refill_interval_minutes": 1440,
+    "refill_tasks_per_group_including_marker": 40,
+    "refill_penalty_coefficient": 100000
+  },
+  "provenance": {
+    "grid_repetitions_criteria": "user specified and accepted recommendation",
+    "protocol": "observed task-group templates in pinned ROUND3 snapshots",
+    "sampling_template": "active restart sampling settings: first image interval 0, coefficient 100; terminal waiting removed",
+    "initial_state": "HEK initially post-passage at time 0; iPS initial passage workflow starts at time 0; all cultures enrolled initially",
+    "solver_limit": "repository default 5 seconds; 1 worker and solver seed 0 from shared CP-SAT implementation",
+    "unknown_policy": "agent selected stop to classify fixed-limit search failures",
+    "watchdogs": "agent selected censoring limits, not biological acceptance thresholds",
+    "additional_observation_noise": "not introduced; growth-curve variation is the requested perturbation",
+    "density_scoring": "latent pre-operation density at actual start, prior to passage reset",
+    "refill": "latest active 40-task ROUND3 sequence; repeats if needed until all cultures sampled",
+    "storage_inventory": "not separately modeled; no additional source-unsupported capacity constraint"
+  }
+}
